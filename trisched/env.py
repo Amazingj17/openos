@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from .oracle import validate_schedule_independent
 from .scenario import Scenario
 
 
@@ -197,4 +198,5 @@ def run_policy(scenario: Scenario, policy: Any) -> ScheduleResult:
         env.step(task_id, resource_id)
     result = env.result(policy.name)
     validate_schedule(scenario, result)
+    validate_schedule_independent(scenario, result)
     return result

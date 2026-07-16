@@ -11,6 +11,7 @@
 - 使用插入式时间线模拟执行与跨节点通信；
 - 通过统一接口运行 HEFT、Greedy-EFT、Random 和学习策略；
 - 对所有“就绪任务 × 资源”候选执行严格合法动作掩码；
+- 使用不复用环境时间计算的第二套 HEFT oracle 和 validator 交叉检查调度；
 - 用 HEFT 行为克隆预训练两层 NumPy MLP，并将 HEFT 当前决策作为教师先验特征，再以 episodic REINFORCE 学习残差；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
@@ -61,6 +62,8 @@ python -m pytest
 
 测试覆盖场景合法性、DAG 环检测、ready mask、HEFT 调度、神经策略训练/保存/加载，以及完整 pipeline 输出。`tests/fixtures/golden/heft_cases.json` 还固化了 10 个手工推导的 HEFT 黄金案例，覆盖插入式时间线、非对称通信、固定时延和确定性 tie-break。
 
+正确性门禁还包括一条独立实现路径：10 个黄金案例在人工 fixture、生产 HEFT 和独立 oracle 之间逐字段比对；40 个固定 seed 的随机 DAG 分别运行 HEFT、Greedy-EFT 和 Random，共检查 120 份调度；10 类故障注入验证遗漏、重复、越界、时间、依赖、资源重叠和 makespan 错误均会被拒绝。设计边界和复核方法见[独立验证器设计与测试报告](doc/独立验证器设计.md)。
+
 ## 生成可查看的场景 JSON
 
 ```powershell
@@ -86,7 +89,8 @@ python -m trisched evaluate `
 ```text
 configs/smoke.json       最小训练与评测配置
 trisched/scenario.py     场景 schema、校验、生成和 hash
-trisched/env.py          调度环境、插入式时间线、独立合法性检查
+trisched/env.py          调度环境、插入式时间线和生产合法性检查
+trisched/oracle.py       独立 HEFT、upward rank 和合法性验证
 trisched/policies.py     统一策略接口与 HEFT/Greedy/Random
 trisched/learning.py     Masked MLP、HEFT 模仿和 REINFORCE
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
