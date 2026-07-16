@@ -1,0 +1,13 @@
+# Reproducible direct and test dependencies for Python 3.10-3.12.
+# Update intentionally and verify the full CI matrix before merging.
+pip==23.3.1
+setuptools==68.2.2
+wheel==0.41.2
+numpy==1.26.4
+pytest==7.4.0
+iniconfig==1.1.1
+packaging==23.1
+pluggy==1.0.0
+colorama==0.4.6; platform_system == "Windows"
+exceptiongroup==1.2.2; python_version < "3.11"
+tomli==2.0.1; python_version < "3.11"

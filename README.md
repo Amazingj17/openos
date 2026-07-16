@@ -1,5 +1,8 @@
 # TriSched MVP
 
+[![CI](https://github.com/Amazingj17/openos/actions/workflows/ci.yml/badge.svg)](https://github.com/Amazingj17/openos/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 赛题十五“基于深度强化学习的云-边-端异构计算资源管理调度方法”的最小可执行实现。
 
 它已经形成一个完整闭环：
@@ -20,6 +23,13 @@
 ```powershell
 python -m pip install -r requirements.txt
 python -m trisched pipeline --config configs/smoke.json
+```
+
+复现实验或 CI 应使用锁定依赖：
+
+```powershell
+python -m pip install --no-deps -r requirements-lock.txt
+python -m pip install --no-build-isolation --no-deps .
 ```
 
 默认在 `outputs/smoke/` 生成：
@@ -91,3 +101,7 @@ tests/                   单元与集成测试
 - 学习策略使用手工候选特征，还未使用 GNN；
 - REINFORCE 是最小训练闭环，尚未加入 PPO、课程学习、OOD 数据与多随机种子报告；
 - 当前合成场景用于工程验证，正式实验需要接入 STG/GrapheonRL benchmark 和固定隐藏测试集。
+
+## 开源许可证
+
+本项目采用 [Apache License 2.0](LICENSE)。第三方代码、数据和模型仍须分别核验并记录其许可证。
