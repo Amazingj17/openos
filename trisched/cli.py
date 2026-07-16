@@ -9,7 +9,7 @@ from typing import Any
 
 from .evaluation import dataset_manifest, evaluate_split, write_summary
 from .learning import MaskedMLPPolicy, train_policy
-from .scenario import Scenario, generate_dataset
+from .scenario import Scenario, ScenarioValidationError, generate_dataset
 
 
 def _file_sha256(path: Path) -> str:
@@ -190,6 +190,34 @@ def generate_scenarios(
     print(f"generated scenarios under {output.resolve()}")
 
 
+def validate_scenario_file(path: str | Path) -> bool:
+    """Print a stable JSON diagnostic and return whether a Scenario is valid."""
+
+    try:
+        scenario = Scenario.load(path)
+    except ScenarioValidationError as error:
+        print(
+            json.dumps(
+                {"valid": False, "error": error.to_dict()},
+                ensure_ascii=False,
+            )
+        )
+        return False
+    print(
+        json.dumps(
+            {
+                "valid": True,
+                "scenario_id": scenario.id,
+                "task_count": scenario.task_count,
+                "resource_count": scenario.resource_count,
+                "content_hash": scenario.content_hash(),
+            },
+            ensure_ascii=False,
+        )
+    )
+    return True
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="trisched",
@@ -213,6 +241,10 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--checkpoint", default="outputs/smoke/masked_mlp.npz")
     evaluate.add_argument("--split", choices=("validation", "test"), default="test")
     evaluate.add_argument("--output", default="outputs/evaluate")
+    validate = subparsers.add_parser(
+        "validate-scenario", help="validate one Scenario JSON with structured errors"
+    )
+    validate.add_argument("--input", required=True)
     return parser
 
 
@@ -224,6 +256,9 @@ def main(argv: list[str] | None = None) -> int:
         generate_scenarios(args.config, args.output)
     elif args.command == "evaluate":
         evaluate_checkpoint(args.config, args.checkpoint, args.split, args.output)
+    elif args.command == "validate-scenario":
+        if not validate_scenario_file(args.input):
+            return 2
     else:
         raise AssertionError(f"unknown command: {args.command}")
     return 0

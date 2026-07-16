@@ -73,6 +73,16 @@ python -m pytest
 python -m trisched generate --config configs/smoke.json --output outputs/generated
 ```
 
+## 校验场景输入
+
+Scenario 的正式结构定义位于 [`schemas/scenario.schema.json`](schemas/scenario.schema.json)。除 JSON Schema 可表达的字段和类型约束外，运行时还检查 ID 连续性、通信矩阵维度、有限数值、边端点、重复边和 DAG 无环。
+
+```powershell
+python -m trisched validate-scenario --input outputs/generated/test/test-0000.json
+```
+
+合法输入输出场景规模和内容 hash，退出码为 0；非法输入输出带稳定 `code` 和 JSONPath 风格 `path` 的单行 JSON，退出码为 2。完整错误契约和 fixture 见[Scenario 输入契约](doc/Scenario输入契约.md)。
+
 ## 加载 checkpoint 复评
 
 无需重新训练即可加载冻结模型，并在确定性重建的 validation 或 test split 上复评：
@@ -91,6 +101,7 @@ python -m trisched evaluate `
 
 ```text
 configs/smoke.json       最小训练与评测配置
+schemas/                 Scenario JSON Schema
 trisched/scenario.py     场景 schema、校验、生成和 hash
 trisched/env.py          调度环境、插入式时间线和生产合法性检查
 trisched/oracle.py       独立 HEFT、upward rank 和合法性验证

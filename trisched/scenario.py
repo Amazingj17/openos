@@ -3,10 +3,102 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass
+from math import isfinite
+from numbers import Integral, Real
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+
+class ScenarioValidationError(ValueError):
+    """A stable, machine-readable Scenario input or invariant error."""
+
+    def __init__(self, message: str, *, code: str, path: str) -> None:
+        self.code = code
+        self.path = path
+        self.detail = message
+        super().__init__(f"{code} at {path}: {message}")
+
+    def to_dict(self) -> dict[str, str]:
+        return {"code": self.code, "path": self.path, "message": self.detail}
+
+
+def _fail(message: str, *, code: str, path: str) -> None:
+    raise ScenarioValidationError(message, code=code, path=path)
+
+
+def _mapping(value: Any, path: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        _fail("expected a JSON object", code="type_error", path=path)
+    if any(not isinstance(key, str) for key in value):
+        _fail("object keys must be strings", code="type_error", path=path)
+    return value
+
+
+def _sequence(value: Any, path: str) -> list[Any] | tuple[Any, ...]:
+    if not isinstance(value, (list, tuple)):
+        _fail("expected a JSON array", code="type_error", path=path)
+    return value
+
+
+def _keys(
+    value: dict[str, Any],
+    *,
+    required: set[str],
+    optional: set[str] | frozenset[str] = frozenset(),
+    path: str,
+) -> None:
+    missing = sorted(required - set(value))
+    if missing:
+        field = missing[0]
+        _fail(
+            f"missing required field '{field}'",
+            code="missing_field",
+            path=f"{path}.{field}",
+        )
+    unknown = sorted(set(value) - required - optional)
+    if unknown:
+        field = unknown[0]
+        _fail(
+            f"unknown field '{field}'",
+            code="unknown_field",
+            path=f"{path}.{field}",
+        )
+
+
+def _integer(value: Any, path: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        _fail("expected an integer", code="type_error", path=path)
+    return int(value)
+
+
+def _number(value: Any, path: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        _fail("expected a number", code="type_error", path=path)
+    result = float(value)
+    if not isfinite(result):
+        _fail("number must be finite", code="non_finite", path=path)
+    return result
+
+
+def _string(value: Any, path: str) -> str:
+    if not isinstance(value, str):
+        _fail("expected a string", code="type_error", path=path)
+    if not value:
+        _fail("string must not be empty", code="value_error", path=path)
+    return value
+
+
+def _matrix(value: Any, path: str) -> tuple[tuple[float, ...], ...]:
+    rows = _sequence(value, path)
+    return tuple(
+        tuple(
+            _number(item, f"{path}[{row_index}][{column_index}]")
+            for column_index, item in enumerate(_sequence(row, f"{path}[{row_index}]"))
+        )
+        for row_index, row in enumerate(rows)
+    )
 
 
 @dataclass(frozen=True)
@@ -85,35 +177,221 @@ class Scenario:
     def validate(self) -> None:
         n = len(self.tasks)
         m = len(self.resources)
-        if n == 0 or m == 0:
-            raise ValueError("scenario requires at least one task and one resource")
+        if not isinstance(self.id, str) or not self.id:
+            _fail(
+                "scenario id must be a non-empty string",
+                code="value_error",
+                path="$.id",
+            )
+        if isinstance(self.seed, bool) or not isinstance(self.seed, Integral):
+            _fail("scenario seed must be an integer", code="type_error", path="$.seed")
+        if n == 0:
+            _fail(
+                "scenario requires at least one task",
+                code="value_error",
+                path="$.tasks",
+            )
+        if m == 0:
+            _fail(
+                "scenario requires at least one resource",
+                code="value_error",
+                path="$.resources",
+            )
+        for index, task in enumerate(self.tasks):
+            if isinstance(task.id, bool) or not isinstance(task.id, Integral):
+                _fail(
+                    "task id must be an integer",
+                    code="type_error",
+                    path=f"$.tasks[{index}].id",
+                )
+            if isinstance(task.workload, bool) or not isinstance(task.workload, Real):
+                _fail(
+                    "task workload must be a number",
+                    code="type_error",
+                    path=f"$.tasks[{index}].workload",
+                )
+        for index, resource in enumerate(self.resources):
+            if isinstance(resource.id, bool) or not isinstance(resource.id, Integral):
+                _fail(
+                    "resource id must be an integer",
+                    code="type_error",
+                    path=f"$.resources[{index}].id",
+                )
+            if not isinstance(resource.name, str) or not resource.name:
+                _fail(
+                    "resource name must be a non-empty string",
+                    code="value_error",
+                    path=f"$.resources[{index}].name",
+                )
+            if not isinstance(resource.kind, str):
+                _fail(
+                    "resource kind must be a string",
+                    code="type_error",
+                    path=f"$.resources[{index}].kind",
+                )
+            if isinstance(resource.speed, bool) or not isinstance(resource.speed, Real):
+                _fail(
+                    "resource speed must be a number",
+                    code="type_error",
+                    path=f"$.resources[{index}].speed",
+                )
         if [task.id for task in self.tasks] != list(range(n)):
-            raise ValueError("task ids must be contiguous and start at zero")
+            _fail(
+                "task ids must be contiguous and start at zero",
+                code="id_sequence",
+                path="$.tasks",
+            )
         if [resource.id for resource in self.resources] != list(range(m)):
-            raise ValueError("resource ids must be contiguous and start at zero")
-        if any(task.workload <= 0 for task in self.tasks):
-            raise ValueError("task workloads must be positive")
-        if any(resource.speed <= 0 for resource in self.resources):
-            raise ValueError("resource speeds must be positive")
+            _fail(
+                "resource ids must be contiguous and start at zero",
+                code="id_sequence",
+                path="$.resources",
+            )
+        for index, task in enumerate(self.tasks):
+            if not isfinite(float(task.workload)):
+                _fail(
+                    "task workload must be finite",
+                    code="non_finite",
+                    path=f"$.tasks[{index}].workload",
+                )
+            if task.workload <= 0:
+                _fail(
+                    "task workload must be positive",
+                    code="value_error",
+                    path=f"$.tasks[{index}].workload",
+                )
+        for index, resource in enumerate(self.resources):
+            if resource.kind not in {"device", "edge", "cloud"}:
+                _fail(
+                    "resource kind must be device, edge, or cloud",
+                    code="value_error",
+                    path=f"$.resources[{index}].kind",
+                )
+            if not isfinite(float(resource.speed)):
+                _fail(
+                    "resource speed must be finite",
+                    code="non_finite",
+                    path=f"$.resources[{index}].speed",
+                )
+            if resource.speed <= 0:
+                _fail(
+                    "resource speed must be positive",
+                    code="value_error",
+                    path=f"$.resources[{index}].speed",
+                )
         if len(self.bandwidth) != m or any(len(row) != m for row in self.bandwidth):
-            raise ValueError("bandwidth must be a resource_count square matrix")
+            _fail(
+                "bandwidth must be a resource_count square matrix",
+                code="matrix_shape",
+                path="$.bandwidth",
+            )
         if len(self.latency) != m or any(len(row) != m for row in self.latency):
-            raise ValueError("latency must be a resource_count square matrix")
-        if any(self.bandwidth[i][j] <= 0 for i in range(m) for j in range(m)):
-            raise ValueError("all bandwidth entries must be positive")
-        if any(self.latency[i][j] < 0 for i in range(m) for j in range(m)):
-            raise ValueError("latency entries cannot be negative")
+            _fail(
+                "latency must be a resource_count square matrix",
+                code="matrix_shape",
+                path="$.latency",
+            )
+        for i in range(m):
+            for j in range(m):
+                if isinstance(self.bandwidth[i][j], bool) or not isinstance(
+                    self.bandwidth[i][j], Real
+                ):
+                    _fail(
+                        "bandwidth entry must be a number",
+                        code="type_error",
+                        path=f"$.bandwidth[{i}][{j}]",
+                    )
+                if not isfinite(float(self.bandwidth[i][j])):
+                    _fail(
+                        "bandwidth entry must be finite",
+                        code="non_finite",
+                        path=f"$.bandwidth[{i}][{j}]",
+                    )
+                if self.bandwidth[i][j] <= 0:
+                    _fail(
+                        "bandwidth entry must be positive",
+                        code="value_error",
+                        path=f"$.bandwidth[{i}][{j}]",
+                    )
+                if isinstance(self.latency[i][j], bool) or not isinstance(
+                    self.latency[i][j], Real
+                ):
+                    _fail(
+                        "latency entry must be a number",
+                        code="type_error",
+                        path=f"$.latency[{i}][{j}]",
+                    )
+                if not isfinite(float(self.latency[i][j])):
+                    _fail(
+                        "latency entry must be finite",
+                        code="non_finite",
+                        path=f"$.latency[{i}][{j}]",
+                    )
+                if self.latency[i][j] < 0:
+                    _fail(
+                        "latency entry cannot be negative",
+                        code="value_error",
+                        path=f"$.latency[{i}][{j}]",
+                    )
         seen: set[tuple[int, int]] = set()
         indegree = [0] * n
         succ: list[list[int]] = [[] for _ in range(n)]
-        for edge in self.edges:
-            if not (0 <= edge.source < n and 0 <= edge.target < n):
-                raise ValueError("edge endpoint outside task range")
-            if edge.source == edge.target or edge.data < 0:
-                raise ValueError("invalid dependency edge")
+        for index, edge in enumerate(self.edges):
+            if isinstance(edge.source, bool) or not isinstance(edge.source, Integral):
+                _fail(
+                    "edge source must be an integer",
+                    code="type_error",
+                    path=f"$.edges[{index}].source",
+                )
+            if isinstance(edge.target, bool) or not isinstance(edge.target, Integral):
+                _fail(
+                    "edge target must be an integer",
+                    code="type_error",
+                    path=f"$.edges[{index}].target",
+                )
+            if isinstance(edge.data, bool) or not isinstance(edge.data, Real):
+                _fail(
+                    "edge data must be a number",
+                    code="type_error",
+                    path=f"$.edges[{index}].data",
+                )
+            if not 0 <= edge.source < n:
+                _fail(
+                    "edge source outside task range",
+                    code="value_error",
+                    path=f"$.edges[{index}].source",
+                )
+            if not 0 <= edge.target < n:
+                _fail(
+                    "edge target outside task range",
+                    code="value_error",
+                    path=f"$.edges[{index}].target",
+                )
+            if edge.source == edge.target:
+                _fail(
+                    "dependency edge cannot be a self-loop",
+                    code="value_error",
+                    path=f"$.edges[{index}]",
+                )
+            if not isfinite(float(edge.data)):
+                _fail(
+                    "edge data must be finite",
+                    code="non_finite",
+                    path=f"$.edges[{index}].data",
+                )
+            if edge.data < 0:
+                _fail(
+                    "edge data cannot be negative",
+                    code="value_error",
+                    path=f"$.edges[{index}].data",
+                )
             key = (edge.source, edge.target)
             if key in seen:
-                raise ValueError("duplicate dependency edge")
+                _fail(
+                    "duplicate dependency edge",
+                    code="duplicate_edge",
+                    path=f"$.edges[{index}]",
+                )
             seen.add(key)
             indegree[edge.target] += 1
             succ[edge.source].append(edge.target)
@@ -127,7 +405,11 @@ class Scenario:
                 if indegree[child] == 0:
                     queue.append(child)
         if visited != n:
-            raise ValueError("task graph must be acyclic")
+            _fail(
+                "task graph must be acyclic",
+                code="cycle",
+                path="$.edges",
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -142,24 +424,106 @@ class Scenario:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Scenario":
+        root = _mapping(data, "$")
+        _keys(
+            root,
+            required={"id", "tasks", "resources", "edges", "bandwidth", "latency"},
+            optional={"seed"},
+            path="$",
+        )
+
+        tasks = []
+        for index, value in enumerate(_sequence(root["tasks"], "$.tasks")):
+            path = f"$.tasks[{index}]"
+            item = _mapping(value, path)
+            _keys(item, required={"id", "workload"}, path=path)
+            tasks.append(
+                Task(
+                    id=_integer(item["id"], f"{path}.id"),
+                    workload=_number(item["workload"], f"{path}.workload"),
+                )
+            )
+
+        resources = []
+        for index, value in enumerate(_sequence(root["resources"], "$.resources")):
+            path = f"$.resources[{index}]"
+            item = _mapping(value, path)
+            _keys(item, required={"id", "name", "kind", "speed"}, path=path)
+            resources.append(
+                Resource(
+                    id=_integer(item["id"], f"{path}.id"),
+                    name=_string(item["name"], f"{path}.name"),
+                    kind=_string(item["kind"], f"{path}.kind"),
+                    speed=_number(item["speed"], f"{path}.speed"),
+                )
+            )
+
+        edges = []
+        for index, value in enumerate(_sequence(root["edges"], "$.edges")):
+            path = f"$.edges[{index}]"
+            item = _mapping(value, path)
+            _keys(item, required={"source", "target", "data"}, path=path)
+            edges.append(
+                Edge(
+                    source=_integer(item["source"], f"{path}.source"),
+                    target=_integer(item["target"], f"{path}.target"),
+                    data=_number(item["data"], f"{path}.data"),
+                )
+            )
+
         return cls(
-            id=str(data["id"]),
-            seed=int(data.get("seed", 0)),
-            tasks=tuple(Task(**item) for item in data["tasks"]),
-            resources=tuple(Resource(**item) for item in data["resources"]),
-            edges=tuple(Edge(**item) for item in data["edges"]),
-            bandwidth=tuple(tuple(float(x) for x in row) for row in data["bandwidth"]),
-            latency=tuple(tuple(float(x) for x in row) for row in data["latency"]),
+            id=_string(root["id"], "$.id"),
+            seed=_integer(root.get("seed", 0), "$.seed"),
+            tasks=tuple(tasks),
+            resources=tuple(resources),
+            edges=tuple(edges),
+            bandwidth=_matrix(root["bandwidth"], "$.bandwidth"),
+            latency=_matrix(root["latency"], "$.latency"),
         )
 
     def save(self, path: str | Path) -> None:
         Path(path).write_text(
-            json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(
+                self.to_dict(), ensure_ascii=False, indent=2, allow_nan=False
+            ),
+            encoding="utf-8",
         )
 
     @classmethod
     def load(cls, path: str | Path) -> "Scenario":
-        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+        source = Path(path)
+
+        def reject_constant(value: str) -> None:
+            _fail(
+                f"JSON constant {value} is not allowed",
+                code="non_finite",
+                path="$",
+            )
+
+        try:
+            text = source.read_text(encoding="utf-8-sig")
+        except UnicodeDecodeError as error:
+            _fail(
+                f"scenario file must be UTF-8: {error.reason}",
+                code="encoding_error",
+                path="$",
+            )
+        try:
+            payload = json.loads(
+                text,
+                parse_constant=reject_constant,
+            )
+        except json.JSONDecodeError as error:
+            message = (
+                f"invalid JSON at line {error.lineno}, "
+                f"column {error.colno}: {error.msg}"
+            )
+            _fail(
+                message,
+                code="json_syntax",
+                path="$",
+            )
+        return cls.from_dict(payload)
 
     def content_hash(self) -> str:
         content = self.to_dict()

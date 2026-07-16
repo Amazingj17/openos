@@ -32,6 +32,9 @@ trisched = "trisched.cli:main"
 [tool.setuptools.packages.find]
 include = ["trisched*"]
 
+[tool.setuptools.data-files]
+"share/trisched/schemas" = ["schemas/scenario.schema.json"]
+
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
