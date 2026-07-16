@@ -16,6 +16,7 @@ from trisched.oracle import (
     validate_schedule_independent,
 )
 from trisched.policies import (
+    CpopPolicy,
     GreedyEarliestFinishPolicy,
     HeftPolicy,
     RandomPolicy,
@@ -100,6 +101,7 @@ def test_random_dag_schedules_satisfy_independent_properties(
     )
     policies = (
         HeftPolicy(),
+        CpopPolicy(),
         GreedyEarliestFinishPolicy(),
         RandomPolicy(seed=70_000 + case_index),
     )

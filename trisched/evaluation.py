@@ -14,7 +14,7 @@ import numpy as np
 
 from .env import ScheduleResult, run_policy
 from .learning import MaskedMLPPolicy
-from .policies import GreedyEarliestFinishPolicy, HeftPolicy, RandomPolicy
+from .policies import CpopPolicy, GreedyEarliestFinishPolicy, HeftPolicy, RandomPolicy
 from .scenario import Scenario
 
 
@@ -69,6 +69,7 @@ def evaluate_split(
     for index, scenario in enumerate(scenarios):
         policies = [
             HeftPolicy(),
+            CpopPolicy(),
             GreedyEarliestFinishPolicy(),
             RandomPolicy(seed=random_seed),
             learned_policy,
@@ -115,7 +116,7 @@ def evaluate_split(
         )
     metrics = {
         name: _policy_metrics(rows, name)
-        for name in ("heft", "greedy_eft", "random", "masked_mlp")
+        for name in ("heft", "cpop", "greedy_eft", "random", "masked_mlp")
     }
     return metrics, rows
 

@@ -103,7 +103,7 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
         json.dumps(training_history, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-    print("[3/4] evaluating HEFT, Greedy-EFT, Random and Masked-MLP")
+    print("[3/4] evaluating HEFT, CPOP, Greedy-EFT, Random and Masked-MLP")
     random_seed = int(config["evaluation"].get("random_seed", 991))
     validation_metrics, _ = evaluate_split(
         splits["validation"],

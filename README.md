@@ -9,9 +9,10 @@
 
 - 参数化生成任务 DAG、云/边/端资源与通信矩阵；
 - 使用插入式时间线模拟执行与跨节点通信；
-- 通过统一接口运行 HEFT、Greedy-EFT、Random 和学习策略；
+- 通过统一接口运行 HEFT、CPOP、Greedy-EFT、Random 和学习策略；
 - 对所有“就绪任务 × 资源”候选执行严格合法动作掩码；
 - 使用不复用环境时间计算的第二套 HEFT oracle 和 validator 交叉检查调度；
+- 用小图精确分支定界 solver 冻结 optimum/bound，量化启发式最优性 gap；
 - 用 HEFT 行为克隆预训练两层 NumPy MLP，并将 HEFT 当前决策作为教师先验特征，再以 episodic REINFORCE 学习残差；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
@@ -62,7 +63,9 @@ python -m pytest
 
 测试覆盖场景合法性、DAG 环检测、ready mask、HEFT 调度、神经策略训练/保存/加载，以及完整 pipeline 输出。`tests/fixtures/golden/heft_cases.json` 还固化了 10 个手工推导的 HEFT 黄金案例，覆盖插入式时间线、非对称通信、固定时延和确定性 tie-break。
 
-正确性门禁还包括一条独立实现路径：10 个黄金案例在人工 fixture、生产 HEFT 和独立 oracle 之间逐字段比对；40 个固定 seed 的随机 DAG 分别运行 HEFT、Greedy-EFT 和 Random，共检查 120 份调度；10 类故障注入验证遗漏、重复、越界、时间、依赖、资源重叠和 makespan 错误均会被拒绝。设计边界和复核方法见[独立验证器设计与测试报告](doc/独立验证器设计.md)。
+正确性门禁还包括独立实现路径：10 个黄金案例在人工 fixture、生产 HEFT 和独立 oracle 之间逐字段比对；40 个固定 seed 的随机 DAG 分别运行 HEFT、CPOP、Greedy-EFT 和 Random，共检查 160 份调度；10 类故障注入验证遗漏、重复、越界、时间、依赖、资源重叠和 makespan 错误均会被拒绝。设计边界和复核方法见[独立验证器设计与测试报告](doc/独立验证器设计.md)。
+
+`tests/fixtures/golden/optimal_cases.json` 进一步冻结了 10 个小图的 CPOP 完整决策轨迹、解析下界和精确最优 makespan。精确 solver 穷举所有 active schedule，只用于不超过 8 个任务的小图正确性测试；算法定义、证明边界和结果见[CPOP 与小图精确 Oracle 报告](doc/CPOP与精确Oracle设计.md)。
 
 ## 生成可查看的场景 JSON
 
@@ -91,7 +94,8 @@ configs/smoke.json       最小训练与评测配置
 trisched/scenario.py     场景 schema、校验、生成和 hash
 trisched/env.py          调度环境、插入式时间线和生产合法性检查
 trisched/oracle.py       独立 HEFT、upward rank 和合法性验证
-trisched/policies.py     统一策略接口与 HEFT/Greedy/Random
+trisched/exact.py        小图精确分支定界 solver 与解析下界
+trisched/policies.py     统一策略接口与 HEFT/CPOP/Greedy/Random
 trisched/learning.py     Masked MLP、HEFT 模仿和 REINFORCE
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
 trisched/cli.py          pipeline/generate 命令
@@ -102,6 +106,7 @@ tests/                   单元与集成测试
 
 - 每次评测一个静态 DAG，资源和链路在单个 episode 内不变化；
 - 目标函数仅为 makespan；
+- 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - 学习策略使用手工候选特征，还未使用 GNN；
 - REINFORCE 是最小训练闭环，尚未加入 PPO、课程学习、OOD 数据与多随机种子报告；
 - 当前合成场景用于工程验证，正式实验需要接入 STG/GrapheonRL benchmark 和固定隐藏测试集。

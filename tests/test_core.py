@@ -122,6 +122,7 @@ def test_pipeline_writes_standard_outputs(tmp_path) -> None:
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert summary["primary_metric"]["name"] == "mean_ratio"
     assert summary["test"]["heft"]["mean_ratio"] == pytest.approx(1.0)
+    assert summary["test"]["cpop"]["valid_schedule_rate"] == 1.0
     assert (output / "masked_mlp.npz").exists()
     assert (output / "test_per_instance.csv").exists()
     assert (output / "dataset_manifest.json").exists()
@@ -167,5 +168,6 @@ def test_checkpoint_can_be_evaluated_without_retraining(tmp_path) -> None:
     assert summary["split"] == "test"
     assert summary["metrics"]["masked_mlp"]["mean_ratio"] == pytest.approx(1.0)
     assert summary["metrics"]["masked_mlp"]["valid_schedule_rate"] == 1.0
+    assert summary["metrics"]["cpop"]["valid_schedule_rate"] == 1.0
     assert len(summary["checkpoint"]["sha256"]) == 64
     assert (evaluation_output / "test_per_instance.csv").exists()
