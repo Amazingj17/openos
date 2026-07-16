@@ -96,7 +96,7 @@ python -m trisched pipeline --config configs/smoke.json
 2026-07-16 本地实测：
 
 ```text
-94 passed in 1.95s
+94 passed
 done: test mean_ratio=1.0000 (lower is better; HEFT=1.0)
 ```
 
@@ -108,6 +108,8 @@ done: test mean_ratio=1.0000 (lower is better; HEFT=1.0)
 | `trisched/exact.py` | 小图精确分支定界 solver | `be2fc8e0aca964ce29cb7b01d071ee01780386036f48b321c096724e710c0095` |
 | `tests/fixtures/golden/optimal_cases.json` | 10 例 CPOP 与 optimum/bound 冻结值 | `8767638dd491a051721b3c13f3ff8f7ce011a79f0a96fd561aa4530c1a40cfa1` |
 | `tests/test_cpop_exact.py` | 排名、轨迹、最优性及失败路径测试 | `c2ca33949107a10da7f7c1faaf99384e236d7e3703563773f2706019532223a7` |
+
+实现提交：`424e53a`（`feat(scheduling): [P0-B03] add CPOP and exact small-DAG oracle`）。
 
 ## 7. 已知限制、回退与 A 的复核要求
 
