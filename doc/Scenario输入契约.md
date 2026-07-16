@@ -136,6 +136,8 @@ python -m pytest -o addopts="" -q
 | `tests/fixtures/invalid/scenario_cases.json` | `1c51ad84c32c02777a0b9ab02684fd137919c2fc0e21a716786e97dd69b1f953` |
 | `tests/test_scenario_schema.py` | `10e7b6ee2f50cfb1e5bd2ae402078d398031875a5b0071d42611c9b921adbeef` |
 
+实现提交：`36edfc7`（`feat(scenario): [P0-03] add schema and structured diagnostics`）。
+
 ## 8. 兼容性、限制与复核要求
 
 - `ScenarioValidationError` 是 `ValueError` 子类，原有 `pytest.raises(ValueError)` 和调用方仍兼容。
