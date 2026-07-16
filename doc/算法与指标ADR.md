@@ -73,7 +73,7 @@ M_i=\max_{v\in V} finish(v)
 - 任务执行时长与场景的 workload/speed 一致；
 - 报告的 makespan 与任务完成时刻重算值一致。
 
-当前 `run_policy` 会在每个实例结束后调用 `validate_schedule`，这是正确的第一道门禁。但 `evaluation.py` 的 `valid_schedule_rate` 目前固定写为 `1.0`，且非法结果会让整个批次异常退出，尚不能保留失败行并统计失败率。P0-B02 必须修正这一点。
+当前 `run_policy` 会在每个实例结束后依次调用生产 validator 和独立 validator；非法结果会使整个批次明确失败，因此成功写出的结果都经过双检。但 `evaluation.py` 的 `valid_schedule_rate` 仍固定写为 `1.0`，尚不能保留失败行并统计真实失败率。G1 只据此确认成功调度的语义正确性，不把该字段当作正式失败率证据；P0-08/P1-B02 必须在正式性能实验前补齐失败行和真实失败率统计。
 
 ### 3.2 主指标
 
