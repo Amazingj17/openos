@@ -57,6 +57,20 @@ python -m pytest
 python -m trisched generate --config configs/smoke.json --output outputs/generated
 ```
 
+## 加载 checkpoint 复评
+
+无需重新训练即可加载冻结模型，并在确定性重建的 validation 或 test split 上复评：
+
+```powershell
+python -m trisched evaluate `
+  --config configs/smoke.json `
+  --checkpoint outputs/smoke/masked_mlp.npz `
+  --split test `
+  --output outputs/checkpoint-eval
+```
+
+命令会生成 `evaluation_summary.json`、逐实例 CSV 和示例调度，其中摘要记录 checkpoint 的 SHA-256。
+
 ## 目录
 
 ```text

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -9,6 +10,14 @@ from typing import Any
 from .evaluation import dataset_manifest, evaluate_split, write_summary
 from .learning import MaskedMLPPolicy, train_policy
 from .scenario import Scenario, generate_dataset
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -123,6 +132,49 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
     return summary_path
 
 
+def evaluate_checkpoint(
+    config_path: str | Path,
+    checkpoint_path: str | Path,
+    split_name: str = "test",
+    output_dir: str | Path = "outputs/evaluate",
+) -> Path:
+    """Load a frozen checkpoint and evaluate it without retraining."""
+    if split_name not in {"validation", "test"}:
+        raise ValueError("split_name must be validation or test")
+    config = load_config(config_path)
+    splits = build_splits(config)
+    checkpoint = Path(checkpoint_path)
+    policy = MaskedMLPPolicy.load(checkpoint)
+    destination = Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    random_seed = int(config["evaluation"].get("random_seed", 991))
+    metrics, _ = evaluate_split(
+        splits[split_name], policy, split_name, destination, random_seed
+    )
+    payload = {
+        "format_version": 1,
+        "mode": "checkpoint_evaluation",
+        "split": split_name,
+        "checkpoint": {
+            "path": checkpoint.name,
+            "sha256": _file_sha256(checkpoint),
+        },
+        "dataset": dataset_manifest(splits[split_name], split_name),
+        "metrics": metrics,
+    }
+    summary_path = destination / "evaluation_summary.json"
+    summary_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    ratio = metrics[policy.name]["mean_ratio"]
+    print(
+        f"done: {split_name} mean_ratio={ratio:.4f} "
+        "(loaded checkpoint; no training)"
+    )
+    print(f"summary: {summary_path.resolve()}")
+    return summary_path
+
+
 def generate_scenarios(
     config_path: str | Path, destination: str | Path
 ) -> None:
@@ -154,6 +206,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     generate.add_argument("--config", default="configs/smoke.json")
     generate.add_argument("--output", default="outputs/generated")
+    evaluate = subparsers.add_parser(
+        "evaluate", help="load a checkpoint and evaluate it without retraining"
+    )
+    evaluate.add_argument("--config", default="configs/smoke.json")
+    evaluate.add_argument("--checkpoint", default="outputs/smoke/masked_mlp.npz")
+    evaluate.add_argument("--split", choices=("validation", "test"), default="test")
+    evaluate.add_argument("--output", default="outputs/evaluate")
     return parser
 
 
@@ -163,6 +222,8 @@ def main(argv: list[str] | None = None) -> int:
         run_pipeline(args.config, args.output)
     elif args.command == "generate":
         generate_scenarios(args.config, args.output)
+    elif args.command == "evaluate":
+        evaluate_checkpoint(args.config, args.checkpoint, args.split, args.output)
     else:
         raise AssertionError(f"unknown command: {args.command}")
     return 0
@@ -170,4 +231,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

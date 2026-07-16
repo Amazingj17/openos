@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pytest
 
-from trisched.cli import run_pipeline
+from trisched.cli import evaluate_checkpoint, run_pipeline
 from trisched.env import HeterogeneousDagEnv, run_policy, validate_schedule
 from trisched.learning import MaskedMLPPolicy, candidate_features, train_policy
 from trisched.policies import HeftPolicy, RandomPolicy, compute_upward_ranks
@@ -125,3 +125,47 @@ def test_pipeline_writes_standard_outputs(tmp_path) -> None:
     assert (output / "masked_mlp.npz").exists()
     assert (output / "test_per_instance.csv").exists()
     assert (output / "dataset_manifest.json").exists()
+
+
+def test_checkpoint_can_be_evaluated_without_retraining(tmp_path) -> None:
+    training_output = tmp_path / "training"
+    evaluation_output = tmp_path / "evaluation"
+    config = {
+        "seed": 42,
+        "output_dir": str(training_output),
+        "dataset": {
+            "train_count": 4,
+            "validation_count": 3,
+            "test_count": 3,
+            "task_range": [5, 7],
+            "resource_count": 3,
+            "edge_probability": 0.2,
+        },
+        "training": {
+            "hidden_dim": 8,
+            "imitation_epochs": 1,
+            "reinforce_epochs": 1,
+            "imitation_learning_rate": 0.005,
+            "reinforce_learning_rate": 0.001,
+            "reinforce_temperature": 2.0,
+            "gradient_clip": 5.0,
+        },
+        "evaluation": {"random_seed": 9},
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    run_pipeline(config_path)
+
+    summary_path = evaluate_checkpoint(
+        config_path,
+        training_output / "masked_mlp.npz",
+        "test",
+        evaluation_output,
+    )
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["mode"] == "checkpoint_evaluation"
+    assert summary["split"] == "test"
+    assert summary["metrics"]["masked_mlp"]["mean_ratio"] == pytest.approx(1.0)
+    assert summary["metrics"]["masked_mlp"]["valid_schedule_rate"] == 1.0
+    assert len(summary["checkpoint"]["sha256"]) == 64
+    assert (evaluation_output / "test_per_instance.csv").exists()
