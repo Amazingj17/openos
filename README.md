@@ -59,7 +59,7 @@ mean_ratio = mean(masked_mlp_makespan / HEFT_makespan)
 python -m pytest
 ```
 
-测试覆盖场景合法性、DAG 环检测、ready mask、HEFT 调度、神经策略训练/保存/加载，以及完整 pipeline 输出。
+测试覆盖场景合法性、DAG 环检测、ready mask、HEFT 调度、神经策略训练/保存/加载，以及完整 pipeline 输出。`tests/fixtures/golden/heft_cases.json` 还固化了 10 个手工推导的 HEFT 黄金案例，覆盖插入式时间线、非对称通信、固定时延和确定性 tie-break。
 
 ## 生成可查看的场景 JSON
 
