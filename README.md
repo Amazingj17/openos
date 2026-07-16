@@ -67,7 +67,7 @@ python -m pytest
 
 `tests/fixtures/golden/optimal_cases.json` 进一步冻结了 10 个小图的 CPOP 完整决策轨迹、解析下界和精确最优 makespan。精确 solver 穷举所有 active schedule，只用于不超过 8 个任务的小图正确性测试；算法定义、证明边界和结果见[CPOP 与小图精确 Oracle 报告](doc/CPOP与精确Oracle设计.md)。
 
-上述输入、环境、HEFT、CPOP、小图最优参考和跨平台证据已汇总到 [G1 正确性门禁评审包](doc/G1正确性门禁评审.md)。当前状态为成员 B 已提交、待成员 A 独立复核；A 签字前不得视为 G1 已通过，也不得开始 PPO/GNN。
+上述输入、环境、HEFT、CPOP、小图最优参考和跨平台证据已汇总到 [G1 正确性门禁评审包](doc/G1正确性门禁评审.md)，并由成员 A [独立复核通过](doc/G1独立复核记录.md)。该结论只覆盖当前静态模型正确性；下一任务是 openEuler CPU smoke，尚不能宣称当前学习策略优于 HEFT。
 
 ## 生成可查看的场景 JSON
 
