@@ -1,0 +1,24 @@
+{
+  "seed": 20260716,
+  "output_dir": "outputs/smoke",
+  "dataset": {
+    "train_count": 24,
+    "validation_count": 10,
+    "test_count": 20,
+    "task_range": [8, 16],
+    "resource_count": 3,
+    "edge_probability": 0.18
+  },
+  "training": {
+    "hidden_dim": 32,
+    "imitation_epochs": 3,
+    "reinforce_epochs": 5,
+    "imitation_learning_rate": 0.008,
+    "reinforce_learning_rate": 0.002,
+    "reinforce_temperature": 2.0,
+    "gradient_clip": 5.0
+  },
+  "evaluation": {
+    "random_seed": 991
+  }
+}
