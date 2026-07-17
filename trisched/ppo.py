@@ -1,0 +1,1330 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import platform
+import sys
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from . import __version__
+from .bc import (
+    BehaviorCloningError,
+    FrozenTeacherStates,
+    _file_hash,
+    _git_metadata,
+    _resolve_config_path,
+    _write_json,
+    _write_jsonl,
+    build_teacher_manifest,
+    evaluate_bc_policy,
+    freeze_teacher_dataset,
+    policy_parameter_hash,
+    train_bc_baseline,
+)
+from .benchmark import load_benchmark_manifest, load_frozen_split
+from .env import HeterogeneousDagEnv, validate_schedule
+from .learning import (
+    FEATURE_NAMES,
+    TEACHER_FEATURE_NAMES,
+    MaskedMLPPolicy,
+)
+from .oracle import validate_schedule_independent
+from .scenario import Scenario
+
+
+def _fail(
+    code: str,
+    path: str,
+    message: str,
+    *,
+    details: Mapping[str, Any] | None = None,
+) -> None:
+    raise BehaviorCloningError(
+        code,
+        path,
+        message,
+        details=details,
+    )
+
+
+def _positive_integer(value: Any, path: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        _fail("config_value", path, "expected a positive integer")
+    return value
+
+
+def _finite_number(
+    value: Any,
+    path: str,
+    *,
+    positive: bool = False,
+    non_negative: bool = False,
+) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        _fail("config_value", path, "expected a number")
+    result = float(value)
+    if not math.isfinite(result):
+        _fail("config_value", path, "expected a finite number")
+    if positive and result <= 0:
+        _fail("config_value", path, "expected a positive number")
+    if non_negative and result < 0:
+        _fail("config_value", path, "expected a non-negative number")
+    return result
+
+
+def load_ppo_config(path: str | Path) -> dict[str, Any]:
+    source = Path(path)
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        _fail("config_read", "$", str(error))
+    if not isinstance(payload, dict):
+        _fail("config_type", "$", "expected an object")
+    if payload.get("format_version") != 1:
+        _fail("config_version", "$.format_version", "expected 1")
+
+    seeds = payload.get("seeds")
+    if not isinstance(seeds, list) or any(
+        isinstance(seed, bool) or not isinstance(seed, int) for seed in seeds
+    ):
+        _fail("config_value", "$.seeds", "expected an array of integers")
+    if len(seeds) < 3 or len(set(seeds)) != len(seeds):
+        _fail(
+            "ppo_seed_contract",
+            "$.seeds",
+            "P1-A02 requires at least three distinct training seeds",
+        )
+
+    output_dir = payload.get("output_dir")
+    if not isinstance(output_dir, str) or not output_dir.strip():
+        _fail("config_value", "$.output_dir", "expected a non-empty path")
+    benchmark = payload.get("benchmark")
+    if not isinstance(benchmark, dict):
+        _fail("config_type", "$.benchmark", "expected an object")
+    for key in ("manifest", "raw_root"):
+        if not isinstance(benchmark.get(key), str) or not benchmark[key].strip():
+            _fail(
+                "config_value",
+                f"$.benchmark.{key}",
+                "expected a non-empty path",
+            )
+
+    feature_config = payload.get("features")
+    if not isinstance(feature_config, dict):
+        _fail("config_type", "$.features", "expected an object")
+    excluded = feature_config.get("exclude")
+    if not isinstance(excluded, list) or any(
+        not isinstance(name, str) for name in excluded
+    ):
+        _fail("config_value", "$.features.exclude", "expected feature names")
+    if len(excluded) != len(set(excluded)):
+        _fail("config_value", "$.features.exclude", "features must be unique")
+    unknown = sorted(set(excluded) - set(FEATURE_NAMES))
+    if unknown:
+        _fail(
+            "config_value",
+            "$.features.exclude",
+            "unknown feature names",
+            details={"unknown": unknown},
+        )
+    missing_teacher_exclusions = sorted(
+        set(TEACHER_FEATURE_NAMES) - set(excluded)
+    )
+    if missing_teacher_exclusions:
+        _fail(
+            "ppo_teacher_feature_leakage",
+            "$.features.exclude",
+            "masked PPO must exclude direct HEFT decision features",
+            details={"missing": missing_teacher_exclusions},
+        )
+    selected_features = tuple(
+        name for name in FEATURE_NAMES if name not in set(excluded)
+    )
+    if not selected_features:
+        _fail("config_value", "$.features.exclude", "no features remain")
+
+    bc = payload.get("behavior_cloning")
+    if not isinstance(bc, dict):
+        _fail("config_type", "$.behavior_cloning", "expected an object")
+    normalized_bc = {
+        "hidden_dim": _positive_integer(
+            bc.get("hidden_dim", 32), "$.behavior_cloning.hidden_dim"
+        ),
+        "epochs": _positive_integer(
+            bc.get("epochs", 1), "$.behavior_cloning.epochs"
+        ),
+        "learning_rate": _finite_number(
+            bc.get("learning_rate", 0.004),
+            "$.behavior_cloning.learning_rate",
+            positive=True,
+        ),
+        "gradient_clip": _finite_number(
+            bc.get("gradient_clip", 5.0),
+            "$.behavior_cloning.gradient_clip",
+            non_negative=True,
+        ),
+        "shuffle_seed_offset": _positive_integer(
+            bc.get("shuffle_seed_offset", 101),
+            "$.behavior_cloning.shuffle_seed_offset",
+        ),
+    }
+
+    ppo = payload.get("ppo")
+    if not isinstance(ppo, dict):
+        _fail("config_type", "$.ppo", "expected an object")
+    gamma = _finite_number(ppo.get("gamma", 1.0), "$.ppo.gamma", positive=True)
+    if abs(gamma - 1.0) > 1e-12:
+        _fail(
+            "ppo_reward_contract",
+            "$.ppo.gamma",
+            "gamma must be 1.0 so shaped rewards sum to negative final ratio",
+        )
+    gae_lambda = _finite_number(
+        ppo.get("gae_lambda", 0.95),
+        "$.ppo.gae_lambda",
+        non_negative=True,
+    )
+    if gae_lambda > 1.0:
+        _fail("config_value", "$.ppo.gae_lambda", "expected a value in [0, 1]")
+    clip_ratio = _finite_number(
+        ppo.get("clip_ratio", 0.2), "$.ppo.clip_ratio", positive=True
+    )
+    if clip_ratio >= 1.0:
+        _fail("config_value", "$.ppo.clip_ratio", "expected a value below 1")
+    normalized_ppo = {
+        "epochs": _positive_integer(ppo.get("epochs", 2), "$.ppo.epochs"),
+        "episodes_per_epoch": _positive_integer(
+            ppo.get("episodes_per_epoch", 120),
+            "$.ppo.episodes_per_epoch",
+        ),
+        "update_epochs": _positive_integer(
+            ppo.get("update_epochs", 2), "$.ppo.update_epochs"
+        ),
+        "minibatch_size": _positive_integer(
+            ppo.get("minibatch_size", 256), "$.ppo.minibatch_size"
+        ),
+        "actor_learning_rate": _finite_number(
+            ppo.get("actor_learning_rate", 0.0003),
+            "$.ppo.actor_learning_rate",
+            positive=True,
+        ),
+        "value_learning_rate": _finite_number(
+            ppo.get("value_learning_rate", 0.001),
+            "$.ppo.value_learning_rate",
+            positive=True,
+        ),
+        "value_hidden_dim": _positive_integer(
+            ppo.get("value_hidden_dim", 32), "$.ppo.value_hidden_dim"
+        ),
+        "gamma": gamma,
+        "gae_lambda": gae_lambda,
+        "clip_ratio": clip_ratio,
+        "entropy_coefficient": _finite_number(
+            ppo.get("entropy_coefficient", 0.001),
+            "$.ppo.entropy_coefficient",
+            non_negative=True,
+        ),
+        "target_kl": _finite_number(
+            ppo.get("target_kl", 0.03), "$.ppo.target_kl", positive=True
+        ),
+        "gradient_clip": _finite_number(
+            ppo.get("gradient_clip", 5.0),
+            "$.ppo.gradient_clip",
+            non_negative=True,
+        ),
+        "shuffle_seed_offset": _positive_integer(
+            ppo.get("shuffle_seed_offset", 303),
+            "$.ppo.shuffle_seed_offset",
+        ),
+    }
+
+    selection = payload.get("selection", {})
+    if not isinstance(selection, dict):
+        _fail("config_type", "$.selection", "expected an object")
+    metric = selection.get("metric", "validation_mean_ratio")
+    if metric != "validation_mean_ratio":
+        _fail(
+            "selection_metric",
+            "$.selection.metric",
+            "only validation_mean_ratio is supported",
+        )
+    failure_penalty = _finite_number(
+        selection.get("failure_penalty_ratio", 10.0),
+        "$.selection.failure_penalty_ratio",
+        positive=True,
+    )
+    target_ratio = _finite_number(
+        selection.get("target_ratio", 1.0),
+        "$.selection.target_ratio",
+        positive=True,
+    )
+    ablation = payload.get("ablation", {})
+    if not isinstance(ablation, dict):
+        _fail("config_type", "$.ablation", "expected an object")
+    reference_seed = ablation.get("teacher_feature_reference_seed", seeds[0])
+    if reference_seed not in seeds:
+        _fail(
+            "config_value",
+            "$.ablation.teacher_feature_reference_seed",
+            "reference seed must be one of the training seeds",
+        )
+
+    return {
+        "format_version": 1,
+        "seeds": list(seeds),
+        "output_dir": output_dir,
+        "benchmark": {
+            "manifest": benchmark["manifest"],
+            "raw_root": benchmark["raw_root"],
+        },
+        "features": {
+            "all": list(FEATURE_NAMES),
+            "excluded": list(excluded),
+            "selected": list(selected_features),
+        },
+        "behavior_cloning": normalized_bc,
+        "ppo": normalized_ppo,
+        "selection": {
+            "metric": metric,
+            "failure_penalty_ratio": failure_penalty,
+            "target_ratio": target_ratio,
+            "tie_break": ["zero_failures", "lower_mean_ratio", "earlier_epoch"],
+        },
+        "ablation": {
+            "teacher_feature_reference_seed": reference_seed,
+        },
+    }
+
+
+class ValueNetwork:
+    """Small state-value MLP over mean/max pooled legal-candidate features."""
+
+    def __init__(self, feature_dim: int, hidden_dim: int, seed: int) -> None:
+        if feature_dim <= 0 or hidden_dim <= 0:
+            raise ValueError("value network dimensions must be positive")
+        self.feature_dim = feature_dim
+        self.input_dim = feature_dim * 2
+        self.hidden_dim = hidden_dim
+        self.seed = seed
+        rng = np.random.default_rng(seed)
+        limit_1 = np.sqrt(6.0 / (self.input_dim + hidden_dim))
+        limit_2 = np.sqrt(6.0 / (hidden_dim + 1))
+        self.params: dict[str, np.ndarray] = {
+            "w1": rng.uniform(-limit_1, limit_1, (self.input_dim, hidden_dim)),
+            "b1": np.zeros(hidden_dim, dtype=np.float64),
+            "w2": rng.uniform(-limit_2, limit_2, hidden_dim),
+            "b2": np.zeros(1, dtype=np.float64),
+        }
+        self._adam_m = {
+            name: np.zeros_like(value) for name, value in self.params.items()
+        }
+        self._adam_v = {
+            name: np.zeros_like(value) for name, value in self.params.items()
+        }
+        self._adam_step = 0
+
+    def state_features(self, candidate_features: np.ndarray) -> np.ndarray:
+        values = np.asarray(candidate_features, dtype=np.float64)
+        if values.ndim != 2 or values.shape[0] == 0:
+            raise ValueError("value state requires non-empty candidate features")
+        if values.shape[1] != self.feature_dim:
+            raise ValueError("candidate feature width does not match value network")
+        return np.concatenate((np.mean(values, axis=0), np.max(values, axis=0)))
+
+    def forward(self, state: np.ndarray) -> tuple[np.ndarray, float]:
+        values = np.asarray(state, dtype=np.float64)
+        if values.shape != (self.input_dim,):
+            raise ValueError("value state has the wrong shape")
+        hidden = np.tanh(values @ self.params["w1"] + self.params["b1"])
+        value = float(hidden @ self.params["w2"] + self.params["b2"][0])
+        return hidden, value
+
+    def predict(self, state: np.ndarray) -> float:
+        return self.forward(state)[1]
+
+    def empty_gradients(self) -> dict[str, np.ndarray]:
+        return {name: np.zeros_like(value) for name, value in self.params.items()}
+
+    @staticmethod
+    def add_gradients(
+        target: dict[str, np.ndarray],
+        source: Mapping[str, np.ndarray],
+        scale: float = 1.0,
+    ) -> None:
+        for name in target:
+            target[name] += source[name] * scale
+
+    def loss_gradients(
+        self,
+        state: np.ndarray,
+        target: float,
+    ) -> tuple[float, float, dict[str, np.ndarray]]:
+        hidden, value = self.forward(state)
+        error = value - float(target)
+        hidden_gradient = error * self.params["w2"] * (1.0 - hidden**2)
+        gradients = {
+            "w2": hidden * error,
+            "b2": np.asarray([error], dtype=np.float64),
+            "w1": np.outer(np.asarray(state, dtype=np.float64), hidden_gradient),
+            "b1": hidden_gradient,
+        }
+        return 0.5 * error * error, value, gradients
+
+    def apply_gradients(
+        self,
+        gradients: Mapping[str, np.ndarray],
+        learning_rate: float,
+        clip_norm: float,
+    ) -> float:
+        norm = float(
+            np.sqrt(sum(float(np.sum(value * value)) for value in gradients.values()))
+        )
+        scaled = {name: np.asarray(value) for name, value in gradients.items()}
+        if norm > clip_norm > 0:
+            factor = clip_norm / (norm + 1e-12)
+            scaled = {name: value * factor for name, value in scaled.items()}
+        self._adam_step += 1
+        beta1, beta2 = 0.9, 0.999
+        for name, gradient in scaled.items():
+            self._adam_m[name] = beta1 * self._adam_m[name] + (1 - beta1) * gradient
+            self._adam_v[name] = beta2 * self._adam_v[name] + (1 - beta2) * (
+                gradient * gradient
+            )
+            m_hat = self._adam_m[name] / (1 - beta1**self._adam_step)
+            v_hat = self._adam_v[name] / (1 - beta2**self._adam_step)
+            self.params[name] -= learning_rate * m_hat / (np.sqrt(v_hat) + 1e-8)
+        return norm
+
+    def snapshot(self) -> dict[str, np.ndarray]:
+        return {name: value.copy() for name, value in self.params.items()}
+
+    def clone(self) -> ValueNetwork:
+        clone = ValueNetwork(self.feature_dim, self.hidden_dim, self.seed)
+        for name in clone.params:
+            clone.params[name] = self.params[name].copy()
+        return clone
+
+    def save(self, path: str | Path) -> None:
+        destination = Path(path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            destination,
+            format_version=np.asarray([1], dtype=np.int64),
+            feature_dim=np.asarray([self.feature_dim], dtype=np.int64),
+            hidden_dim=np.asarray([self.hidden_dim], dtype=np.int64),
+            seed=np.asarray([self.seed], dtype=np.int64),
+            **self.params,
+        )
+
+    @classmethod
+    def load(cls, path: str | Path) -> ValueNetwork:
+        data = np.load(path, allow_pickle=False)
+        if int(data["format_version"][0]) != 1:
+            raise ValueError("unsupported value checkpoint format")
+        network = cls(
+            feature_dim=int(data["feature_dim"][0]),
+            hidden_dim=int(data["hidden_dim"][0]),
+            seed=int(data["seed"][0]),
+        )
+        for name in network.params:
+            network.params[name] = np.asarray(data[name], dtype=np.float64)
+        return network
+
+
+def value_parameter_hash(network: ValueNetwork) -> str:
+    digest = hashlib.sha256()
+    schema = {
+        "format_version": 1,
+        "feature_dim": network.feature_dim,
+        "hidden_dim": network.hidden_dim,
+        "parameters": [
+            {
+                "name": name,
+                "shape": list(network.params[name].shape),
+                "dtype": "float64-little-endian",
+            }
+            for name in sorted(network.params)
+        ],
+    }
+    digest.update(
+        json.dumps(
+            schema,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+    for name in sorted(network.params):
+        digest.update(name.encode("utf-8"))
+        values = np.asarray(network.params[name], dtype="<f8", order="C")
+        digest.update(values.tobytes(order="C"))
+    return digest.hexdigest()
+
+
+@dataclass(frozen=True)
+class PPOTransition:
+    candidate_features: np.ndarray
+    selected_index: int
+    old_log_probability: float
+    state_features: np.ndarray
+    advantage: float
+    return_value: float
+
+
+def compute_gae(
+    rewards: Sequence[float],
+    values: Sequence[float],
+    *,
+    gamma: float,
+    gae_lambda: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    if len(rewards) != len(values) or not rewards:
+        raise ValueError("GAE requires equally sized non-empty rewards and values")
+    advantages = np.zeros(len(rewards), dtype=np.float64)
+    next_value = 0.0
+    next_advantage = 0.0
+    for index in range(len(rewards) - 1, -1, -1):
+        delta = float(rewards[index]) + gamma * next_value - float(values[index])
+        next_advantage = delta + gamma * gae_lambda * next_advantage
+        advantages[index] = next_advantage
+        next_value = float(values[index])
+    returns = advantages + np.asarray(values, dtype=np.float64)
+    return advantages, returns
+
+
+def _clone_policy(policy: MaskedMLPPolicy) -> MaskedMLPPolicy:
+    clone = MaskedMLPPolicy(
+        hidden_dim=policy.hidden_dim,
+        seed=policy.seed,
+        deterministic=True,
+        feature_names=policy.feature_names,
+    )
+    for name in clone.params:
+        clone.params[name] = policy.params[name].copy()
+    return clone
+
+
+def _manifest_records(
+    manifest: Mapping[str, Any],
+    scenarios: Sequence[Scenario],
+    *,
+    split: str,
+    purpose: str,
+) -> dict[str, Mapping[str, Any]]:
+    if manifest.get("split") != split or manifest.get("purpose") != purpose:
+        _fail("ppo_split_usage", "$.split", "manifest split or purpose changed")
+    entries = manifest.get("entries")
+    if not isinstance(entries, list):
+        _fail("teacher_manifest", "$.entries", "expected an array")
+    records = {
+        str(entry["scenario_id"]): entry
+        for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("scenario_id"), str)
+    }
+    if len(records) != len(entries) or set(records) != {
+        scenario.id for scenario in scenarios
+    }:
+        _fail(
+            "teacher_manifest",
+            "$.entries",
+            "manifest scenarios do not exactly match PPO scenarios",
+        )
+    for scenario in scenarios:
+        if records[scenario.id].get("scenario_hash") != scenario.content_hash():
+            _fail(
+                "teacher_manifest",
+                f"$.entries.{scenario.id}",
+                "Scenario hash changed",
+            )
+    return records
+
+
+def _collect_episode(
+    actor: MaskedMLPPolicy,
+    critic: ValueNetwork,
+    scenario: Scenario,
+    heft_makespan: float,
+    *,
+    gamma: float,
+    gae_lambda: float,
+) -> tuple[list[PPOTransition], float, float]:
+    env = HeterogeneousDagEnv(scenario)
+    actor.reset(scenario)
+    features: list[np.ndarray] = []
+    selected_indices: list[int] = []
+    old_log_probabilities: list[float] = []
+    states: list[np.ndarray] = []
+    values: list[float] = []
+    rewards: list[float] = []
+    current_makespan = 0.0
+    while not env.done:
+        cache = actor.distribution(env)
+        selected_index = int(
+            actor.rng.choice(len(cache.actions), p=cache.probabilities)
+        )
+        action = cache.actions[selected_index]
+        state = critic.state_features(cache.features)
+        value = critic.predict(state)
+        env.step(*action)
+        next_makespan = max(entry.finish for entry in env.entries.values())
+        reward = -(next_makespan - current_makespan) / heft_makespan
+        current_makespan = next_makespan
+        features.append(cache.features.copy())
+        selected_indices.append(selected_index)
+        old_log_probabilities.append(
+            float(np.log(cache.probabilities[selected_index] + 1e-12))
+        )
+        states.append(state)
+        values.append(value)
+        rewards.append(reward)
+    result = env.result(actor.name)
+    validate_schedule(scenario, result)
+    validate_schedule_independent(scenario, result)
+    ratio = result.makespan / heft_makespan
+    reward_error = abs(float(np.sum(rewards)) + ratio)
+    if reward_error > 1e-9:
+        raise RuntimeError("incremental PPO rewards do not sum to negative ratio")
+    advantages, returns = compute_gae(
+        rewards,
+        values,
+        gamma=gamma,
+        gae_lambda=gae_lambda,
+    )
+    transitions = [
+        PPOTransition(
+            candidate_features=features[index],
+            selected_index=selected_indices[index],
+            old_log_probability=old_log_probabilities[index],
+            state_features=states[index],
+            advantage=float(advantages[index]),
+            return_value=float(returns[index]),
+        )
+        for index in range(len(rewards))
+    ]
+    return transitions, ratio, reward_error
+
+
+def _update_ppo(
+    actor: MaskedMLPPolicy,
+    critic: ValueNetwork,
+    transitions: Sequence[PPOTransition],
+    config: Mapping[str, Any],
+    rng: np.random.Generator,
+) -> dict[str, Any]:
+    if not transitions:
+        raise ValueError("PPO update requires transitions")
+    raw_advantages = np.asarray(
+        [transition.advantage for transition in transitions],
+        dtype=np.float64,
+    )
+    advantage_mean = float(np.mean(raw_advantages))
+    advantage_std = float(np.std(raw_advantages))
+    normalized_advantages = (raw_advantages - advantage_mean) / (
+        advantage_std + 1e-8
+    )
+    clip_ratio = float(config["clip_ratio"])
+    entropy_coefficient = float(config["entropy_coefficient"])
+    update_records: list[dict[str, Any]] = []
+    stopped_early = False
+    for update_epoch in range(1, int(config["update_epochs"]) + 1):
+        policy_losses: list[float] = []
+        value_losses: list[float] = []
+        entropies: list[float] = []
+        approximate_kls: list[float] = []
+        clipped: list[float] = []
+        actor_norms: list[float] = []
+        value_norms: list[float] = []
+        permutation = rng.permutation(len(transitions))
+        for start in range(0, len(transitions), int(config["minibatch_size"])):
+            indices = permutation[
+                start : start + int(config["minibatch_size"])
+            ]
+            if len(indices) == 0:
+                continue
+            actor_gradients = actor.empty_gradients()
+            value_gradients = critic.empty_gradients()
+            for raw_index in indices:
+                index = int(raw_index)
+                transition = transitions[index]
+                advantage = float(normalized_advantages[index])
+                cache = actor.distribution_from_features(
+                    transition.candidate_features
+                )
+                probability = float(cache.probabilities[transition.selected_index])
+                new_log_probability = float(np.log(probability + 1e-12))
+                log_ratio = new_log_probability - transition.old_log_probability
+                ratio = float(np.exp(np.clip(log_ratio, -20.0, 20.0)))
+                unclipped_objective = ratio * advantage
+                clipped_objective = (
+                    float(np.clip(ratio, 1.0 - clip_ratio, 1.0 + clip_ratio))
+                    * advantage
+                )
+                objective = min(unclipped_objective, clipped_objective)
+                policy_losses.append(-objective)
+                is_clipped = unclipped_objective > clipped_objective + 1e-15
+                clipped.append(float(is_clipped))
+                if not is_clipped:
+                    policy_gradient = actor.log_probability_gradients(
+                        cache,
+                        transition.selected_index,
+                    )
+                    actor.add_gradients(
+                        actor_gradients,
+                        policy_gradient,
+                        scale=ratio * advantage,
+                    )
+                entropy = -float(
+                    np.sum(
+                        cache.probabilities
+                        * np.log(cache.probabilities + 1e-12)
+                    )
+                )
+                entropies.append(entropy)
+                if entropy_coefficient:
+                    actor.add_gradients(
+                        actor_gradients,
+                        actor.entropy_gradients(cache),
+                        scale=entropy_coefficient,
+                    )
+                value_loss, _, gradients = critic.loss_gradients(
+                    transition.state_features,
+                    transition.return_value,
+                )
+                value_losses.append(value_loss)
+                critic.add_gradients(value_gradients, gradients)
+                approximate_kls.append(0.5 * log_ratio * log_ratio)
+            scale = 1.0 / len(indices)
+            actor_gradients = {
+                name: gradient * scale
+                for name, gradient in actor_gradients.items()
+            }
+            value_gradients = {
+                name: gradient * scale
+                for name, gradient in value_gradients.items()
+            }
+            actor_norms.append(
+                actor.apply_gradients(
+                    actor_gradients,
+                    float(config["actor_learning_rate"]),
+                    float(config["gradient_clip"]),
+                )
+            )
+            value_norms.append(
+                critic.apply_gradients(
+                    value_gradients,
+                    float(config["value_learning_rate"]),
+                    float(config["gradient_clip"]),
+                )
+            )
+        record = {
+            "update_epoch": update_epoch,
+            "policy_loss": float(np.mean(policy_losses)),
+            "value_loss": float(np.mean(value_losses)),
+            "entropy": float(np.mean(entropies)),
+            "approximate_kl": float(np.mean(approximate_kls)),
+            "clip_fraction": float(np.mean(clipped)),
+            "mean_actor_gradient_norm": float(np.mean(actor_norms)),
+            "mean_value_gradient_norm": float(np.mean(value_norms)),
+        }
+        update_records.append(record)
+        if record["approximate_kl"] > float(config["target_kl"]):
+            stopped_early = True
+            break
+    return {
+        "transition_count": len(transitions),
+        "advantage_mean_before_normalization": advantage_mean,
+        "advantage_std_before_normalization": advantage_std,
+        "stopped_early_for_kl": stopped_early,
+        "updates": update_records,
+    }
+
+
+def train_masked_ppo(
+    warm_start: MaskedMLPPolicy,
+    train_scenarios: Sequence[Scenario],
+    train_teacher_manifest: Mapping[str, Any],
+    validation_scenarios: Sequence[Scenario],
+    validation_reference_manifest: Mapping[str, Any],
+    config: Mapping[str, Any],
+    *,
+    seed: int,
+    validation_frozen_states: Mapping[str, FrozenTeacherStates] | None = None,
+) -> tuple[
+    MaskedMLPPolicy,
+    MaskedMLPPolicy,
+    ValueNetwork,
+    ValueNetwork,
+    dict[str, Any],
+]:
+    if set(warm_start.feature_names) & set(TEACHER_FEATURE_NAMES):
+        _fail(
+            "ppo_teacher_feature_leakage",
+            "$.feature_names",
+            "PPO actor contains direct HEFT decision features",
+        )
+    if int(config["episodes_per_epoch"]) > len(train_scenarios):
+        _fail(
+            "config_value",
+            "$.ppo.episodes_per_epoch",
+            "cannot exceed the number of train scenarios",
+        )
+    train_records = _manifest_records(
+        train_teacher_manifest,
+        train_scenarios,
+        split="train",
+        purpose="behavior_cloning_teacher",
+    )
+    _manifest_records(
+        validation_reference_manifest,
+        validation_scenarios,
+        split="validation",
+        purpose="model_selection_reference",
+    )
+    actor = _clone_policy(warm_start)
+    critic = ValueNetwork(
+        feature_dim=len(actor.feature_names),
+        hidden_dim=int(config["value_hidden_dim"]),
+        seed=seed + 404,
+    )
+    rng = np.random.default_rng(seed + int(config["shuffle_seed_offset"]))
+    initial_validation, _ = evaluate_bc_policy(
+        actor,
+        validation_scenarios,
+        validation_reference_manifest,
+        failure_penalty_ratio=float(config["failure_penalty_ratio"]),
+        frozen_teacher_states=validation_frozen_states,
+    )
+    best_key = (
+        float(initial_validation["failure_count"]),
+        float(initial_validation["mean_ratio"]),
+        0.0,
+    )
+    best_epoch = 0
+    best_actor = _clone_policy(actor)
+    best_critic = critic.clone()
+    history: list[dict[str, Any]] = [
+        {
+            "epoch": 0,
+            "source": "behavior_cloning_warm_start",
+            "validation": initial_validation,
+        }
+    ]
+    for epoch in range(1, int(config["epochs"]) + 1):
+        transitions: list[PPOTransition] = []
+        train_ratios: list[float] = []
+        reward_errors: list[float] = []
+        selected = rng.permutation(len(train_scenarios))[
+            : int(config["episodes_per_epoch"])
+        ]
+        for raw_index in selected:
+            scenario = train_scenarios[int(raw_index)]
+            episode, ratio, reward_error = _collect_episode(
+                actor,
+                critic,
+                scenario,
+                float(train_records[scenario.id]["makespan"]),
+                gamma=float(config["gamma"]),
+                gae_lambda=float(config["gae_lambda"]),
+            )
+            transitions.extend(episode)
+            train_ratios.append(ratio)
+            reward_errors.append(reward_error)
+        update = _update_ppo(actor, critic, transitions, config, rng)
+        validation, _ = evaluate_bc_policy(
+            actor,
+            validation_scenarios,
+            validation_reference_manifest,
+            failure_penalty_ratio=float(config["failure_penalty_ratio"]),
+            frozen_teacher_states=validation_frozen_states,
+        )
+        history.append(
+            {
+                "epoch": epoch,
+                "source": "masked_ppo",
+                "train_episode_count": len(train_ratios),
+                "train_mean_ratio": float(np.mean(train_ratios)),
+                "train_min_ratio": float(np.min(train_ratios)),
+                "train_max_ratio": float(np.max(train_ratios)),
+                "reward_identity_max_abs_error": float(np.max(reward_errors)),
+                "update": update,
+                "validation": validation,
+            }
+        )
+        key = (
+            float(validation["failure_count"]),
+            float(validation["mean_ratio"]),
+            float(epoch),
+        )
+        if key < best_key:
+            best_key = key
+            best_epoch = epoch
+            best_actor = _clone_policy(actor)
+            best_critic = critic.clone()
+    return best_actor, _clone_policy(actor), best_critic, critic.clone(), {
+        "format_version": 1,
+        "algorithm": "masked PPO with GAE and BC warm start",
+        "seed": seed,
+        "feature_names": list(actor.feature_names),
+        "reward": "negative incremental makespan divided by HEFT makespan",
+        "reward_sum_identity": "sum(step_reward) == -final_ratio",
+        "epochs": history,
+        "selection": {
+            "split": "validation",
+            "test_accessed": False,
+            "metric": "validation_mean_ratio",
+            "candidates": "BC warm start plus every PPO epoch",
+            "tie_break": ["zero_failures", "lower_mean_ratio", "earlier_epoch"],
+            "best_epoch": best_epoch,
+        },
+    }
+
+
+def _checkpoint_metadata(
+    actor_path: Path,
+    actor: MaskedMLPPolicy,
+    value_path: Path,
+    critic: ValueNetwork,
+) -> dict[str, Any]:
+    return {
+        "actor": {
+            "name": actor_path.name,
+            "sha256": _file_hash(actor_path),
+            "parameter_sha256": policy_parameter_hash(actor),
+        },
+        "value": {
+            "name": value_path.name,
+            "sha256": _file_hash(value_path),
+            "parameter_sha256": value_parameter_hash(critic),
+        },
+    }
+
+
+def run_ppo_pipeline(
+    config_path: str | Path,
+    output_override: str | Path | None = None,
+) -> Path:
+    """Run the P1-A02 no-test, multi-seed masked PPO validation pipeline."""
+
+    config_source = Path(config_path).resolve()
+    config = load_ppo_config(config_source)
+    manifest_path = _resolve_config_path(
+        config_source, config["benchmark"]["manifest"]
+    )
+    raw_root = _resolve_config_path(config_source, config["benchmark"]["raw_root"])
+    output_dir = (
+        _resolve_config_path(config_source, config["output_dir"])
+        if output_override is None
+        else Path(output_override).resolve()
+    )
+    if output_dir.exists() and any(output_dir.iterdir()):
+        _fail(
+            "output_not_empty",
+            "$.output_dir",
+            f"refusing to mix evidence in {output_dir}",
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(output_dir / "resolved_config.json", config)
+
+    print("[1/6] loading verified train and validation splits (test forbidden)")
+    benchmark_manifest = load_benchmark_manifest(manifest_path)
+    manifest_sha256 = _file_hash(manifest_path)
+    train_scenarios = load_frozen_split(
+        raw_root,
+        manifest_path,
+        "train",
+        purpose="teacher",
+    )
+    validation_scenarios = load_frozen_split(
+        raw_root,
+        manifest_path,
+        "validation",
+        purpose="model_selection",
+    )
+    train_entries = [
+        entry for entry in benchmark_manifest["entries"] if entry["split"] == "train"
+    ]
+    validation_entries = [
+        entry
+        for entry in benchmark_manifest["entries"]
+        if entry["split"] == "validation"
+    ]
+    repository = Path(__file__).resolve().parents[1]
+    code_metadata = _git_metadata(repository)
+
+    print("[2/6] generating production/independent HEFT manifests")
+    train_teacher = build_teacher_manifest(
+        train_scenarios,
+        train_entries,
+        split="train",
+        purpose="behavior_cloning_teacher",
+        benchmark_manifest_name=manifest_path.name,
+        benchmark_manifest_sha256=manifest_sha256,
+        benchmark_id=benchmark_manifest["benchmark_id"],
+        code_metadata=code_metadata,
+    )
+    validation_reference = build_teacher_manifest(
+        validation_scenarios,
+        validation_entries,
+        split="validation",
+        purpose="model_selection_reference",
+        benchmark_manifest_name=manifest_path.name,
+        benchmark_manifest_sha256=manifest_sha256,
+        benchmark_id=benchmark_manifest["benchmark_id"],
+        code_metadata=code_metadata,
+    )
+    _write_json(output_dir / "train_teacher_manifest.json", train_teacher)
+    _write_json(
+        output_dir / "validation_reference_manifest.json",
+        validation_reference,
+    )
+    _write_jsonl(output_dir / "teacher_failures.jsonl", [])
+
+    print("[3/6] freezing teacher states and running feature ablation reference")
+    train_states = freeze_teacher_dataset(
+        train_scenarios,
+        train_teacher,
+        split="train",
+        purpose="behavior_cloning_teacher",
+    )
+    validation_states = freeze_teacher_dataset(
+        validation_scenarios,
+        validation_reference,
+        split="validation",
+        purpose="model_selection_reference",
+    )
+    bc_common = {
+        **config["behavior_cloning"],
+        "failure_penalty_ratio": config["selection"]["failure_penalty_ratio"],
+    }
+    reference_seed = int(config["ablation"]["teacher_feature_reference_seed"])
+    reference_actor, _, reference_curve = train_bc_baseline(
+        train_scenarios,
+        train_teacher,
+        validation_scenarios,
+        validation_reference,
+        {**bc_common, "feature_names": list(FEATURE_NAMES)},
+        seed=reference_seed,
+        train_frozen_states=train_states,
+        validation_frozen_states=validation_states,
+    )
+    reference_metrics, _ = evaluate_bc_policy(
+        reference_actor,
+        validation_scenarios,
+        validation_reference,
+        failure_penalty_ratio=config["selection"]["failure_penalty_ratio"],
+        frozen_teacher_states=validation_states,
+    )
+    reference_path = output_dir / "ablation_with_teacher_bc.npz"
+    reference_actor.save(reference_path)
+
+    print("[4/6] training no-teacher-feature BC plus masked PPO across seeds")
+    artifact_names = [
+        "resolved_config.json",
+        "train_teacher_manifest.json",
+        "validation_reference_manifest.json",
+        "teacher_failures.jsonl",
+        reference_path.name,
+    ]
+    seed_results: list[dict[str, Any]] = []
+    first_no_teacher_metrics: dict[str, Any] | None = None
+    for seed in config["seeds"]:
+        prefix = f"seed_{seed}"
+        warm_actor, _, warm_curve = train_bc_baseline(
+            train_scenarios,
+            train_teacher,
+            validation_scenarios,
+            validation_reference,
+            {
+                **bc_common,
+                "feature_names": config["features"]["selected"],
+            },
+            seed=int(seed),
+            train_frozen_states=train_states,
+            validation_frozen_states=validation_states,
+        )
+        warm_metrics, _ = evaluate_bc_policy(
+            warm_actor,
+            validation_scenarios,
+            validation_reference,
+            failure_penalty_ratio=config["selection"]["failure_penalty_ratio"],
+            frozen_teacher_states=validation_states,
+        )
+        if int(seed) == reference_seed:
+            first_no_teacher_metrics = warm_metrics
+        warm_path = output_dir / f"{prefix}_bc_warm_start.npz"
+        warm_actor.save(warm_path)
+        (
+            best_actor,
+            last_actor,
+            best_value,
+            last_value,
+            ppo_curve,
+        ) = train_masked_ppo(
+            warm_actor,
+            train_scenarios,
+            train_teacher,
+            validation_scenarios,
+            validation_reference,
+            {
+                **config["ppo"],
+                "failure_penalty_ratio": config["selection"][
+                    "failure_penalty_ratio"
+                ],
+            },
+            seed=int(seed),
+            validation_frozen_states=validation_states,
+        )
+        best_metrics, best_rows = evaluate_bc_policy(
+            best_actor,
+            validation_scenarios,
+            validation_reference,
+            failure_penalty_ratio=config["selection"]["failure_penalty_ratio"],
+            frozen_teacher_states=validation_states,
+        )
+        last_metrics, last_rows = evaluate_bc_policy(
+            last_actor,
+            validation_scenarios,
+            validation_reference,
+            failure_penalty_ratio=config["selection"]["failure_penalty_ratio"],
+            frozen_teacher_states=validation_states,
+        )
+        best_actor_path = output_dir / f"{prefix}_ppo_best_policy.npz"
+        last_actor_path = output_dir / f"{prefix}_ppo_last_policy.npz"
+        best_value_path = output_dir / f"{prefix}_ppo_best_value.npz"
+        last_value_path = output_dir / f"{prefix}_ppo_last_value.npz"
+        best_actor.save(best_actor_path)
+        last_actor.save(last_actor_path)
+        best_value.save(best_value_path)
+        last_value.save(last_value_path)
+        curve_path = output_dir / f"{prefix}_training_curve.json"
+        diagnostics_path = output_dir / f"{prefix}_validation_diagnostics.json"
+        failures_path = output_dir / f"{prefix}_validation_failures.jsonl"
+        _write_json(
+            curve_path,
+            {
+                "format_version": 1,
+                "seed": seed,
+                "behavior_cloning": warm_curve,
+                "ppo": ppo_curve,
+            },
+        )
+        _write_json(
+            diagnostics_path,
+            {
+                "format_version": 1,
+                "seed": seed,
+                "split": "validation",
+                "test_accessed": False,
+                "best": {"metrics": best_metrics, "per_instance": best_rows},
+                "last": {"metrics": last_metrics, "per_instance": last_rows},
+            },
+        )
+        _write_jsonl(
+            failures_path,
+            [row for row in best_rows if row["status"] == "failure"],
+        )
+        best_checkpoint = _checkpoint_metadata(
+            best_actor_path,
+            best_actor,
+            best_value_path,
+            best_value,
+        )
+        last_checkpoint = _checkpoint_metadata(
+            last_actor_path,
+            last_actor,
+            last_value_path,
+            last_value,
+        )
+        seed_results.append(
+            {
+                "seed": seed,
+                "warm_start_validation": warm_metrics,
+                "selection": ppo_curve["selection"],
+                "best_validation": best_metrics,
+                "last_validation": last_metrics,
+                "best_checkpoint": best_checkpoint,
+                "last_checkpoint": last_checkpoint,
+                "improved_over_warm_start": best_metrics["mean_ratio"]
+                < warm_metrics["mean_ratio"] - 1e-12,
+                "selected_warm_start": ppo_curve["selection"]["best_epoch"] == 0,
+            }
+        )
+        artifact_names.extend(
+            [
+                warm_path.name,
+                best_actor_path.name,
+                last_actor_path.name,
+                best_value_path.name,
+                last_value_path.name,
+                curve_path.name,
+                diagnostics_path.name,
+                failures_path.name,
+            ]
+        )
+    assert first_no_teacher_metrics is not None
+
+    print("[5/6] aggregating validation gate and writing summary")
+    ablation = {
+        "format_version": 1,
+        "seed": reference_seed,
+        "controlled_change": "remove is_heft_task and is_heft_pair",
+        "with_teacher_features": {
+            "feature_names": list(FEATURE_NAMES),
+            "training": reference_curve,
+            "validation": reference_metrics,
+            "checkpoint": {
+                "name": reference_path.name,
+                "sha256": _file_hash(reference_path),
+                "parameter_sha256": policy_parameter_hash(reference_actor),
+            },
+        },
+        "without_teacher_features": {
+            "feature_names": config["features"]["selected"],
+            "validation": first_no_teacher_metrics,
+        },
+        "test_accessed": False,
+    }
+    ablation_path = output_dir / "feature_ablation.json"
+    _write_json(ablation_path, ablation)
+    artifact_names.append(ablation_path.name)
+
+    seed_ratios = [
+        float(result["best_validation"]["mean_ratio"])
+        for result in seed_results
+    ]
+    validation_gate_passed = all(
+        result["best_validation"]["failure_count"] == 0
+        and result["best_validation"]["illegal_action_count"] == 0
+        and result["best_validation"]["mean_ratio"]
+        <= float(config["selection"]["target_ratio"]) + 1e-12
+        for result in seed_results
+    )
+    summary = {
+        "format_version": 1,
+        "mode": "stg_masked_ppo",
+        "benchmark_id": benchmark_manifest["benchmark_id"],
+        "data_access": {
+            "loaded_splits": ["train", "validation"],
+            "teacher_split": "train",
+            "training_split": "train",
+            "model_selection_split": "validation",
+            "test_accessed": False,
+            "test_status": "forbidden_until_final_evaluation",
+        },
+        "features": config["features"],
+        "teacher": {
+            "scenario_count": train_teacher["scenario_count"],
+            "action_count": train_teacher["action_count"],
+            "failure_count": train_teacher["failure_count"],
+            "trace_hashes_sha256": train_teacher["trace_hashes_sha256"],
+            "schedule_hashes_sha256": train_teacher["schedule_hashes_sha256"],
+        },
+        "ablation": "feature_ablation.json",
+        "seeds": seed_results,
+        "aggregate_validation": {
+            "seed_count": len(seed_results),
+            "mean_of_seed_mean_ratios": float(np.mean(seed_ratios)),
+            "std_of_seed_mean_ratios": float(np.std(seed_ratios)),
+            "min_seed_mean_ratio": float(np.min(seed_ratios)),
+            "max_seed_mean_ratio": float(np.max(seed_ratios)),
+            "improved_seed_count": sum(
+                int(result["improved_over_warm_start"])
+                for result in seed_results
+            ),
+            "warm_start_fallback_count": sum(
+                int(result["selected_warm_start"]) for result in seed_results
+            ),
+            "failure_count": sum(
+                int(result["best_validation"]["failure_count"])
+                for result in seed_results
+            ),
+            "illegal_action_count": sum(
+                int(result["best_validation"]["illegal_action_count"])
+                for result in seed_results
+            ),
+        },
+        "selection": {
+            **config["selection"],
+            "split": "validation",
+            "test_accessed": False,
+        },
+        "validation_gate_passed": validation_gate_passed,
+        "recommendation": (
+            "proceed_to_independent_review"
+            if validation_gate_passed
+            else "fallback_to_p1_a01_and_tune_only_on_validation"
+        ),
+        "run_manifest": "ppo_run_manifest.json",
+    }
+    summary_path = output_dir / "ppo_summary.json"
+    _write_json(summary_path, summary)
+    artifact_names.append(summary_path.name)
+
+    print("[6/6] writing reproducibility manifest")
+    artifacts = {
+        name: {
+            "bytes": (output_dir / name).stat().st_size,
+            "sha256": _file_hash(output_dir / name),
+        }
+        for name in sorted(artifact_names)
+    }
+    lockfile = repository / "requirements-lock.txt"
+    run_manifest = {
+        "format_version": 1,
+        "mode": "stg_masked_ppo",
+        "created_at_utc": datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
+        "code": code_metadata,
+        "runtime": {
+            "trisched": __version__,
+            "python": sys.version,
+            "platform": platform.platform(),
+            "numpy": np.__version__,
+        },
+        "inputs": {
+            "config": {
+                "name": config_source.name,
+                "sha256": _file_hash(config_source),
+            },
+            "benchmark_manifest": {
+                "name": manifest_path.name,
+                "sha256": manifest_sha256,
+            },
+            "dependency_lock": {
+                "name": lockfile.name,
+                "sha256": _file_hash(lockfile),
+            }
+            if lockfile.is_file()
+            else None,
+            "splits": {
+                "train": benchmark_manifest["splits"]["train"],
+                "validation": benchmark_manifest["splits"]["validation"],
+            },
+            "feature_names": config["features"]["selected"],
+            "seeds": config["seeds"],
+            "test_accessed": False,
+        },
+        "checkpoints": {
+            str(result["seed"]): {
+                "best": result["best_checkpoint"],
+                "last": result["last_checkpoint"],
+            }
+            for result in seed_results
+        },
+        "artifacts": artifacts,
+    }
+    _write_json(output_dir / "ppo_run_manifest.json", run_manifest)
+    print(
+        "done: seed mean ratios="
+        + ", ".join(f"{ratio:.6f}" for ratio in seed_ratios)
+        + f", validation_gate_passed={validation_gate_passed}"
+    )
+    print(f"summary: {summary_path.resolve()}")
+    return summary_path

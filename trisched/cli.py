@@ -24,6 +24,7 @@ from .evaluation import (
     write_summary,
 )
 from .learning import MaskedMLPPolicy, train_policy
+from .ppo import run_ppo_pipeline
 from .scenario import Scenario, ScenarioValidationError, generate_dataset
 from .schedulers import SchedulerAdapterError
 
@@ -539,6 +540,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     train_bc.add_argument("--config", default="configs/stg_bc.json")
     train_bc.add_argument("--output", default=None)
+    train_ppo = subparsers.add_parser(
+        "train-ppo",
+        help="train multi-seed masked PPO on public-STG train/validation",
+    )
+    train_ppo.add_argument("--config", default="configs/stg_ppo.json")
+    train_ppo.add_argument("--output", default=None)
     generate = subparsers.add_parser(
         "generate", help="materialize deterministic scenario JSON files"
     )
@@ -574,6 +581,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 3
         elif args.command == "train-bc":
             run_bc_pipeline(args.config, args.output)
+        elif args.command == "train-ppo":
+            run_ppo_pipeline(args.config, args.output)
         elif args.command == "generate":
             generate_scenarios(args.config, args.output)
         elif args.command == "evaluate":

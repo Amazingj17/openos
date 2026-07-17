@@ -161,7 +161,7 @@ def policy_parameter_hash(policy: MaskedMLPPolicy) -> str:
     schema = {
         "format_version": 1,
         "hidden_dim": policy.hidden_dim,
-        "feature_names": list(FEATURE_NAMES),
+        "feature_names": list(policy.feature_names),
         "parameters": [
             {
                 "name": name,
@@ -565,16 +565,40 @@ def _freeze_teacher_states(
     return tuple(states)
 
 
+def freeze_teacher_dataset(
+    scenarios: Sequence[Scenario],
+    manifest: Mapping[str, Any],
+    *,
+    split: str,
+    purpose: str,
+) -> dict[str, FrozenTeacherStates]:
+    """Validate and materialize a frozen teacher/reference dataset once."""
+
+    if manifest.get("split") != split or manifest.get("purpose") != purpose:
+        _fail(
+            "teacher_split_usage",
+            "$.split",
+            f"expected {purpose!r} on split {split!r}",
+        )
+    records = _record_map(manifest)
+    scenario_ids = {scenario.id for scenario in scenarios}
+    if set(records) != scenario_ids:
+        _fail(
+            "teacher_manifest",
+            "$.entries",
+            "teacher scenarios do not exactly match the supplied scenarios",
+        )
+    return {
+        scenario.id: _freeze_teacher_states(scenario, records[scenario.id])
+        for scenario in scenarios
+    }
+
+
 def _distribution_from_features(
     policy: MaskedMLPPolicy,
     features: np.ndarray,
 ) -> DistributionCache:
-    hidden = np.tanh(features @ policy.params["w1"] + policy.params["b1"])
-    scores = hidden @ policy.params["w2"]
-    scores = scores - np.max(scores)
-    exp_scores = np.exp(scores)
-    probabilities = exp_scores / np.sum(exp_scores)
-    return DistributionCache((), features, hidden, probabilities, 1.0)
+    return policy.distribution_from_features(features)
 
 
 def _train_frozen_episode(
@@ -796,8 +820,14 @@ def _policy_from_snapshot(
     *,
     hidden_dim: int,
     seed: int,
+    feature_names: Sequence[str] = FEATURE_NAMES,
 ) -> MaskedMLPPolicy:
-    policy = MaskedMLPPolicy(hidden_dim=hidden_dim, seed=seed, deterministic=True)
+    policy = MaskedMLPPolicy(
+        hidden_dim=hidden_dim,
+        seed=seed,
+        deterministic=True,
+        feature_names=feature_names,
+    )
     for name in policy.params:
         policy.params[name] = np.asarray(snapshot[name], dtype=np.float64).copy()
     return policy
@@ -811,6 +841,8 @@ def train_bc_baseline(
     config: Mapping[str, Any],
     *,
     seed: int,
+    train_frozen_states: Mapping[str, FrozenTeacherStates] | None = None,
+    validation_frozen_states: Mapping[str, FrozenTeacherStates] | None = None,
 ) -> tuple[
     MaskedMLPPolicy,
     MaskedMLPPolicy,
@@ -830,42 +862,48 @@ def train_bc_baseline(
             "$.split",
             "model selection is restricted to validation",
         )
-    train_records = _record_map(train_teacher_manifest)
-    if set(train_records) != {scenario.id for scenario in train_scenarios}:
-        _fail(
-            "training_teacher",
-            "$.entries",
-            "teacher scenarios do not exactly match train scenarios",
-        )
+    feature_names = tuple(config.get("feature_names", FEATURE_NAMES))
     policy = MaskedMLPPolicy(
         hidden_dim=int(config["hidden_dim"]),
         seed=seed,
         deterministic=True,
+        feature_names=feature_names,
     )
     rng = np.random.default_rng(seed + int(config["shuffle_seed_offset"]))
-    train_states = {
-        scenario.id: _freeze_teacher_states(
-            scenario,
-            train_records[scenario.id],
+    train_states = (
+        freeze_teacher_dataset(
+            train_scenarios,
+            train_teacher_manifest,
+            split="train",
+            purpose="behavior_cloning_teacher",
         )
-        for scenario in train_scenarios
-    }
-    validation_records = _record_map(validation_reference_manifest)
-    if set(validation_records) != {
+        if train_frozen_states is None
+        else dict(train_frozen_states)
+    )
+    validation_states = (
+        freeze_teacher_dataset(
+            validation_scenarios,
+            validation_reference_manifest,
+            split="validation",
+            purpose="model_selection_reference",
+        )
+        if validation_frozen_states is None
+        else dict(validation_frozen_states)
+    )
+    if set(train_states) != {scenario.id for scenario in train_scenarios}:
+        _fail(
+            "training_teacher",
+            "$.entries",
+            "frozen train states do not exactly match train scenarios",
+        )
+    if set(validation_states) != {
         scenario.id for scenario in validation_scenarios
     }:
         _fail(
             "validation_reference",
             "$.entries",
-            "reference scenarios do not exactly match validation scenarios",
+            "frozen validation states do not exactly match validation scenarios",
         )
-    validation_states = {
-        scenario.id: _freeze_teacher_states(
-            scenario,
-            validation_records[scenario.id],
-        )
-        for scenario in validation_scenarios
-    }
     history: list[dict[str, Any]] = []
     best_key: tuple[float, ...] | None = None
     best_epoch = 0
@@ -921,16 +959,18 @@ def train_bc_baseline(
         best_snapshot,
         hidden_dim=policy.hidden_dim,
         seed=seed,
+        feature_names=policy.feature_names,
     )
     last_policy = _policy_from_snapshot(
         _snapshot(policy),
         hidden_dim=policy.hidden_dim,
         seed=seed,
+        feature_names=policy.feature_names,
     )
     return best_policy, last_policy, {
         "format_version": 1,
         "algorithm": "frozen HEFT behavior cloning",
-        "feature_names": list(FEATURE_NAMES),
+        "feature_names": list(policy.feature_names),
         "seed": seed,
         "epochs": history,
         "selection": {

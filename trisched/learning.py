@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,11 @@ FEATURE_NAMES = (
     "is_device",
     "is_edge",
     "is_cloud",
+    "is_heft_task",
+    "is_heft_pair",
+)
+
+TEACHER_FEATURE_NAMES = (
     "is_heft_task",
     "is_heft_pair",
 )
@@ -150,14 +156,30 @@ class MaskedMLPPolicy:
         hidden_dim: int = 32,
         seed: int = 0,
         deterministic: bool = True,
+        feature_names: Sequence[str] | None = None,
     ) -> None:
         if hidden_dim <= 0:
             raise ValueError("hidden_dim must be positive")
+        selected_features = (
+            FEATURE_NAMES if feature_names is None else tuple(feature_names)
+        )
+        if not selected_features:
+            raise ValueError("feature_names must not be empty")
+        if len(set(selected_features)) != len(selected_features):
+            raise ValueError("feature_names must be unique")
+        unknown = sorted(set(selected_features) - set(FEATURE_NAMES))
+        if unknown:
+            raise ValueError(f"unknown policy features: {unknown}")
         self.hidden_dim = hidden_dim
         self.seed = seed
         self.deterministic = deterministic
+        self.feature_names = selected_features
+        self.feature_indices = np.asarray(
+            [FEATURE_NAMES.index(name) for name in selected_features],
+            dtype=np.int64,
+        )
         self.rng = np.random.default_rng(seed)
-        input_dim = len(FEATURE_NAMES)
+        input_dim = len(self.feature_names)
         limit_1 = np.sqrt(6.0 / (input_dim + hidden_dim))
         limit_2 = np.sqrt(6.0 / (hidden_dim + 1))
         self.params: dict[str, np.ndarray] = {
@@ -191,12 +213,48 @@ class MaskedMLPPolicy:
             self.ranks,
             self.feature_context,
         )
-        hidden = np.tanh(features @ self.params["w1"] + self.params["b1"])
+        return self.distribution_from_features(
+            features,
+            actions=actions,
+            temperature=temperature,
+        )
+
+    def select_feature_columns(self, features: np.ndarray) -> np.ndarray:
+        values = np.asarray(features, dtype=np.float64)
+        if values.ndim != 2:
+            raise ValueError("candidate features must be a two-dimensional array")
+        if values.shape[1] == len(self.feature_names):
+            return values
+        if values.shape[1] == len(FEATURE_NAMES):
+            return values[:, self.feature_indices]
+        raise ValueError(
+            "candidate feature width does not match the full or policy schema"
+        )
+
+    def distribution_from_features(
+        self,
+        features: np.ndarray,
+        *,
+        actions: tuple[tuple[int, int], ...] = (),
+        temperature: float = 1.0,
+    ) -> DistributionCache:
+        if temperature <= 0:
+            raise ValueError("temperature must be positive")
+        selected = self.select_feature_columns(features)
+        if selected.shape[0] == 0:
+            raise ValueError("candidate feature matrix must not be empty")
+        hidden = np.tanh(selected @ self.params["w1"] + self.params["b1"])
         scores = (hidden @ self.params["w2"]) / temperature
         scores = scores - np.max(scores)
         exp_scores = np.exp(scores)
         probabilities = exp_scores / np.sum(exp_scores)
-        return DistributionCache(actions, features, hidden, probabilities, temperature)
+        return DistributionCache(
+            actions,
+            selected,
+            hidden,
+            probabilities,
+            temperature,
+        )
 
     def select_action(self, env: HeterogeneousDagEnv) -> tuple[int, int]:
         cache = self.distribution(env)
@@ -219,8 +277,29 @@ class MaskedMLPPolicy:
     def log_probability_gradients(
         self, cache: DistributionCache, selected_index: int
     ) -> dict[str, np.ndarray]:
+        if not 0 <= selected_index < len(cache.probabilities):
+            raise IndexError("selected_index is outside the masked distribution")
         d_scores = -cache.probabilities.copy()
         d_scores[selected_index] += 1.0
+        return self.score_gradients(cache, d_scores)
+
+    def entropy_gradients(
+        self, cache: DistributionCache
+    ) -> dict[str, np.ndarray]:
+        probabilities = cache.probabilities
+        log_probabilities = np.log(probabilities + 1e-12)
+        entropy = -float(np.sum(probabilities * log_probabilities))
+        d_scores = -probabilities * (log_probabilities + entropy)
+        return self.score_gradients(cache, d_scores)
+
+    def score_gradients(
+        self,
+        cache: DistributionCache,
+        d_scores: np.ndarray,
+    ) -> dict[str, np.ndarray]:
+        d_scores = np.asarray(d_scores, dtype=np.float64)
+        if d_scores.shape != cache.probabilities.shape:
+            raise ValueError("score gradient shape does not match probabilities")
         d_scores /= cache.temperature
         hidden_gradient = (
             d_scores[:, None] * self.params["w2"][None, :]
@@ -272,7 +351,7 @@ class MaskedMLPPolicy:
             destination,
             hidden_dim=np.asarray([self.hidden_dim], dtype=np.int64),
             seed=np.asarray([self.seed], dtype=np.int64),
-            feature_names=np.asarray(FEATURE_NAMES),
+            feature_names=np.asarray(self.feature_names),
             **self.params,
         )
 
@@ -282,14 +361,11 @@ class MaskedMLPPolicy:
     ) -> "MaskedMLPPolicy":
         data = np.load(path, allow_pickle=False)
         stored_features = tuple(str(item) for item in data["feature_names"].tolist())
-        if stored_features != FEATURE_NAMES:
-            raise ValueError(
-                "checkpoint feature schema does not match this TriSched version"
-            )
         policy = cls(
             hidden_dim=int(data["hidden_dim"][0]),
             seed=int(data["seed"][0]),
             deterministic=deterministic,
+            feature_names=stored_features,
         )
         for name in policy.params:
             policy.params[name] = np.asarray(data[name], dtype=np.float64)
