@@ -127,7 +127,7 @@ python -m trisched train-task-gnn --config configs/stg_task_gnn.json
 python -m trisched train-task-gnn --config configs/stg_task_gnn.json --resume
 ```
 
-恢复沿用同盘 staging 目录交换；微型测试已证明连续/恢复的 summary、曲线和全部模型/状态数组一致，后置 seed 写出失败时正式目录逐字节不变。该门禁尚待成员 B 从不可变提交独立复核，冻结的正式 3-seed validation 也尚未运行，因此目前没有 GNN 性能结论，也没有新增公开 test 访问。冻结张量、状态格式、产物契约和下一步见 [P1-A03 task-GNN 设计与验收契约](doc/P1-A03TaskGNN设计与验收.md)。
+恢复沿用同盘 staging 目录交换；微型测试已证明连续/恢复的 summary、曲线和全部模型/状态数组一致，后置 seed 写出失败时正式目录逐字节不变。成员 B 已从远端不可变提交独立复跑 32-artifact、15 对 NPZ、后置失败目录快照和 MLP 旧入口并[复核通过](doc/P1-A03独立复核记录.md)。正式参数量 GNN/MLP 为 `1008/512`；120 个 train 场景的 frozen state 峰值 RSS 增量约 53.42 MiB，graph 按 Scenario 共享。冻结的正式 3-seed validation 尚未运行，因此目前没有 GNN 性能结论，也没有新增公开 test 访问。冻结张量、状态格式、产物契约和下一步见 [P1-A03 task-GNN 设计与验收契约](doc/P1-A03TaskGNN设计与验收.md)。
 
 ## openEuler CPU smoke
 

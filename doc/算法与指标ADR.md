@@ -145,7 +145,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | B 独立推导通过；正式最大恒等式误差 `1.78e-15`，`gamma=0.99` 注入被拒绝 | task-GNN 保持奖励与 `gamma=1.0` 不变 |
 | 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | B 已独立复核 3-seed validation 与 staging 断点续训 run 级事务边界 | 启动 task-GNN 单变量对照 |
-| 图表示 | PPO 基线仍为 14 维 MLP；P1-A03 一层双向 task-GNN 已完成微型 BC/PPO、独立 CLI 与目录事务 | 连续/中断/恢复模型及 56 数值数组一致；32-artifact hash 和后置失败目录不变已测，尚无性能证据 | B 独立复核后做正式单变量对照 |
+| 图表示 | PPO 基线仍为 14 维 MLP；P1-A03 一层双向 task-GNN 已完成微型 BC/PPO、独立 CLI 与目录事务 | B 已从远端提交独立复核 32-artifact、15 对 NPZ、后置失败目录不变和 MLP 隔离；尚无性能证据 | 运行冻结正式 3-seed 单变量对照 |
 | checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单 | 后续 checkpoint 内嵌 manifest 摘要 |
 | test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁且正式运行未访问 | B 已在物理删除 test JSON 与 archive 的 raw root 上完成 P1-A02 正式复跑，manifest 固定 `test_accessed=false` | 最终阶段另建一次性公开 test 评测命令 |
 
@@ -321,4 +321,4 @@ P1-03 epoch 边界状态覆盖 actor/value 参数、两个 Adam、两套 RNG、h
 - 正式 task-GNN 训练前，P1-03 断点续训及中断/损坏状态注入必须由 B 复核通过；
 - 报告逐实例配对结果、参数量、CPU 推理 P50/P95 和失败切片，未出现固定 validation 配对优势则回退 MLP。
 
-P1-A03 已按上述冻结项实现前向、完整解析梯度、裁剪 Adam、只读 frozen graph state、专用 BC/PPO、完整 epoch 状态和独立 `train-task-gnn` run 事务：节点只复用 14 维输入中的 workload、upward-rank、indegree、outdegree，经一次前驱/后继均值消息传递后与候选表示融合。合成 4/2/0 的 PPO 未优于 BC，按冻结规则回退 epoch 0；2-epoch 连续/中断/恢复逐字段一致。3-seed 微型 CLI 声明 32 个可重算 artifact，后置 seed 写出失败时正式目录逐字节不变。完整公式、参数量和未完成门禁见 [P1-A03 task-GNN 设计与验收](./P1-A03TaskGNN设计与验收.md)。当前仍不包含 B 独立复核、正式训练或性能结论。
+P1-A03 已按上述冻结项实现前向、完整解析梯度、裁剪 Adam、只读 frozen graph state、专用 BC/PPO、完整 epoch 状态和独立 `train-task-gnn` run 事务：节点只复用 14 维输入中的 workload、upward-rank、indegree、outdegree，经一次前驱/后继均值消息传递后与候选表示融合。合成 4/2/0 的 PPO 未优于 BC，按冻结规则回退 epoch 0；2-epoch 连续/中断/恢复逐字段一致。B 已从远端 `f6301ae7...` 独立重验 32-artifact、15 对 NPZ、后置失败目录不变和 34-artifact MLP 旧入口；正式 frozen train 峰值 RSS 增量约 53.42 MiB，GNN/MLP 参数为 `1008/512`。完整证据见 [P1-A03 设计与验收](./P1-A03TaskGNN设计与验收.md)和[独立复核](./P1-A03独立复核记录.md)。当前仍不包含正式训练或性能结论。

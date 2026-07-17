@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：进行中（微型 CLI/目录事务已完成；待 B 独立复核和正式 3-seed）
+- 状态：进行中（B 已独立复核微型 CLI/目录事务；待正式 3-seed）
 - 前置门禁：[P1-03 第二轮独立复核通过](./P1-03第二轮独立复核记录.md)
 
 ## 1. 目标与单变量边界
@@ -110,7 +110,7 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 | 完整 artifact 与 manifest | 每次 3-seed 微型 run 生成 32 个被 manifest 声明的 artifact；bytes/SHA-256 全部重算一致 | 通过微型 smoke |
 | run 级 staging 事务 | 第二个 PPO epoch 中断后恢复与连续 run 一致；后置 seed 写出失败时正式目录逐字节不变且事务残留为 0 | 通过微型 smoke |
 | 固定 3-seed validation 对照 | 尚未运行 | 未开始 |
-| B 独立复核 | 尚未进行 | 未开始 |
+| B 独立复核 | 远端 `f6301ae7...` 干净 clone 全回归、独立 4/2/0 数据、15 对 NPZ、32-artifact、后置失败目录快照和 MLP 旧入口均通过 | [通过](./P1-A03独立复核记录.md) |
 
 实现位于 `trisched/gnn.py`、`trisched/bc.py` 和 `trisched/ppo.py`，聚焦测试位于 `tests/test_task_gnn.py`、`tests/test_task_gnn_training.py` 与 `tests/test_task_gnn_pipeline.py`。第二阶段增加了从候选分数到节点编码的完整解析反传、梯度累加/裁剪 Adam，以及与 Scenario 内容 hash 绑定的只读 `FrozenTaskGraph/FrozenTaskGNNState`。冻结状态在 live env 继续执行后仍逐数组重放相同 probability，错误 Scenario 会在冻结时拒绝。
 
@@ -130,10 +130,12 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 
 目录事务测试把 PPO 扩为 2 epochs，在 seed 41 第二次 update 前中断；恢复 run 与连续 run 的 summary、3 条曲线、12 个 actor/value checkpoint 和 3 个训练状态均逐数组一致，manifest 记录 `resumed_seeds=[41]` 与 `publication_mode=staging_directory_swap`。随后在 staging 写 seed 42 曲线时注入异常，正式目录前后逐字节一致，staging/backup 残留为 0。配置测试还拒绝 resource-GNN、课程字段与 14 维 schema 漂移。MLP/task-GNN 聚焦回归通过，完整回归为 `187 passed`。这些仍是事务与闭环证据，不是正式性能证据。
 
+B 在远端不可变提交 `f6301ae7...` 上建立干净 clone，完整回归 `187 passed in 10.33s`；另用 seeds 71/72/73 和物理删除 test 文件的独立 4/2/0 数据复跑。32 个 artifact 全部重算，连续/恢复 15 对 NPZ 逐数组一致，后置 seed 失败保持正式目录逐字节不变且残留为 0；独立 MLP run 仍输出 34 个 artifact。正式 train frozen state 为 6000 transitions/139,848 candidates，唯一张量约 19.74 MiB，采样 RSS 峰值增量约 53.42 MiB，120 个场景恰有 120 个共享 graph。参数量复算为 GNN/MLP `1008/512=1.96875×`。完整方法和带边界的 CPU 预检见 [P1-A03 独立复核记录](./P1-A03独立复核记录.md)。
+
 ## 7. 下一步要求
 
-1. 用户推送本提交后，成员 B 从不可变提交独立复跑 CLI 首次运行、中断恢复和后置失败目录快照；
-2. B 重算全部 artifact hash、参数量与完整 frozen graph transition 的峰值内存，并确认 MLP `train-ppo` 未漂移；
-3. B 通过后才允许 A 运行冻结 `20260717/20260718/20260719` 正式 validation，公开 test 继续物理隔离；
-4. 正式 run 同时保留 task-GNN 与既有 MLP 的逐实例配对，报告 win/tie/loss、bootstrap CI、训练时长、CPU 推理 P50/P95 和失败切片；
+1. 用户推送 B 的独立复核记录后，成员 A 运行冻结 `20260717/20260718/20260719` 正式 validation，公开 test 继续物理隔离；
+2. 正式 run 必须使用 `configs/stg_task_gnn.json`，保留全部 32 项 artifact，并记录总训练和冻结前处理时间；
+3. 将 task-GNN 与既有 MLP 逐实例配对，报告 win/tie/loss、bootstrap CI、训练时长、正式 checkpoint CPU 推理 P50/P95 和失败切片；
+4. 成员 B 从新不可变提交复核正式 summary、checkpoint、manifest、配对统计和 test 禁用边界；
 5. 若固定 validation 未产生配对优势或失败/时延明显恶化，保留 MLP 并关闭本轮，不加入 resource-GNN、课程或新奖励补救。
