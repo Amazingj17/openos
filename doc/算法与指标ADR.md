@@ -134,10 +134,10 @@ mean ± 1.96 × population_std / sqrt(N)
 | 项目 | 当前实现 | 审计结论 | 后续动作 |
 | --- | --- | --- | --- |
 | 逐实例 ratio | 每个策略 makespan 除以同实例 HEFT makespan | 正确 | 保持 |
-| train/validation/test | 使用不同派生 seed 生成，并以内容 hash 检查交集 | MVP 可用 | 固定公开数据清单并冻结 test |
+| train/validation/test | smoke 使用派生 seed；P1-B01 已提交公开 STG 120/30/30 冻结 manifest | 数据层已固定、待 A 复核 | P1-A01 只用 train/validation 生成 teacher/选模，test 禁止调参 |
 | checkpoint 选择 | 只保存训练结束模型，没有 best-by-validation | 不满足正式实验 | 增加 validation 早停与 best/last 双 checkpoint |
 | CI | 正态近似、总体标准差 | 仅适合 smoke | 改为分层 bootstrap |
-| 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现 | A 独立注入并重算后关闭任务 |
+| 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现并由 A 独立复核 | 保持零失败发布门禁 |
 | HEFT teacher | 输入含 `is_heft_task`、`is_heft_pair` | 易直接复制 HEFT | 主消融必须比较移除 teacher 二值特征 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | 每个 episode 终局 `-policy/HEFT` | 与主指标对齐 | 加 value/GAE 前不得改变主奖励定义 |
@@ -173,7 +173,7 @@ mean ± 1.96 × population_std / sqrt(N)
 6. **REINFORCE 方差高**：只有 batch mean baseline，没有 value network、GAE、clipping 或 KL 约束。
 7. **训练与部署策略不一致**：训练以温度 2.0 随机采样，测试使用确定性 argmax；训练均值略优不保证部署策略改善。
 8. **没有 validation 选模**：当前保存最后模型，不保存 best-by-validation，无法证明 checkpoint 选择公平。
-9. **数据覆盖不足**：单个训练 seed、小规模合成 DAG、固定 3 资源，没有 STG、CCR 或 OOD 证据。
+9. **公开数据尚未进入训练**：P1-B01 已冻结 STG topology projection，但主模型仍只在单 seed、小规模合成 DAG、固定 3 资源上训练，尚无公开 STG 主结果、CCR 或 OOD 证据。
 10. **统计证据不足**：只有一次训练、20 个 test 实例，当前 CI 还是正态近似。
 11. **失败惩罚仍需 benchmark 冻结**：P0-08 已实现真实失败记录和可配置惩罚，但默认 10.0 只是工程值，正式实验必须只在 validation 上冻结。
 12. **checkpoint 未内嵌完整元数据**：外部 run manifest 已记录配置、数据、commit、依赖和 checkpoint hash；模型文件本身仍只保存维度、seed、特征名和权重。
