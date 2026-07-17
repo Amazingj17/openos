@@ -120,7 +120,7 @@ python -m trisched train-ppo --config configs/stg_ppo.json --resume
 
 当前已实现 task-GNN 的前向、完整解析梯度、裁剪 Adam、合法动作接口、只读 frozen graph state 和无 pickle checkpoint。它继续使用相同 14 维 teacher-free 候选特征，仅从其中复用 workload、upward-rank、入度和出度构造任务节点，沿 DAG 分别做一次前驱/后继均值消息传递，再与原候选表示融合打分。该接口已有同 seed 确定性、图结构敏感性、动作 mask、中心有限差分、冻结重放、参数量和 checkpoint 往返测试。
 
-task-GNN 尚未接入 BC/PPO 训练入口、epoch 状态和 3-seed validation，因此目前没有 GNN 性能结论，也没有新增公开 test 访问。冻结张量、参数量公式、验收门禁和下一提交要求见 [P1-A03 task-GNN 设计与验收契约](doc/P1-A03TaskGNN设计与验收.md)。
+task-GNN 已通过专用函数完成合成 4/2/0 数据的微型 1-seed BC/PPO：零失败、零非法动作，PPO 无改善时正确回退 BC warm start。它尚未接入 CLI、epoch 状态和正式 3-seed validation，因此目前没有 GNN 性能结论，也没有新增公开 test 访问。冻结张量、参数量公式、微型结果、验收门禁和下一提交要求见 [P1-A03 task-GNN 设计与验收契约](doc/P1-A03TaskGNN设计与验收.md)。
 
 ## openEuler CPU smoke
 
@@ -186,8 +186,8 @@ trisched/policies.py     统一策略接口与 HEFT/CPOP/Greedy/Random
 trisched/schedulers.py   scheduler registry、外部进程 adapter 和稳定诊断
 trisched/learning.py     可变特征 Masked MLP、HEFT 模仿和 legacy REINFORCE
 trisched/gnn.py          14 维输入 task-GNN、DAG 消息传递和 checkpoint
-trisched/bc.py           冻结 teacher、BC best/last 和防 test 泄漏流程
-trisched/ppo.py          增量 ratio 奖励、GAE、clipped PPO、多 seed 清单和断点续训
+trisched/bc.py           MLP/task-GNN 冻结 teacher、BC best/last 和防 test 泄漏流程
+trisched/ppo.py          MLP/task-GNN 增量奖励、GAE/PPO；MLP 多 seed 与断点续训
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
 trisched/cli.py          pipeline/train-bc/train-ppo/generate/evaluate 命令
 trisched/benchmark.py    公开 STG loader、冻结 split 与来源校验
@@ -202,7 +202,7 @@ tests/                   单元与集成测试
 - 目标函数仅为 makespan；
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - 学习策略使用手工候选特征，还未使用 GNN；
-- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 表示/梯度已验收但尚未接入 BC/PPO、课程或 OOD；
+- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 仅完成合成微型 BC/PPO，尚无 CLI、正式训练、课程或 OOD；
 - 已在公开 STG topology projection 上完成并独立复核 3-seed PPO validation 开发结果；公开 test 最终评测、5-seed 主结果、分层 bootstrap 与竞赛方隐藏测试尚未完成。
 - epoch 边界断点续训已通过 A 的微型中断注入，但尚待 B 从不可变提交独立复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 

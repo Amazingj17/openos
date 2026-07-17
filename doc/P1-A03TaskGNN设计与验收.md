@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：进行中（解析梯度、Adam 和冻结图状态已完成；BC/PPO 尚未接入）
+- 状态：进行中（微型 1-seed BC/PPO 已接入；epoch 状态与正式 3-seed 尚未完成）
 - 前置门禁：[P1-03 第二轮独立复核通过](./P1-03第二轮独立复核记录.md)
 
 ## 1. 目标与单变量边界
@@ -94,18 +94,28 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 | 参数量可机器读取 | metadata 固定输出维度和 parameter count | 通过自动测试 |
 | 解析梯度与 Adam | log-probability/entropy 对全部 10 组参数做中心有限差分；裁剪前 norm、更新方向和 optimizer clone 已测 | 通过自动测试 |
 | frozen graph state | 只读 ranks/归一化上下文/节点/邻接/候选张量可脱离 live env 重放；graph hash 与 Scenario 绑定 | 通过自动测试 |
-| BC/PPO 与 warm start | 尚未接入训练入口 | 未通过，下一提交 |
+| BC/PPO 与 warm start | 专用训练函数在 4/2/0 微型数据上完成 BC、PPO、validation 选模和 epoch-0 回退；直接调用仍拒绝 `gamma != 1` | 通过微型 smoke |
 | PPO epoch 状态与事务恢复 | 尚未扩展到 GNN 参数 | 未通过，下一提交 |
 | 固定 3-seed validation 对照 | 尚未运行 | 未开始 |
 | B 独立复核 | 尚未进行 | 未开始 |
 
-实现位于 `trisched/gnn.py`，聚焦测试位于 `tests/test_task_gnn.py`。第二阶段增加了从候选分数到节点编码的完整解析反传、梯度累加/裁剪 Adam，以及与 Scenario 内容 hash 绑定的只读 `FrozenTaskGraph/FrozenTaskGNNState`。冻结状态在 live env 继续执行后仍逐数组重放相同 probability，错误 Scenario 会在冻结时拒绝；本地完整回归为 `179 passed in 7.22s`。本阶段仍只能表述为“task-GNN 表示和梯度门禁通过本地自动测试”，不能表述为“GNN 已训练”“GNN 优于 MLP”或“P1-A03 已完成”。
+实现位于 `trisched/gnn.py`，聚焦测试位于 `tests/test_task_gnn.py`。第二阶段增加了从候选分数到节点编码的完整解析反传、梯度累加/裁剪 Adam，以及与 Scenario 内容 hash 绑定的只读 `FrozenTaskGraph/FrozenTaskGNNState`。冻结状态在 live env 继续执行后仍逐数组重放相同 probability，错误 Scenario 会在冻结时拒绝。
+
+第三阶段在 `trisched/bc.py` 和 `trisched/ppo.py` 增加专用 task-GNN 训练类型，不修改原 MLP 的 frozen state 或 PPO transition：
+
+- teacher 冻结状态携带只读 graph、合法 actions、14 维候选和 target index，并继续复放 HEFT 后通过双 validator；
+- BC 使用相同交叉熵、Adam、validation mean ratio 和 best/last 规则；
+- PPO transition 只保存 `FrozenTaskGNNState`、旧 log-probability、只读 critic state、advantage 和 return，不保存 live env；同 episode 共用一个 graph 对象；
+- critic、增量 makespan/HEFT 奖励、GAE、clipping、entropy、target-KL 和 validation selection key 与 P1-A02 相同；
+- epoch 0 明确作为 task-GNN BC warm start 候选，无改善时必须回退。
+
+微型 smoke 使用合成 `4 train / 2 validation / 0 test`、每图 5–6 tasks、seed 61。BC 两个 epoch 的 validation ratio 为 `2.656002480246 / 2.092007786142`，零失败；PPO epoch 1 仍为 `2.092007786142`，故 best 正确回退 epoch 0。PPO 共 21 个 transition，零失败、零非法动作，最大奖励恒等误差 `8.881784197001252e-16`。新增训练测试 `4 passed`，本地完整回归 `183 passed in 7.65s`。这些数值只证明训练、冻结重放和选模闭环，不是性能收益；ratio 明显差于 1，更不能用作领先证据。
 
 ## 7. 下一提交要求
 
-1. 将 `FrozenTaskGraph/FrozenTaskGNNState` 接入 teacher 数据冻结和 PPO transition，不保存 live env；
-2. 用相同 HEFT teacher、14 维输入和训练预算完成 task-GNN BC warm start，并记录初始化来源；
-3. 让 PPO actor 在 frozen graph state 上调用已验收的解析梯度，不改变 critic、奖励或 selection key；
-4. 扩展 checkpoint hash、完整 epoch 状态、损坏状态诊断和 staging 恢复；
-5. 先运行微型 1-seed 连续/恢复，再申请运行冻结 3-seed validation；
+1. 为 task-GNN 增加冻结配置校验和 CLI，但不得改变现有 `train-ppo` 默认 MLP 行为；
+2. 扩展 actor checkpoint 参数 hash、完整 epoch 状态、Adam/RNG/history/best 保存；
+3. 复用 P1-03 staging 事务发布，注入状态损坏和后置 seed 失败并证明正式目录不变；
+4. 先运行微型 1-seed 连续/中断/恢复逐字段一致，再申请运行冻结 3-seed validation；
+5. 正式训练前测算完整 frozen graph transition 的峰值内存，必要时按 scenario 共享 graph；
 6. 成员 B 从不可变提交复算参数量、CPU 时延、逐实例 win/tie/loss 和失败切片。

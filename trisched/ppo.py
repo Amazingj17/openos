@@ -19,6 +19,7 @@ import numpy as np
 from . import __version__
 from .bc import (
     BehaviorCloningError,
+    FrozenTaskGNNTeacherStates,
     FrozenTeacherStates,
     _file_hash,
     _git_metadata,
@@ -27,12 +28,19 @@ from .bc import (
     _write_jsonl,
     build_teacher_manifest,
     evaluate_bc_policy,
+    freeze_task_gnn_teacher_dataset,
     freeze_teacher_dataset,
     policy_parameter_hash,
     train_bc_baseline,
 )
 from .benchmark import load_benchmark_manifest, load_frozen_split
 from .env import HeterogeneousDagEnv, validate_schedule
+from .gnn import (
+    FrozenTaskGNNState,
+    TaskGNNPolicy,
+    freeze_task_gnn_state,
+    freeze_task_graph,
+)
 from .learning import (
     FEATURE_NAMES,
     TEACHER_FEATURE_NAMES,
@@ -473,6 +481,16 @@ def value_parameter_hash(network: ValueNetwork) -> str:
 @dataclass(frozen=True)
 class PPOTransition:
     candidate_features: np.ndarray
+    selected_index: int
+    old_log_probability: float
+    state_features: np.ndarray
+    advantage: float
+    return_value: float
+
+
+@dataclass(frozen=True)
+class TaskGNNPPOTransition:
+    frozen_state: FrozenTaskGNNState
     selected_index: int
     old_log_probability: float
     state_features: np.ndarray
@@ -1100,6 +1118,389 @@ def _update_ppo(
         "stopped_early_for_kl": stopped_early,
         "updates": update_records,
     }
+
+
+def _collect_task_gnn_episode(
+    actor: TaskGNNPolicy,
+    critic: ValueNetwork,
+    scenario: Scenario,
+    heft_makespan: float,
+    *,
+    gamma: float,
+    gae_lambda: float,
+) -> tuple[list[TaskGNNPPOTransition], float, float]:
+    env = HeterogeneousDagEnv(scenario)
+    graph = freeze_task_graph(scenario)
+    frozen_states: list[FrozenTaskGNNState] = []
+    selected_indices: list[int] = []
+    old_log_probabilities: list[float] = []
+    value_states: list[np.ndarray] = []
+    values: list[float] = []
+    rewards: list[float] = []
+    current_makespan = 0.0
+    while not env.done:
+        frozen_state = freeze_task_gnn_state(env, graph=graph)
+        cache = actor.distribution_from_frozen_state(frozen_state)
+        selected_index = int(
+            actor.rng.choice(len(cache.actions), p=cache.probabilities)
+        )
+        action = cache.actions[selected_index]
+        value_state = critic.state_features(cache.features)
+        value_state.setflags(write=False)
+        value = critic.predict(value_state)
+        env.step(*action)
+        next_makespan = max(entry.finish for entry in env.entries.values())
+        reward = -(next_makespan - current_makespan) / heft_makespan
+        current_makespan = next_makespan
+        frozen_states.append(frozen_state)
+        selected_indices.append(selected_index)
+        old_log_probabilities.append(
+            float(np.log(cache.probabilities[selected_index] + 1e-12))
+        )
+        value_states.append(value_state)
+        values.append(value)
+        rewards.append(reward)
+    result = env.result(actor.name)
+    validate_schedule(scenario, result)
+    validate_schedule_independent(scenario, result)
+    ratio = result.makespan / heft_makespan
+    reward_error = abs(float(np.sum(rewards)) + ratio)
+    if reward_error > 1e-9:
+        raise RuntimeError(
+            "incremental task-GNN PPO rewards do not sum to negative ratio"
+        )
+    advantages, returns = compute_gae(
+        rewards,
+        values,
+        gamma=gamma,
+        gae_lambda=gae_lambda,
+    )
+    transitions = [
+        TaskGNNPPOTransition(
+            frozen_state=frozen_states[index],
+            selected_index=selected_indices[index],
+            old_log_probability=old_log_probabilities[index],
+            state_features=value_states[index],
+            advantage=float(advantages[index]),
+            return_value=float(returns[index]),
+        )
+        for index in range(len(rewards))
+    ]
+    return transitions, ratio, reward_error
+
+
+def _update_task_gnn_ppo(
+    actor: TaskGNNPolicy,
+    critic: ValueNetwork,
+    transitions: Sequence[TaskGNNPPOTransition],
+    config: Mapping[str, Any],
+    rng: np.random.Generator,
+) -> dict[str, Any]:
+    if not transitions:
+        raise ValueError("task-GNN PPO update requires transitions")
+    raw_advantages = np.asarray(
+        [transition.advantage for transition in transitions],
+        dtype=np.float64,
+    )
+    advantage_mean = float(np.mean(raw_advantages))
+    advantage_std = float(np.std(raw_advantages))
+    normalized_advantages = (raw_advantages - advantage_mean) / (
+        advantage_std + 1e-8
+    )
+    clip_ratio = float(config["clip_ratio"])
+    entropy_coefficient = float(config["entropy_coefficient"])
+    update_records: list[dict[str, Any]] = []
+    stopped_early = False
+    for update_epoch in range(1, int(config["update_epochs"]) + 1):
+        policy_losses: list[float] = []
+        value_losses: list[float] = []
+        entropies: list[float] = []
+        approximate_kls: list[float] = []
+        clipped: list[float] = []
+        actor_norms: list[float] = []
+        value_norms: list[float] = []
+        permutation = rng.permutation(len(transitions))
+        for start in range(0, len(transitions), int(config["minibatch_size"])):
+            indices = permutation[
+                start : start + int(config["minibatch_size"])
+            ]
+            if len(indices) == 0:
+                continue
+            actor_gradients = actor.empty_gradients()
+            value_gradients = critic.empty_gradients()
+            for raw_index in indices:
+                index = int(raw_index)
+                transition = transitions[index]
+                advantage = float(normalized_advantages[index])
+                cache = actor.distribution_from_frozen_state(
+                    transition.frozen_state
+                )
+                probability = float(cache.probabilities[transition.selected_index])
+                new_log_probability = float(np.log(probability + 1e-12))
+                log_ratio = new_log_probability - transition.old_log_probability
+                ratio = float(np.exp(np.clip(log_ratio, -20.0, 20.0)))
+                unclipped_objective = ratio * advantage
+                clipped_objective = (
+                    float(np.clip(ratio, 1.0 - clip_ratio, 1.0 + clip_ratio))
+                    * advantage
+                )
+                objective = min(unclipped_objective, clipped_objective)
+                policy_losses.append(-objective)
+                is_clipped = unclipped_objective > clipped_objective + 1e-15
+                clipped.append(float(is_clipped))
+                if not is_clipped:
+                    policy_gradient = actor.log_probability_gradients(
+                        cache,
+                        transition.selected_index,
+                    )
+                    actor.add_gradients(
+                        actor_gradients,
+                        policy_gradient,
+                        scale=ratio * advantage,
+                    )
+                entropy = -float(
+                    np.sum(
+                        cache.probabilities
+                        * np.log(cache.probabilities + 1e-12)
+                    )
+                )
+                entropies.append(entropy)
+                if entropy_coefficient:
+                    actor.add_gradients(
+                        actor_gradients,
+                        actor.entropy_gradients(cache),
+                        scale=entropy_coefficient,
+                    )
+                value_loss, _, gradients = critic.loss_gradients(
+                    transition.state_features,
+                    transition.return_value,
+                )
+                value_losses.append(value_loss)
+                critic.add_gradients(value_gradients, gradients)
+                approximate_kls.append(0.5 * log_ratio * log_ratio)
+            scale = 1.0 / len(indices)
+            actor_gradients = {
+                name: gradient * scale
+                for name, gradient in actor_gradients.items()
+            }
+            value_gradients = {
+                name: gradient * scale
+                for name, gradient in value_gradients.items()
+            }
+            actor_norms.append(
+                actor.apply_gradients(
+                    actor_gradients,
+                    float(config["actor_learning_rate"]),
+                    float(config["gradient_clip"]),
+                )
+            )
+            value_norms.append(
+                critic.apply_gradients(
+                    value_gradients,
+                    float(config["value_learning_rate"]),
+                    float(config["gradient_clip"]),
+                )
+            )
+        record = {
+            "update_epoch": update_epoch,
+            "policy_loss": float(np.mean(policy_losses)),
+            "value_loss": float(np.mean(value_losses)),
+            "entropy": float(np.mean(entropies)),
+            "approximate_kl": float(np.mean(approximate_kls)),
+            "clip_fraction": float(np.mean(clipped)),
+            "mean_actor_gradient_norm": float(np.mean(actor_norms)),
+            "mean_value_gradient_norm": float(np.mean(value_norms)),
+        }
+        update_records.append(record)
+        if record["approximate_kl"] > float(config["target_kl"]):
+            stopped_early = True
+            break
+    return {
+        "transition_count": len(transitions),
+        "advantage_mean_before_normalization": advantage_mean,
+        "advantage_std_before_normalization": advantage_std,
+        "stopped_early_for_kl": stopped_early,
+        "updates": update_records,
+    }
+
+
+def train_task_gnn_ppo(
+    warm_start: TaskGNNPolicy,
+    train_scenarios: Sequence[Scenario],
+    train_teacher_manifest: Mapping[str, Any],
+    validation_scenarios: Sequence[Scenario],
+    validation_reference_manifest: Mapping[str, Any],
+    config: Mapping[str, Any],
+    *,
+    seed: int,
+    validation_frozen_states: (
+        Mapping[str, FrozenTaskGNNTeacherStates] | None
+    ) = None,
+) -> tuple[
+    TaskGNNPolicy,
+    TaskGNNPolicy,
+    ValueNetwork,
+    ValueNetwork,
+    dict[str, Any],
+]:
+    if warm_start.seed != seed:
+        _fail(
+            "ppo_seed_mismatch",
+            "$.seed",
+            "task-GNN warm-start seed does not match the PPO seed",
+        )
+    if abs(float(config["gamma"]) - 1.0) > 1e-12:
+        _fail(
+            "ppo_reward_contract",
+            "$.ppo.gamma",
+            "gamma must remain 1.0 for task-GNN reward identity",
+        )
+    if int(config["episodes_per_epoch"]) > len(train_scenarios):
+        _fail(
+            "config_value",
+            "$.ppo.episodes_per_epoch",
+            "cannot exceed the number of train scenarios",
+        )
+    train_records = _manifest_records(
+        train_teacher_manifest,
+        train_scenarios,
+        split="train",
+        purpose="behavior_cloning_teacher",
+    )
+    _manifest_records(
+        validation_reference_manifest,
+        validation_scenarios,
+        split="validation",
+        purpose="model_selection_reference",
+    )
+    validation_states = (
+        freeze_task_gnn_teacher_dataset(
+            validation_scenarios,
+            validation_reference_manifest,
+            split="validation",
+            purpose="model_selection_reference",
+        )
+        if validation_frozen_states is None
+        else dict(validation_frozen_states)
+    )
+    if set(validation_states) != {
+        scenario.id for scenario in validation_scenarios
+    }:
+        _fail(
+            "validation_reference",
+            "$.entries",
+            "frozen task-GNN validation states do not match scenarios",
+        )
+    actor = warm_start.clone(include_optimizer=False)
+    critic = ValueNetwork(
+        feature_dim=len(actor.feature_names),
+        hidden_dim=int(config["value_hidden_dim"]),
+        seed=seed + 404,
+    )
+    rng = np.random.default_rng(seed + int(config["shuffle_seed_offset"]))
+    initial_validation, _ = evaluate_bc_policy(
+        actor,
+        validation_scenarios,
+        validation_reference_manifest,
+        failure_penalty_ratio=float(config["failure_penalty_ratio"]),
+        frozen_task_gnn_states=validation_states,
+    )
+    best_key = (
+        float(initial_validation["failure_count"]),
+        float(initial_validation["mean_ratio"]),
+        0.0,
+    )
+    best_epoch = 0
+    best_actor = actor.clone(include_optimizer=False)
+    best_critic = critic.clone()
+    history: list[dict[str, Any]] = [
+        {
+            "epoch": 0,
+            "source": "task_gnn_behavior_cloning_warm_start",
+            "validation": initial_validation,
+        }
+    ]
+    for epoch in range(1, int(config["epochs"]) + 1):
+        transitions: list[TaskGNNPPOTransition] = []
+        train_ratios: list[float] = []
+        reward_errors: list[float] = []
+        selected = rng.permutation(len(train_scenarios))[
+            : int(config["episodes_per_epoch"])
+        ]
+        for raw_index in selected:
+            scenario = train_scenarios[int(raw_index)]
+            episode, ratio, reward_error = _collect_task_gnn_episode(
+                actor,
+                critic,
+                scenario,
+                float(train_records[scenario.id]["makespan"]),
+                gamma=float(config["gamma"]),
+                gae_lambda=float(config["gae_lambda"]),
+            )
+            transitions.extend(episode)
+            train_ratios.append(ratio)
+            reward_errors.append(reward_error)
+        update = _update_task_gnn_ppo(actor, critic, transitions, config, rng)
+        validation, _ = evaluate_bc_policy(
+            actor,
+            validation_scenarios,
+            validation_reference_manifest,
+            failure_penalty_ratio=float(config["failure_penalty_ratio"]),
+            frozen_task_gnn_states=validation_states,
+        )
+        history.append(
+            {
+                "epoch": epoch,
+                "source": "task_gnn_masked_ppo",
+                "train_episode_count": len(train_ratios),
+                "train_mean_ratio": float(np.mean(train_ratios)),
+                "train_min_ratio": float(np.min(train_ratios)),
+                "train_max_ratio": float(np.max(train_ratios)),
+                "reward_identity_max_abs_error": float(
+                    np.max(reward_errors)
+                ),
+                "update": update,
+                "validation": validation,
+            }
+        )
+        key = (
+            float(validation["failure_count"]),
+            float(validation["mean_ratio"]),
+            float(epoch),
+        )
+        if key < best_key:
+            best_key = key
+            best_epoch = epoch
+            best_actor = actor.clone(include_optimizer=False)
+            best_critic = critic.clone()
+    return (
+        best_actor,
+        actor.clone(include_optimizer=False),
+        best_critic,
+        critic.clone(),
+        {
+            "format_version": 1,
+            "algorithm": "task-GNN masked PPO with GAE and BC warm start",
+            "architecture": actor.architecture,
+            "seed": seed,
+            "feature_names": list(actor.feature_names),
+            "reward": "negative incremental makespan divided by HEFT makespan",
+            "reward_sum_identity": "sum(step_reward) == -final_ratio",
+            "epochs": history,
+            "selection": {
+                "split": "validation",
+                "test_accessed": False,
+                "metric": "validation_mean_ratio",
+                "candidates": "task-GNN BC warm start plus every PPO epoch",
+                "tie_break": [
+                    "zero_failures",
+                    "lower_mean_ratio",
+                    "earlier_epoch",
+                ],
+                "best_epoch": best_epoch,
+            },
+        },
+    )
 
 
 def train_masked_ppo(

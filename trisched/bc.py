@@ -17,6 +17,12 @@ import numpy as np
 from . import __version__
 from .benchmark import load_benchmark_manifest, load_frozen_split
 from .env import HeterogeneousDagEnv, ScheduleResult, validate_schedule
+from .gnn import (
+    FrozenTaskGNNState,
+    TaskGNNPolicy,
+    freeze_task_gnn_state,
+    freeze_task_graph,
+)
 from .learning import (
     FEATURE_NAMES,
     DistributionCache,
@@ -530,6 +536,7 @@ def _teacher_actions(
 
 
 FrozenTeacherStates = tuple[tuple[np.ndarray, int], ...]
+FrozenTaskGNNTeacherStates = tuple[tuple[FrozenTaskGNNState, int], ...]
 
 
 def _freeze_teacher_states(
@@ -594,6 +601,66 @@ def freeze_teacher_dataset(
     }
 
 
+def _freeze_task_gnn_teacher_states(
+    scenario: Scenario,
+    record: Mapping[str, Any],
+) -> FrozenTaskGNNTeacherStates:
+    env = HeterogeneousDagEnv(scenario)
+    graph = freeze_task_graph(scenario)
+    states: list[tuple[FrozenTaskGNNState, int]] = []
+    actions = _teacher_actions(scenario, record)
+    for step, action in enumerate(actions):
+        state = freeze_task_gnn_state(env, graph=graph)
+        if action not in state.actions:
+            _fail(
+                "teacher_illegal_action",
+                f"$.entries.{scenario.id}.actions[{step}]",
+                "frozen action is not legal while materializing task-GNN state",
+            )
+        states.append((state, state.actions.index(action)))
+        env.step(*action)
+    result = env.result("frozen_task_gnn_heft_teacher")
+    validate_schedule(scenario, result)
+    validate_schedule_independent(scenario, result)
+    if abs(result.makespan - float(record["makespan"])) > 1e-7:
+        _fail(
+            "teacher_replay_mismatch",
+            f"$.entries.{scenario.id}.makespan",
+            "materialized task-GNN teacher makespan changed",
+        )
+    return tuple(states)
+
+
+def freeze_task_gnn_teacher_dataset(
+    scenarios: Sequence[Scenario],
+    manifest: Mapping[str, Any],
+    *,
+    split: str,
+    purpose: str,
+) -> dict[str, FrozenTaskGNNTeacherStates]:
+    if manifest.get("split") != split or manifest.get("purpose") != purpose:
+        _fail(
+            "teacher_split_usage",
+            "$.split",
+            f"expected {purpose!r} on split {split!r}",
+        )
+    records = _record_map(manifest)
+    scenario_ids = {scenario.id for scenario in scenarios}
+    if set(records) != scenario_ids:
+        _fail(
+            "teacher_manifest",
+            "$.entries",
+            "teacher scenarios do not exactly match the supplied scenarios",
+        )
+    return {
+        scenario.id: _freeze_task_gnn_teacher_states(
+            scenario,
+            records[scenario.id],
+        )
+        for scenario in scenarios
+    }
+
+
 def _distribution_from_features(
     policy: MaskedMLPPolicy,
     features: np.ndarray,
@@ -624,8 +691,31 @@ def _train_frozen_episode(
     return loss_sum, correct, len(states), gradient_norm_sum
 
 
+def _train_frozen_task_gnn_episode(
+    policy: TaskGNNPolicy,
+    states: FrozenTaskGNNTeacherStates,
+    *,
+    learning_rate: float,
+    gradient_clip: float,
+) -> tuple[float, int, int, float]:
+    loss_sum = 0.0
+    correct = 0
+    gradient_norm_sum = 0.0
+    for state, target in states:
+        cache = policy.distribution_from_frozen_state(state)
+        correct += int(np.argmax(cache.probabilities) == target)
+        loss_sum -= float(np.log(cache.probabilities[target] + 1e-12))
+        gradients = policy.log_probability_gradients(cache, target)
+        gradient_norm_sum += policy.apply_gradients(
+            gradients,
+            learning_rate,
+            gradient_clip,
+        )
+    return loss_sum, correct, len(states), gradient_norm_sum
+
+
 def _teacher_state_diagnostics(
-    policy: MaskedMLPPolicy,
+    policy: MaskedMLPPolicy | TaskGNNPolicy,
     scenario: Scenario,
     record: Mapping[str, Any],
 ) -> tuple[float, int, int]:
@@ -662,8 +752,21 @@ def _frozen_teacher_state_diagnostics(
     return loss_sum, correct, len(states)
 
 
+def _frozen_task_gnn_state_diagnostics(
+    policy: TaskGNNPolicy,
+    states: FrozenTaskGNNTeacherStates,
+) -> tuple[float, int, int]:
+    loss_sum = 0.0
+    correct = 0
+    for state, target in states:
+        cache = policy.distribution_from_frozen_state(state)
+        correct += int(np.argmax(cache.probabilities) == target)
+        loss_sum -= float(np.log(cache.probabilities[target] + 1e-12))
+    return loss_sum, correct, len(states)
+
+
 def _policy_rollout(
-    policy: MaskedMLPPolicy,
+    policy: MaskedMLPPolicy | TaskGNNPolicy,
     scenario: Scenario,
 ) -> tuple[ScheduleResult, int, int]:
     env = HeterogeneousDagEnv(scenario)
@@ -687,12 +790,15 @@ def _policy_rollout(
 
 
 def evaluate_bc_policy(
-    policy: MaskedMLPPolicy,
+    policy: MaskedMLPPolicy | TaskGNNPolicy,
     scenarios: Sequence[Scenario],
     reference_manifest: Mapping[str, Any],
     *,
     failure_penalty_ratio: float,
     frozen_teacher_states: Mapping[str, FrozenTeacherStates] | None = None,
+    frozen_task_gnn_states: (
+        Mapping[str, FrozenTaskGNNTeacherStates] | None
+    ) = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if reference_manifest.get("purpose") != "model_selection_reference":
         _fail(
@@ -706,6 +812,13 @@ def evaluate_bc_policy(
             "$.split",
             "validation diagnostics cannot use another split",
         )
+    if frozen_teacher_states is not None and frozen_task_gnn_states is not None:
+        raise ValueError("only one frozen validation state type may be supplied")
+    if frozen_task_gnn_states is not None and not isinstance(
+        policy,
+        TaskGNNPolicy,
+    ):
+        raise TypeError("task-GNN frozen states require TaskGNNPolicy")
     records = _record_map(reference_manifest)
     teacher_loss = 0.0
     teacher_correct = 0
@@ -724,7 +837,20 @@ def evaluate_bc_policy(
                 f"$.entries.{scenario.id}",
                 "missing or mismatched validation reference",
             )
-        if frozen_teacher_states is None:
+        if frozen_task_gnn_states is not None:
+            states = frozen_task_gnn_states.get(scenario.id)
+            if states is None:
+                _fail(
+                    "validation_reference",
+                    f"$.entries.{scenario.id}",
+                    "missing frozen task-GNN validation teacher states",
+                )
+            assert isinstance(policy, TaskGNNPolicy)
+            loss, correct, count = _frozen_task_gnn_state_diagnostics(
+                policy,
+                states,
+            )
+        elif frozen_teacher_states is None:
             loss, correct, count = _teacher_state_diagnostics(
                 policy,
                 scenario,
@@ -970,6 +1096,148 @@ def train_bc_baseline(
     return best_policy, last_policy, {
         "format_version": 1,
         "algorithm": "frozen HEFT behavior cloning",
+        "feature_names": list(policy.feature_names),
+        "seed": seed,
+        "epochs": history,
+        "selection": {
+            "split": "validation",
+            "test_accessed": False,
+            "metric": "validation_mean_ratio",
+            "tie_break": [
+                "zero_failures",
+                "higher_teacher_action_accuracy",
+                "earlier_epoch",
+            ],
+            "best_epoch": best_epoch,
+        },
+    }
+
+
+def train_task_gnn_bc_baseline(
+    train_scenarios: Sequence[Scenario],
+    train_teacher_manifest: Mapping[str, Any],
+    validation_scenarios: Sequence[Scenario],
+    validation_reference_manifest: Mapping[str, Any],
+    config: Mapping[str, Any],
+    *,
+    seed: int,
+    train_frozen_states: (
+        Mapping[str, FrozenTaskGNNTeacherStates] | None
+    ) = None,
+    validation_frozen_states: (
+        Mapping[str, FrozenTaskGNNTeacherStates] | None
+    ) = None,
+) -> tuple[TaskGNNPolicy, TaskGNNPolicy, dict[str, Any]]:
+    if train_teacher_manifest.get("purpose") != "behavior_cloning_teacher":
+        _fail(
+            "training_teacher",
+            "$.purpose",
+            "training requires behavior_cloning_teacher",
+        )
+    if train_teacher_manifest.get("split") != "train":
+        _fail("training_split", "$.split", "training is restricted to train")
+    if validation_reference_manifest.get("split") != "validation":
+        _fail(
+            "selection_split",
+            "$.split",
+            "model selection is restricted to validation",
+        )
+    policy = TaskGNNPolicy(
+        hidden_dim=int(config["hidden_dim"]),
+        message_dim=int(config["message_dim"]),
+        seed=seed,
+        deterministic=True,
+    )
+    rng = np.random.default_rng(seed + int(config["shuffle_seed_offset"]))
+    train_states = (
+        freeze_task_gnn_teacher_dataset(
+            train_scenarios,
+            train_teacher_manifest,
+            split="train",
+            purpose="behavior_cloning_teacher",
+        )
+        if train_frozen_states is None
+        else dict(train_frozen_states)
+    )
+    validation_states = (
+        freeze_task_gnn_teacher_dataset(
+            validation_scenarios,
+            validation_reference_manifest,
+            split="validation",
+            purpose="model_selection_reference",
+        )
+        if validation_frozen_states is None
+        else dict(validation_frozen_states)
+    )
+    if set(train_states) != {scenario.id for scenario in train_scenarios}:
+        _fail(
+            "training_teacher",
+            "$.entries",
+            "frozen task-GNN train states do not match train scenarios",
+        )
+    if set(validation_states) != {
+        scenario.id for scenario in validation_scenarios
+    }:
+        _fail(
+            "validation_reference",
+            "$.entries",
+            "frozen task-GNN validation states do not match validation scenarios",
+        )
+    history: list[dict[str, Any]] = []
+    best_key: tuple[float, ...] | None = None
+    best_epoch = 0
+    best_policy: TaskGNNPolicy | None = None
+    for epoch in range(1, int(config["epochs"]) + 1):
+        loss_sum = 0.0
+        correct = 0
+        action_count = 0
+        gradient_norm_sum = 0.0
+        for raw_index in rng.permutation(len(train_scenarios)):
+            scenario = train_scenarios[int(raw_index)]
+            loss, episode_correct, episode_actions, gradient_norm = (
+                _train_frozen_task_gnn_episode(
+                    policy,
+                    train_states[scenario.id],
+                    learning_rate=float(config["learning_rate"]),
+                    gradient_clip=float(config["gradient_clip"]),
+                )
+            )
+            loss_sum += loss
+            correct += episode_correct
+            action_count += episode_actions
+            gradient_norm_sum += gradient_norm
+        validation, _ = evaluate_bc_policy(
+            policy,
+            validation_scenarios,
+            validation_reference_manifest,
+            failure_penalty_ratio=float(config["failure_penalty_ratio"]),
+            frozen_task_gnn_states=validation_states,
+        )
+        record = {
+            "epoch": epoch,
+            "train_action_count": action_count,
+            "train_cross_entropy": loss_sum / action_count,
+            "train_action_accuracy": correct / action_count,
+            "train_illegal_action_count": 0,
+            "mean_gradient_norm": gradient_norm_sum / action_count,
+            "validation": validation,
+        }
+        history.append(record)
+        key = (
+            float(validation["failure_count"]),
+            float(validation["mean_ratio"]),
+            -float(validation["teacher_action_accuracy"]),
+            float(epoch),
+        )
+        if best_key is None or key < best_key:
+            best_key = key
+            best_epoch = epoch
+            best_policy = policy.clone(include_optimizer=False)
+    assert best_policy is not None
+    return best_policy, policy.clone(include_optimizer=False), {
+        "format_version": 1,
+        "algorithm": "frozen HEFT task-GNN behavior cloning",
+        "architecture": policy.architecture,
         "feature_names": list(policy.feature_names),
         "seed": seed,
         "epochs": history,
