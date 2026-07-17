@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -659,3 +661,35 @@ def task_gnn_metadata(policy: TaskGNNPolicy) -> dict[str, Any]:
         "message_dim": policy.message_dim,
         "parameter_count": policy.parameter_count,
     }
+
+
+def task_gnn_parameter_hash(policy: TaskGNNPolicy) -> str:
+    digest = hashlib.sha256()
+    schema = {
+        "format_version": 1,
+        "architecture": policy.architecture,
+        "feature_names": list(policy.feature_names),
+        "node_feature_names": list(TASK_NODE_FEATURE_NAMES),
+        "hidden_dim": policy.hidden_dim,
+        "message_dim": policy.message_dim,
+        "parameters": [
+            {
+                "name": name,
+                "shape": list(policy.params[name].shape),
+                "dtype": "float64-little-endian",
+            }
+            for name in sorted(policy.params)
+        ],
+    }
+    digest.update(
+        json.dumps(
+            schema,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+    for name in sorted(policy.params):
+        digest.update(name.encode("utf-8"))
+        values = np.asarray(policy.params[name], dtype="<f8", order="C")
+        digest.update(values.tobytes(order="C"))
+    return digest.hexdigest()

@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：进行中（微型 1-seed BC/PPO 已接入；epoch 状态与正式 3-seed 尚未完成）
+- 状态：进行中（微型 1-seed epoch 恢复已完成；CLI staging 与正式 3-seed 尚未完成）
 - 前置门禁：[P1-03 第二轮独立复核通过](./P1-03第二轮独立复核记录.md)
 
 ## 1. 目标与单变量边界
@@ -80,7 +80,17 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 - `hidden_dim/message_dim/seed`；
 - 全部 10 组网络参数。
 
-加载时拒绝 architecture、节点特征、基础特征、参数 shape 或有限性漂移。当前 checkpoint 只覆盖推理参数；内存 clone 已能逐数组复制 Adam、step 和 RNG，但训练状态文件、history、best 选择和事务恢复仍须在接入 BC/PPO 时沿用 P1-03 契约扩展，未完成前不得启动正式 3-seed 训练。
+推理 checkpoint 加载时拒绝 architecture、节点特征、基础特征、参数 shape 或有限性漂移。task-GNN PPO 现另有 epoch 边界训练状态，覆盖：
+
+- 当前 actor 10 组参数及两套 Adam 数组、actor RNG；
+- 当前 critic 4 组参数及两套 Adam 数组；
+- best actor/value 参数、best key 和 best epoch；
+- training RNG、完整 history、completed epoch；
+- architecture、14 维 schema、hidden/message/value 维度、seed；
+- 外部 contract SHA-256、BC warm-start 独立参数 SHA-256、`test_accessed=false`；
+- 对 metadata 和 56 个数值数组计算的 payload SHA-256。
+
+状态文件使用同目录临时文件、flush/fsync 和 `os.replace` 原子发布。加载会重算 payload、Adam step 与 history，并拒绝缺失、已存在、损坏、hash、contract、warm-start 或维度错配。该原子性只覆盖单个状态文件；完整 run 输出目录的 staging/rollback 尚未接入，未完成前不得启动正式 3-seed 训练。
 
 ## 6. 第一阶段验收
 
@@ -95,7 +105,8 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 | 解析梯度与 Adam | log-probability/entropy 对全部 10 组参数做中心有限差分；裁剪前 norm、更新方向和 optimizer clone 已测 | 通过自动测试 |
 | frozen graph state | 只读 ranks/归一化上下文/节点/邻接/候选张量可脱离 live env 重放；graph hash 与 Scenario 绑定 | 通过自动测试 |
 | BC/PPO 与 warm start | 专用训练函数在 4/2/0 微型数据上完成 BC、PPO、validation 选模和 epoch-0 回退；直接调用仍拒绝 `gamma != 1` | 通过微型 smoke |
-| PPO epoch 状态与事务恢复 | 尚未扩展到 GNN 参数 | 未通过，下一提交 |
+| PPO epoch 状态 | 连续/中断/恢复 summary、4 个返回模型和 57 个 NPZ 条目逐数组一致；hash/contract/warm-start/损坏/缺失诊断通过 | 通过微型 smoke |
+| run 级 staging 事务 | 尚未把 task-GNN CLI 全部 artifact 放入 staging 后统一发布 | 未通过，下一提交 |
 | 固定 3-seed validation 对照 | 尚未运行 | 未开始 |
 | B 独立复核 | 尚未进行 | 未开始 |
 
@@ -111,11 +122,13 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 
 微型 smoke 使用合成 `4 train / 2 validation / 0 test`、每图 5–6 tasks、seed 61。BC 两个 epoch 的 validation ratio 为 `2.656002480246 / 2.092007786142`，零失败；PPO epoch 1 仍为 `2.092007786142`，故 best 正确回退 epoch 0。PPO 共 21 个 transition，零失败、零非法动作，最大奖励恒等误差 `8.881784197001252e-16`。新增训练测试 `4 passed`，本地完整回归 `183 passed in 7.65s`。这些数值只证明训练、冻结重放和选模闭环，不是性能收益；ratio 明显差于 1，更不能用作领先证据。
 
+第四阶段使用同一类 4/2/0 合成数据和 seed 79，将 PPO 扩展为 2 epochs，并在第二次 update 前注入中断。恢复状态停在 `completed_epoch=1`；恢复后与连续运行的 summary、best/last actor、best/last critic 和最终状态 57 个 NPZ 条目逐数组一致。状态包含 56 个数值数组，Adam step 由 history 的 update 数与 minibatch 数独立重算；actor/training RNG 均为 PCG64。测试还分别得到 `ppo_resume_state_exists/missing/hash/mismatch/read/corrupt`，其中 mismatch 同时覆盖外部 contract 和 BC warm-start 参数变化，corrupt 额外覆盖重签名后仍多出未知数组的严格 schema 拒绝。新增恢复测试后本地完整回归为 `184 passed in 7.54s`。
+
 ## 7. 下一提交要求
 
 1. 为 task-GNN 增加冻结配置校验和 CLI，但不得改变现有 `train-ppo` 默认 MLP 行为；
-2. 扩展 actor checkpoint 参数 hash、完整 epoch 状态、Adam/RNG/history/best 保存；
+2. 输出 actor/value best/last、training state、curve、summary、逐实例 validation 和 run manifest，并记录参数 hash；
 3. 复用 P1-03 staging 事务发布，注入状态损坏和后置 seed 失败并证明正式目录不变；
-4. 先运行微型 1-seed 连续/中断/恢复逐字段一致，再申请运行冻结 3-seed validation；
+4. CLI 微型连续/中断/恢复与全部 artifact 一致后，再申请运行冻结 3-seed validation；
 5. 正式训练前测算完整 frozen graph transition 的峰值内存，必要时按 scenario 共享 graph；
 6. 成员 B 从不可变提交复算参数量、CPU 时延、逐实例 win/tie/loss 和失败切片。

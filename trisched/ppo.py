@@ -40,6 +40,7 @@ from .gnn import (
     TaskGNNPolicy,
     freeze_task_gnn_state,
     freeze_task_graph,
+    task_gnn_parameter_hash,
 )
 from .learning import (
     FEATURE_NAMES,
@@ -544,6 +545,19 @@ class PPOResumeState:
     completed_epoch: int
 
 
+@dataclass
+class TaskGNNPPOResumeState:
+    actor: TaskGNNPolicy
+    critic: ValueNetwork
+    rng: np.random.Generator
+    best_actor: TaskGNNPolicy
+    best_critic: ValueNetwork
+    history: list[dict[str, Any]]
+    best_key: tuple[float, float, float]
+    best_epoch: int
+    completed_epoch: int
+
+
 def _canonical_sha256(value: Any) -> str:
     encoded = json.dumps(
         value,
@@ -873,6 +887,321 @@ def _load_ppo_resume_state(
             str(error),
         )
     return PPOResumeState(
+        actor=actor,
+        critic=critic,
+        rng=rng,
+        best_actor=best_actor,
+        best_critic=best_critic,
+        history=history,
+        best_key=tuple(float(value) for value in raw_best_key),
+        best_epoch=best_epoch,
+        completed_epoch=completed_epoch,
+    )
+
+
+def _save_task_gnn_ppo_resume_state(
+    path: Path,
+    *,
+    contract_sha256: str,
+    warm_start_sha256: str,
+    completed_epoch: int,
+    actor: TaskGNNPolicy,
+    critic: ValueNetwork,
+    rng: np.random.Generator,
+    best_actor: TaskGNNPolicy,
+    best_critic: ValueNetwork,
+    history: Sequence[Mapping[str, Any]],
+    best_key: tuple[float, float, float],
+    best_epoch: int,
+) -> None:
+    metadata = {
+        "format_version": 1,
+        "algorithm": "task_gnn_masked_ppo_epoch_boundary_resume",
+        "architecture": actor.architecture,
+        "contract_sha256": contract_sha256,
+        "warm_start_parameter_sha256": warm_start_sha256,
+        "completed_epoch": completed_epoch,
+        "seed": actor.seed,
+        "feature_names": list(actor.feature_names),
+        "actor_hidden_dim": actor.hidden_dim,
+        "actor_message_dim": actor.message_dim,
+        "actor_parameter_names": sorted(actor.params),
+        "actor_adam_step": actor._adam_step,
+        "critic_feature_dim": critic.feature_dim,
+        "critic_hidden_dim": critic.hidden_dim,
+        "critic_seed": critic.seed,
+        "critic_adam_step": critic._adam_step,
+        "actor_rng_state": actor.rng.bit_generator.state,
+        "training_rng_state": rng.bit_generator.state,
+        "history": list(history),
+        "best_key": list(best_key),
+        "best_epoch": best_epoch,
+        "test_accessed": False,
+    }
+    arrays: dict[str, np.ndarray] = {}
+    for name, values in actor.params.items():
+        arrays[f"actor_param_{name}"] = values
+        arrays[f"actor_adam_m_{name}"] = actor._adam_m[name]
+        arrays[f"actor_adam_v_{name}"] = actor._adam_v[name]
+        arrays[f"best_actor_param_{name}"] = best_actor.params[name]
+    for name, values in critic.params.items():
+        arrays[f"critic_param_{name}"] = values
+        arrays[f"critic_adam_m_{name}"] = critic._adam_m[name]
+        arrays[f"critic_adam_v_{name}"] = critic._adam_v[name]
+        arrays[f"best_critic_param_{name}"] = best_critic.params[name]
+    metadata["payload_sha256"] = _resume_payload_sha256(metadata, arrays)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    try:
+        with temporary.open("wb") as handle:
+            np.savez_compressed(
+                handle,
+                metadata_json=np.asarray(
+                    json.dumps(
+                        metadata,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                        allow_nan=False,
+                    )
+                ),
+                **arrays,
+            )
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    except (OSError, TypeError, ValueError) as error:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+        _fail("ppo_resume_state_write", "$.resume", str(error))
+
+
+def _load_task_gnn_ppo_resume_state(
+    path: Path,
+    *,
+    contract_sha256: str,
+    warm_start: TaskGNNPolicy,
+    config: Mapping[str, Any],
+) -> TaskGNNPPOResumeState:
+    try:
+        with np.load(path, allow_pickle=False) as data:
+            metadata_text = str(data["metadata_json"].item())
+            arrays = {name: np.asarray(data[name]) for name in data.files}
+    except (OSError, ValueError, KeyError, EOFError) as error:
+        _fail("ppo_resume_state_read", "$.resume", str(error))
+    try:
+        metadata = json.loads(metadata_text)
+    except json.JSONDecodeError as error:
+        _fail("ppo_resume_state_read", "$.resume.metadata_json", str(error))
+    if not isinstance(metadata, dict) or metadata.get("format_version") != 1:
+        _fail(
+            "ppo_resume_state_version",
+            "$.resume.format_version",
+            "expected task-GNN resume state format version 1",
+        )
+    stored_payload_sha256 = metadata.get("payload_sha256")
+    metadata_without_hash = dict(metadata)
+    metadata_without_hash.pop("payload_sha256", None)
+    numeric_arrays = {
+        name: values for name, values in arrays.items() if name != "metadata_json"
+    }
+    if (
+        not isinstance(stored_payload_sha256, str)
+        or len(stored_payload_sha256) != 64
+        or stored_payload_sha256
+        != _resume_payload_sha256(metadata_without_hash, numeric_arrays)
+    ):
+        _fail(
+            "ppo_resume_state_hash",
+            "$.resume.payload_sha256",
+            "task-GNN training state payload hash does not match its contents",
+        )
+    expected_identity = {
+        "algorithm": "task_gnn_masked_ppo_epoch_boundary_resume",
+        "architecture": warm_start.architecture,
+        "contract_sha256": contract_sha256,
+        "warm_start_parameter_sha256": task_gnn_parameter_hash(warm_start),
+        "seed": warm_start.seed,
+        "feature_names": list(warm_start.feature_names),
+        "actor_hidden_dim": warm_start.hidden_dim,
+        "actor_message_dim": warm_start.message_dim,
+        "actor_parameter_names": sorted(warm_start.params),
+        "critic_feature_dim": len(warm_start.feature_names),
+        "critic_hidden_dim": int(config["value_hidden_dim"]),
+        "critic_seed": warm_start.seed + 404,
+        "test_accessed": False,
+    }
+    mismatches = {
+        key: {"expected": value, "actual": metadata.get(key)}
+        for key, value in expected_identity.items()
+        if metadata.get(key) != value
+    }
+    if mismatches:
+        _fail(
+            "ppo_resume_state_mismatch",
+            "$.resume",
+            "task-GNN resume state does not match the current contract",
+            details={"mismatches": mismatches},
+        )
+    completed_epoch = metadata.get("completed_epoch")
+    best_epoch = metadata.get("best_epoch")
+    actor_step = metadata.get("actor_adam_step")
+    critic_step = metadata.get("critic_adam_step")
+    if any(
+        isinstance(value, bool) or not isinstance(value, int) or value < 0
+        for value in (completed_epoch, best_epoch, actor_step, critic_step)
+    ):
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume",
+            "epoch and Adam counters must be non-negative integers",
+        )
+    assert isinstance(completed_epoch, int)
+    assert isinstance(best_epoch, int)
+    assert isinstance(actor_step, int)
+    assert isinstance(critic_step, int)
+    if completed_epoch > int(config["epochs"]) or best_epoch > completed_epoch:
+        _fail(
+            "ppo_resume_state_mismatch",
+            "$.resume.completed_epoch",
+            "task-GNN resume epoch is outside the training range",
+        )
+    history = metadata.get("history")
+    if (
+        not isinstance(history, list)
+        or len(history) != completed_epoch + 1
+        or any(
+            not isinstance(record, dict) or record.get("epoch") != index
+            for index, record in enumerate(history)
+        )
+    ):
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.history",
+            "task-GNN history does not match the completed epoch boundary",
+        )
+    raw_best_key = metadata.get("best_key")
+    if (
+        not isinstance(raw_best_key, list)
+        or len(raw_best_key) != 3
+        or any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            for value in raw_best_key
+        )
+    ):
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.best_key",
+            "task-GNN best selection key is invalid",
+        )
+    try:
+        expected_adam_step = sum(
+            len(record["update"]["updates"])
+            * math.ceil(
+                int(record["update"]["transition_count"])
+                / int(config["minibatch_size"])
+            )
+            for record in history[1:]
+        )
+    except (KeyError, TypeError, ValueError) as error:
+        _fail("ppo_resume_state_corrupt", "$.resume.history", str(error))
+    if actor_step != expected_adam_step or critic_step != expected_adam_step:
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.actor_adam_step",
+            "task-GNN Adam counters do not match update history",
+            details={
+                "expected": expected_adam_step,
+                "actor": actor_step,
+                "critic": critic_step,
+            },
+        )
+    actor = warm_start.clone(include_optimizer=False)
+    critic = ValueNetwork(
+        feature_dim=len(actor.feature_names),
+        hidden_dim=int(config["value_hidden_dim"]),
+        seed=actor.seed + 404,
+    )
+    expected_array_names = {
+        key
+        for name in actor.params
+        for key in (
+            f"actor_param_{name}",
+            f"actor_adam_m_{name}",
+            f"actor_adam_v_{name}",
+            f"best_actor_param_{name}",
+        )
+    } | {
+        key
+        for name in critic.params
+        for key in (
+            f"critic_param_{name}",
+            f"critic_adam_m_{name}",
+            f"critic_adam_v_{name}",
+            f"best_critic_param_{name}",
+        )
+    }
+    if set(numeric_arrays) != expected_array_names:
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.arrays",
+            "task-GNN state array schema does not match the architecture",
+            details={
+                "missing": sorted(expected_array_names - set(numeric_arrays)),
+                "unexpected": sorted(set(numeric_arrays) - expected_array_names),
+            },
+        )
+    best_actor = actor.clone(include_optimizer=False)
+    best_critic = critic.clone()
+    for name, values in actor.params.items():
+        shape = values.shape
+        actor.params[name] = _resume_array(arrays, f"actor_param_{name}", shape)
+        actor._adam_m[name] = _resume_array(
+            arrays,
+            f"actor_adam_m_{name}",
+            shape,
+        )
+        actor._adam_v[name] = _resume_array(
+            arrays,
+            f"actor_adam_v_{name}",
+            shape,
+        )
+        best_actor.params[name] = _resume_array(
+            arrays,
+            f"best_actor_param_{name}",
+            shape,
+        )
+    for name, values in critic.params.items():
+        shape = values.shape
+        critic.params[name] = _resume_array(arrays, f"critic_param_{name}", shape)
+        critic._adam_m[name] = _resume_array(
+            arrays,
+            f"critic_adam_m_{name}",
+            shape,
+        )
+        critic._adam_v[name] = _resume_array(
+            arrays,
+            f"critic_adam_v_{name}",
+            shape,
+        )
+        best_critic.params[name] = _resume_array(
+            arrays,
+            f"best_critic_param_{name}",
+            shape,
+        )
+    actor._adam_step = actor_step
+    critic._adam_step = critic_step
+    rng = np.random.default_rng()
+    try:
+        actor.rng.bit_generator.state = metadata["actor_rng_state"]
+        rng.bit_generator.state = metadata["training_rng_state"]
+    except (KeyError, TypeError, ValueError) as error:
+        _fail("ppo_resume_state_corrupt", "$.resume.rng_state", str(error))
+    return TaskGNNPPOResumeState(
         actor=actor,
         critic=critic,
         rng=rng,
@@ -1336,6 +1665,9 @@ def train_task_gnn_ppo(
     validation_frozen_states: (
         Mapping[str, FrozenTaskGNNTeacherStates] | None
     ) = None,
+    resume_state_path: str | Path | None = None,
+    resume_contract: Mapping[str, Any] | None = None,
+    resume: bool = False,
 ) -> tuple[
     TaskGNNPolicy,
     TaskGNNPolicy,
@@ -1391,36 +1723,97 @@ def train_task_gnn_ppo(
             "$.entries",
             "frozen task-GNN validation states do not match scenarios",
         )
-    actor = warm_start.clone(include_optimizer=False)
-    critic = ValueNetwork(
-        feature_dim=len(actor.feature_names),
-        hidden_dim=int(config["value_hidden_dim"]),
-        seed=seed + 404,
+    state_path = Path(resume_state_path) if resume_state_path is not None else None
+    if state_path is not None and resume_contract is None:
+        raise ValueError(
+            "resume_contract is required when saving task-GNN PPO state"
+        )
+    if resume and state_path is None:
+        _fail(
+            "ppo_resume_state_missing",
+            "$.resume",
+            "task-GNN resume requires a training state path",
+        )
+    contract_sha256 = (
+        _canonical_sha256(resume_contract) if resume_contract is not None else ""
     )
-    rng = np.random.default_rng(seed + int(config["shuffle_seed_offset"]))
-    initial_validation, _ = evaluate_bc_policy(
-        actor,
-        validation_scenarios,
-        validation_reference_manifest,
-        failure_penalty_ratio=float(config["failure_penalty_ratio"]),
-        frozen_task_gnn_states=validation_states,
-    )
-    best_key = (
-        float(initial_validation["failure_count"]),
-        float(initial_validation["mean_ratio"]),
-        0.0,
-    )
-    best_epoch = 0
-    best_actor = actor.clone(include_optimizer=False)
-    best_critic = critic.clone()
-    history: list[dict[str, Any]] = [
-        {
-            "epoch": 0,
-            "source": "task_gnn_behavior_cloning_warm_start",
-            "validation": initial_validation,
-        }
-    ]
-    for epoch in range(1, int(config["epochs"]) + 1):
+    warm_start_sha256 = task_gnn_parameter_hash(warm_start)
+    if resume:
+        assert state_path is not None
+        if not state_path.is_file():
+            _fail(
+                "ppo_resume_state_missing",
+                "$.resume",
+                f"task-GNN training state does not exist: {state_path}",
+            )
+        restored = _load_task_gnn_ppo_resume_state(
+            state_path,
+            contract_sha256=contract_sha256,
+            warm_start=warm_start,
+            config=config,
+        )
+        actor = restored.actor
+        critic = restored.critic
+        rng = restored.rng
+        best_actor = restored.best_actor
+        best_critic = restored.best_critic
+        history = restored.history
+        best_key = restored.best_key
+        best_epoch = restored.best_epoch
+        completed_epoch = restored.completed_epoch
+    else:
+        if state_path is not None and state_path.exists():
+            _fail(
+                "ppo_resume_state_exists",
+                "$.resume",
+                f"refusing to overwrite task-GNN state: {state_path}",
+            )
+        actor = warm_start.clone(include_optimizer=False)
+        critic = ValueNetwork(
+            feature_dim=len(actor.feature_names),
+            hidden_dim=int(config["value_hidden_dim"]),
+            seed=seed + 404,
+        )
+        rng = np.random.default_rng(seed + int(config["shuffle_seed_offset"]))
+        initial_validation, _ = evaluate_bc_policy(
+            actor,
+            validation_scenarios,
+            validation_reference_manifest,
+            failure_penalty_ratio=float(config["failure_penalty_ratio"]),
+            frozen_task_gnn_states=validation_states,
+        )
+        best_key = (
+            float(initial_validation["failure_count"]),
+            float(initial_validation["mean_ratio"]),
+            0.0,
+        )
+        best_epoch = 0
+        best_actor = actor.clone(include_optimizer=False)
+        best_critic = critic.clone()
+        history = [
+            {
+                "epoch": 0,
+                "source": "task_gnn_behavior_cloning_warm_start",
+                "validation": initial_validation,
+            }
+        ]
+        completed_epoch = 0
+        if state_path is not None:
+            _save_task_gnn_ppo_resume_state(
+                state_path,
+                contract_sha256=contract_sha256,
+                warm_start_sha256=warm_start_sha256,
+                completed_epoch=completed_epoch,
+                actor=actor,
+                critic=critic,
+                rng=rng,
+                best_actor=best_actor,
+                best_critic=best_critic,
+                history=history,
+                best_key=best_key,
+                best_epoch=best_epoch,
+            )
+    for epoch in range(completed_epoch + 1, int(config["epochs"]) + 1):
         transitions: list[TaskGNNPPOTransition] = []
         train_ratios: list[float] = []
         reward_errors: list[float] = []
@@ -1473,6 +1866,21 @@ def train_task_gnn_ppo(
             best_epoch = epoch
             best_actor = actor.clone(include_optimizer=False)
             best_critic = critic.clone()
+        if state_path is not None:
+            _save_task_gnn_ppo_resume_state(
+                state_path,
+                contract_sha256=contract_sha256,
+                warm_start_sha256=warm_start_sha256,
+                completed_epoch=epoch,
+                actor=actor,
+                critic=critic,
+                rng=rng,
+                best_actor=best_actor,
+                best_critic=best_critic,
+                history=history,
+                best_key=best_key,
+                best_epoch=best_epoch,
+            )
     return (
         best_actor,
         actor.clone(include_optimizer=False),

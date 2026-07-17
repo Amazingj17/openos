@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -13,6 +15,7 @@ from trisched.bc import (
     train_task_gnn_bc_baseline,
 )
 from trisched.env import run_policy, validate_schedule
+from trisched.gnn import task_gnn_parameter_hash
 from trisched.ppo import ValueNetwork, train_task_gnn_ppo
 from trisched.scenario import Scenario, generate_dataset
 
@@ -328,3 +331,300 @@ def test_task_gnn_ppo_rejects_reward_contract_drift() -> None:
         )
     assert captured.value.code == "ppo_reward_contract"
     assert captured.value.path == "$.ppo.gamma"
+
+
+def test_task_gnn_ppo_epoch_resume_matches_uninterrupted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    train, validation, train_manifest, validation_manifest = _micro_data()
+    train_states = freeze_task_gnn_teacher_dataset(
+        train,
+        train_manifest,
+        split="train",
+        purpose="behavior_cloning_teacher",
+    )
+    validation_states = freeze_task_gnn_teacher_dataset(
+        validation,
+        validation_manifest,
+        split="validation",
+        purpose="model_selection_reference",
+    )
+    warm_start, _, _ = train_task_gnn_bc_baseline(
+        train,
+        train_manifest,
+        validation,
+        validation_manifest,
+        _bc_config(),
+        seed=79,
+        train_frozen_states=train_states,
+        validation_frozen_states=validation_states,
+    )
+    config = _ppo_config()
+    config["epochs"] = 2
+    contract = {
+        "kind": "task-gnn-resume-test",
+        "config": config,
+        "train": [scenario.content_hash() for scenario in train],
+        "validation": [scenario.content_hash() for scenario in validation],
+        "test_accessed": False,
+    }
+    continuous_state = tmp_path / "continuous_task_gnn_state.npz"
+    resumed_state = tmp_path / "resumed_task_gnn_state.npz"
+    continuous = train_task_gnn_ppo(
+        warm_start,
+        train,
+        train_manifest,
+        validation,
+        validation_manifest,
+        config,
+        seed=79,
+        validation_frozen_states=validation_states,
+        resume_state_path=continuous_state,
+        resume_contract=contract,
+    )
+
+    original_update = ppo_module._update_task_gnn_ppo
+    update_calls = 0
+
+    def interrupt_during_second_epoch(*args, **kwargs):
+        nonlocal update_calls
+        update_calls += 1
+        if update_calls == 2:
+            raise RuntimeError("simulated task-GNN interruption")
+        return original_update(*args, **kwargs)
+
+    monkeypatch.setattr(
+        ppo_module,
+        "_update_task_gnn_ppo",
+        interrupt_during_second_epoch,
+    )
+    with pytest.raises(RuntimeError, match="simulated task-GNN interruption"):
+        train_task_gnn_ppo(
+            warm_start,
+            train,
+            train_manifest,
+            validation,
+            validation_manifest,
+            config,
+            seed=79,
+            validation_frozen_states=validation_states,
+            resume_state_path=resumed_state,
+            resume_contract=contract,
+        )
+    with np.load(resumed_state, allow_pickle=False) as state:
+        interrupted_metadata = json.loads(str(state["metadata_json"].item()))
+    assert interrupted_metadata["completed_epoch"] == 1
+    assert interrupted_metadata["test_accessed"] is False
+
+    monkeypatch.setattr(
+        ppo_module,
+        "_update_task_gnn_ppo",
+        original_update,
+    )
+    resumed = train_task_gnn_ppo(
+        warm_start,
+        train,
+        train_manifest,
+        validation,
+        validation_manifest,
+        config,
+        seed=79,
+        validation_frozen_states=validation_states,
+        resume_state_path=resumed_state,
+        resume_contract=contract,
+        resume=True,
+    )
+    for continuous_model, resumed_model in zip(continuous[:4], resumed[:4]):
+        assert all(
+            np.array_equal(
+                continuous_model.params[name],
+                resumed_model.params[name],
+            )
+            for name in continuous_model.params
+        )
+    assert continuous[4] == resumed[4]
+
+    with np.load(continuous_state, allow_pickle=False) as state:
+        continuous_arrays = {
+            name: np.asarray(state[name]).copy() for name in state.files
+        }
+    with np.load(resumed_state, allow_pickle=False) as state:
+        resumed_arrays = {
+            name: np.asarray(state[name]).copy() for name in state.files
+        }
+    assert set(continuous_arrays) == set(resumed_arrays)
+    assert len(continuous_arrays) == 57
+    for name in continuous_arrays:
+        assert np.array_equal(continuous_arrays[name], resumed_arrays[name]), name
+    final_metadata = json.loads(str(resumed_arrays["metadata_json"].item()))
+    assert final_metadata["completed_epoch"] == 2
+    assert final_metadata["algorithm"] == (
+        "task_gnn_masked_ppo_epoch_boundary_resume"
+    )
+    assert len(final_metadata["payload_sha256"]) == 64
+    assert final_metadata["warm_start_parameter_sha256"] == (
+        task_gnn_parameter_hash(warm_start)
+    )
+    assert final_metadata["actor_parameter_names"] == sorted(warm_start.params)
+    expected_adam_step = sum(
+        len(record["update"]["updates"])
+        * int(
+            np.ceil(
+                record["update"]["transition_count"]
+                / config["minibatch_size"]
+            )
+        )
+        for record in final_metadata["history"][1:]
+    )
+    assert final_metadata["actor_adam_step"] == expected_adam_step
+    assert final_metadata["critic_adam_step"] == expected_adam_step
+    assert final_metadata["actor_rng_state"]["bit_generator"] == "PCG64"
+    assert final_metadata["training_rng_state"]["bit_generator"] == "PCG64"
+
+    with pytest.raises(BehaviorCloningError) as existing:
+        train_task_gnn_ppo(
+            warm_start,
+            train,
+            train_manifest,
+            validation,
+            validation_manifest,
+            config,
+            seed=79,
+            validation_frozen_states=validation_states,
+            resume_state_path=continuous_state,
+            resume_contract=contract,
+        )
+    assert existing.value.code == "ppo_resume_state_exists"
+
+    changed_warm_start = warm_start.clone(include_optimizer=False)
+    changed_warm_start.params["node_w"][0, 0] += 0.01
+    with pytest.raises(BehaviorCloningError) as warm_start_mismatch:
+        train_task_gnn_ppo(
+            changed_warm_start,
+            train,
+            train_manifest,
+            validation,
+            validation_manifest,
+            config,
+            seed=79,
+            validation_frozen_states=validation_states,
+            resume_state_path=resumed_state,
+            resume_contract=contract,
+            resume=True,
+        )
+    assert warm_start_mismatch.value.code == "ppo_resume_state_mismatch"
+
+    valid_state = resumed_state.read_bytes()
+    with np.load(resumed_state, allow_pickle=False) as state:
+        extra_array_state = {
+            name: np.asarray(state[name]) for name in state.files
+        }
+    extra_metadata = json.loads(
+        str(extra_array_state["metadata_json"].item())
+    )
+    extra_metadata.pop("payload_sha256")
+    extra_array_state["unexpected_array"] = np.zeros(1, dtype=np.float64)
+    extra_metadata["payload_sha256"] = ppo_module._resume_payload_sha256(
+        extra_metadata,
+        {
+            name: values
+            for name, values in extra_array_state.items()
+            if name != "metadata_json"
+        },
+    )
+    extra_array_state["metadata_json"] = np.asarray(
+        json.dumps(extra_metadata, sort_keys=True, separators=(",", ":"))
+    )
+    np.savez_compressed(resumed_state, **extra_array_state)
+    with pytest.raises(BehaviorCloningError) as extra_array:
+        train_task_gnn_ppo(
+            warm_start,
+            train,
+            train_manifest,
+            validation,
+            validation_manifest,
+            config,
+            seed=79,
+            validation_frozen_states=validation_states,
+            resume_state_path=resumed_state,
+            resume_contract=contract,
+            resume=True,
+        )
+    assert extra_array.value.code == "ppo_resume_state_corrupt"
+
+    resumed_state.write_bytes(valid_state)
+    with np.load(resumed_state, allow_pickle=False) as state:
+        altered = {name: np.asarray(state[name]) for name in state.files}
+    metadata = json.loads(str(altered["metadata_json"].item()))
+    metadata["completed_epoch"] = 0
+    altered["metadata_json"] = np.asarray(
+        json.dumps(metadata, sort_keys=True, separators=(",", ":"))
+    )
+    np.savez_compressed(resumed_state, **altered)
+    with pytest.raises(BehaviorCloningError) as bad_hash:
+        train_task_gnn_ppo(
+            warm_start,
+            train,
+            train_manifest,
+            validation,
+            validation_manifest,
+            config,
+            seed=79,
+            validation_frozen_states=validation_states,
+            resume_state_path=resumed_state,
+            resume_contract=contract,
+            resume=True,
+        )
+    assert bad_hash.value.code == "ppo_resume_state_hash"
+
+    resumed_state.write_bytes(valid_state)
+    with pytest.raises(BehaviorCloningError) as contract_mismatch:
+        train_task_gnn_ppo(
+            warm_start,
+            train,
+            train_manifest,
+            validation,
+            validation_manifest,
+            config,
+            seed=79,
+            validation_frozen_states=validation_states,
+            resume_state_path=resumed_state,
+            resume_contract={**contract, "injected_change": True},
+            resume=True,
+        )
+    assert contract_mismatch.value.code == "ppo_resume_state_mismatch"
+
+    resumed_state.write_bytes(b"corrupt task-GNN state")
+    with pytest.raises(BehaviorCloningError) as corrupt:
+        train_task_gnn_ppo(
+            warm_start,
+            train,
+            train_manifest,
+            validation,
+            validation_manifest,
+            config,
+            seed=79,
+            validation_frozen_states=validation_states,
+            resume_state_path=resumed_state,
+            resume_contract=contract,
+            resume=True,
+        )
+    assert corrupt.value.code == "ppo_resume_state_read"
+
+    missing_state = tmp_path / "missing_task_gnn_state.npz"
+    with pytest.raises(BehaviorCloningError) as missing:
+        train_task_gnn_ppo(
+            warm_start,
+            train,
+            train_manifest,
+            validation,
+            validation_manifest,
+            config,
+            seed=79,
+            validation_frozen_states=validation_states,
+            resume_state_path=missing_state,
+            resume_contract=contract,
+            resume=True,
+        )
+    assert missing.value.code == "ppo_resume_state_missing"
