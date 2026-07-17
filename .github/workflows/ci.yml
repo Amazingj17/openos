@@ -77,3 +77,51 @@ jobs:
             outputs/ci-eval/test_per_instance.csv
           if-no-files-found: warn
           retention-days: 14
+
+  openeuler-smoke:
+    name: openEuler 24.03 LTS SP4 / Python 3.11
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Run pinned openEuler CPU smoke
+        run: |
+          image="openeuler/openeuler:24.03-lts-sp4@sha256:17c15554be2a5bc46023acb6e04d609d77642b8c20e236e88deb18e41ae4558e"
+          docker pull "${image}"
+          docker run --rm \
+            --env "TRISCHED_GIT_HEAD=${GITHUB_SHA}" \
+            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace" \
+            "${image}" \
+            bash /workspace/scripts/openeuler_smoke.sh \
+            /workspace /workspace/outputs/ci-openeuler
+
+      - name: Validate openEuler evidence
+        run: >-
+          python -c "import json,pathlib;
+          p=pathlib.Path('outputs/ci-openeuler/validation.json');
+          s=json.loads(p.read_text(encoding='utf-8'));
+          assert s['status']=='pass';
+          assert s['test_count']>=139;
+          assert s['dataset_hash_intersections']=={'train_validation':0,'train_test':0,'validation_test':0};
+          assert len(s['checkpoint_sha256'])==64"
+
+      - name: Upload openEuler evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-openeuler-24.03-lts-sp4
+          path: |
+            outputs/ci-openeuler/platform.txt
+            outputs/ci-openeuler/pip-freeze.txt
+            outputs/ci-openeuler/pytest.xml
+            outputs/ci-openeuler/validation.json
+            outputs/ci-openeuler/sha256.txt
+            outputs/ci-openeuler/pipeline/summary.json
+            outputs/ci-openeuler/pipeline/test_per_instance.csv
+            outputs/ci-openeuler/evaluate/evaluation_summary.json
+            outputs/ci-openeuler/evaluate/test_per_instance.csv
+          if-no-files-found: warn
+          retention-days: 14
