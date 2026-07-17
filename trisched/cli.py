@@ -15,6 +15,7 @@ from typing import Any
 import numpy as np
 
 from . import __version__
+from .bc import BehaviorCloningError, run_bc_pipeline
 from .evaluation import (
     DEFAULT_FAILURE_PENALTY_RATIO,
     dataset_manifest,
@@ -532,6 +533,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     pipeline.add_argument("--config", default="configs/smoke.json")
     pipeline.add_argument("--output", default=None)
+    train_bc = subparsers.add_parser(
+        "train-bc",
+        help="freeze HEFT teachers and select a public-STG BC checkpoint",
+    )
+    train_bc.add_argument("--config", default="configs/stg_bc.json")
+    train_bc.add_argument("--output", default=None)
     generate = subparsers.add_parser(
         "generate", help="materialize deterministic scenario JSON files"
     )
@@ -565,6 +572,8 @@ def main(argv: list[str] | None = None) -> int:
                     file=sys.stderr,
                 )
                 return 3
+        elif args.command == "train-bc":
+            run_bc_pipeline(args.config, args.output)
         elif args.command == "generate":
             generate_scenarios(args.config, args.output)
         elif args.command == "evaluate":
@@ -585,6 +594,14 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
         else:
             raise AssertionError(f"unknown command: {args.command}")
+    except BehaviorCloningError as error:
+        print(
+            json.dumps(
+                {"ok": False, "error": error.to_dict()}, ensure_ascii=False
+            ),
+            file=sys.stderr,
+        )
+        return 2
     except SchedulerAdapterError as error:
         print(
             json.dumps(

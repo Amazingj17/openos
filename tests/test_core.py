@@ -8,7 +8,12 @@ import pytest
 
 from trisched.cli import evaluate_checkpoint, run_pipeline
 from trisched.env import HeterogeneousDagEnv, run_policy, validate_schedule
-from trisched.learning import MaskedMLPPolicy, candidate_features, train_policy
+from trisched.learning import (
+    MaskedMLPPolicy,
+    build_candidate_feature_context,
+    candidate_features,
+    train_policy,
+)
 from trisched.policies import HeftPolicy, RandomPolicy, compute_upward_ranks
 from trisched.scenario import Edge, Resource, Scenario, Task, generate_dataset
 
@@ -63,10 +68,18 @@ def test_ready_mask_only_exposes_legal_pairs() -> None:
 def test_feature_shape_matches_all_masked_actions() -> None:
     scenario = toy_scenario()
     env = HeterogeneousDagEnv(scenario)
-    actions, features = candidate_features(env, compute_upward_ranks(scenario))
+    ranks = compute_upward_ranks(scenario)
+    actions, features = candidate_features(env, ranks)
+    cached_actions, cached_features = candidate_features(
+        env,
+        ranks,
+        build_candidate_feature_context(scenario, ranks),
+    )
     assert len(actions) == len(env.ready_tasks()) * scenario.resource_count
     assert features.shape == (len(actions), 16)
     assert np.isfinite(features).all()
+    assert cached_actions == actions
+    assert np.array_equal(cached_features, features)
 
 
 def test_minimal_training_checkpoint_round_trip(tmp_path) -> None:

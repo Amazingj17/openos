@@ -50,6 +50,7 @@ class HeterogeneousDagEnv:
             [] for _ in scenario.resources
         ]
         self.decision_order: list[int] = []
+        self._ready_cache: tuple[int, ...] | None = None
 
     @property
     def done(self) -> bool:
@@ -60,12 +61,17 @@ class HeterogeneousDagEnv:
         return len(self.entries) / self.scenario.task_count
 
     def ready_tasks(self) -> tuple[int, ...]:
-        return tuple(
-            task.id
-            for task in self.scenario.tasks
-            if task.id not in self.entries
-            and all(parent in self.entries for parent in self.predecessors[task.id])
-        )
+        if self._ready_cache is None:
+            self._ready_cache = tuple(
+                task.id
+                for task in self.scenario.tasks
+                if task.id not in self.entries
+                and all(
+                    parent in self.entries
+                    for parent in self.predecessors[task.id]
+                )
+            )
+        return self._ready_cache
 
     def candidate_actions(self) -> tuple[tuple[int, int], ...]:
         return tuple(
@@ -100,9 +106,8 @@ class HeterogeneousDagEnv:
             raise ValueError(f"resource {resource_id} does not exist")
         duration = self.scenario.execution_time(task_id, resource_id)
         start = self.dependency_ready_time(task_id, resource_id)
-        for interval in sorted(
-            self.resource_intervals[resource_id], key=lambda item: (item.start, item.finish)
-        ):
+        # step() keeps every resource timeline sorted.
+        for interval in self.resource_intervals[resource_id]:
             if start + duration <= interval.start + EPSILON:
                 break
             if start < interval.finish:
@@ -113,6 +118,7 @@ class HeterogeneousDagEnv:
         start, finish = self.earliest_slot(task_id, resource_id)
         entry = ScheduleEntry(task_id, resource_id, start, finish)
         self.entries[task_id] = entry
+        self._ready_cache = None
         self.resource_intervals[resource_id].append(entry)
         self.resource_intervals[resource_id].sort(
             key=lambda item: (item.start, item.finish, item.task_id)

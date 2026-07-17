@@ -12,6 +12,7 @@ from trisched.benchmark import (
     BenchmarkValidationError,
     build_stg_manifest,
     extract_verified_archive,
+    load_frozen_split,
     load_benchmark_manifest,
     load_stg_json,
     verify_frozen_splits,
@@ -116,6 +117,48 @@ def test_manifest_freezes_disjoint_hashes_and_detects_source_change(
     with pytest.raises(BenchmarkValidationError) as caught:
         load_benchmark_manifest(manifest_path)
     assert caught.value.code == "source_metadata"
+
+
+def test_split_purpose_gate_blocks_test_leakage(tmp_path: Path) -> None:
+    extracted = tmp_path / "raw"
+    source = extracted / "rnc50_hetero"
+    _write_source_set(source)
+    manifest = build_stg_manifest(
+        source, {"train": 4, "validation": 1, "test": 1}
+    )
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    assert len(
+        load_frozen_split(
+            extracted, manifest_path, "train", purpose="teacher"
+        )
+    ) == 4
+    assert len(
+        load_frozen_split(
+            extracted,
+            manifest_path,
+            "validation",
+            purpose="model_selection",
+        )
+    ) == 1
+    with pytest.raises(BenchmarkValidationError) as caught:
+        load_frozen_split(
+            extracted,
+            manifest_path,
+            "test",
+            purpose="training",
+        )
+    assert caught.value.code == "split_usage"
+
+    with pytest.raises(BenchmarkValidationError) as caught:
+        load_frozen_split(
+            extracted,
+            manifest_path,
+            "test",
+            purpose="model_selection",
+        )
+    assert caught.value.code == "split_usage"
 
 
 def test_archive_extraction_rejects_path_traversal(tmp_path: Path) -> None:

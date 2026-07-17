@@ -17,6 +17,12 @@ PROJECTION_VERSION = 1
 SPLIT_SALT = "trisched-p1-b01-stg-rnc50-v1"
 DEFAULT_SPLIT_COUNTS = {"train": 120, "validation": 30, "test": 30}
 SPLIT_ORDER = ("train", "validation", "test")
+SPLIT_PURPOSES = {
+    "teacher": frozenset({"train"}),
+    "training": frozenset({"train"}),
+    "model_selection": frozenset({"validation"}),
+    "evaluation": frozenset({"validation", "test"}),
+}
 
 SOURCE_RECORD_ID = 18_927_122
 SOURCE_DOI = "10.5281/zenodo.18927122"
@@ -535,6 +541,59 @@ def load_benchmark_manifest(path: str | Path) -> dict[str, Any]:
     return payload
 
 
+def _load_verified_entry(
+    root: Path,
+    entry: Mapping[str, Any],
+    index: int,
+) -> Scenario:
+    relative = PurePosixPath(entry["source"])
+    if relative.is_absolute() or ".." in relative.parts:
+        _fail("unsafe_path", f"$.entries[{index}].source", "path escapes root")
+    source = root.joinpath(*relative.parts).resolve()
+    if not source.is_relative_to(root) or not source.is_file():
+        _fail("source_missing", f"$.entries[{index}].source", str(source))
+    if _sha256_file(source) != entry["source_sha256"]:
+        _fail("source_hash", f"$.entries[{index}].source_sha256", str(source))
+    scenario = load_stg_json(source, scenario_id=entry["scenario_id"])
+    if scenario.content_hash() != entry["scenario_hash"]:
+        _fail("scenario_hash", f"$.entries[{index}].scenario_hash", str(source))
+    if (
+        scenario.task_count != entry["task_count"]
+        or len(scenario.edges) != entry["edge_count"]
+    ):
+        _fail("scenario_shape", f"$.entries[{index}]", str(source))
+    return scenario
+
+
+def load_frozen_split(
+    extracted_root: str | Path,
+    manifest_path: str | Path,
+    split: str,
+    *,
+    purpose: str,
+) -> list[Scenario]:
+    """Load one verified split through an explicit anti-leakage purpose gate."""
+
+    if split not in SPLIT_ORDER:
+        _fail("split_name", "$split", f"unknown split {split!r}")
+    allowed = SPLIT_PURPOSES.get(purpose)
+    if allowed is None:
+        _fail("split_purpose", "$purpose", f"unknown purpose {purpose!r}")
+    if split not in allowed:
+        _fail(
+            "split_usage",
+            "$split",
+            f"split {split!r} is forbidden for purpose {purpose!r}",
+        )
+    root = Path(extracted_root).resolve()
+    manifest = load_benchmark_manifest(manifest_path)
+    return [
+        _load_verified_entry(root, entry, index)
+        for index, entry in enumerate(manifest["entries"])
+        if entry["split"] == split
+    ]
+
+
 def verify_frozen_splits(
     extracted_root: str | Path,
     manifest_path: str | Path,
@@ -543,23 +602,9 @@ def verify_frozen_splits(
     manifest = load_benchmark_manifest(manifest_path)
     splits: dict[str, list[Scenario]] = {name: [] for name in SPLIT_ORDER}
     for index, entry in enumerate(manifest["entries"]):
-        relative = PurePosixPath(entry["source"])
-        if relative.is_absolute() or ".." in relative.parts:
-            _fail("unsafe_path", f"$.entries[{index}].source", "path escapes root")
-        source = root.joinpath(*relative.parts).resolve()
-        if not source.is_relative_to(root) or not source.is_file():
-            _fail("source_missing", f"$.entries[{index}].source", str(source))
-        if _sha256_file(source) != entry["source_sha256"]:
-            _fail("source_hash", f"$.entries[{index}].source_sha256", str(source))
-        scenario = load_stg_json(source, scenario_id=entry["scenario_id"])
-        if scenario.content_hash() != entry["scenario_hash"]:
-            _fail("scenario_hash", f"$.entries[{index}].scenario_hash", str(source))
-        if (
-            scenario.task_count != entry["task_count"]
-            or len(scenario.edges) != entry["edge_count"]
-        ):
-            _fail("scenario_shape", f"$.entries[{index}]", str(source))
-        splits[entry["split"]].append(scenario)
+        splits[entry["split"]].append(
+            _load_verified_entry(root, entry, index)
+        )
     return splits
 
 

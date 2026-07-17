@@ -32,59 +32,56 @@ FEATURE_NAMES = (
 
 
 def candidate_features(
-    env: HeterogeneousDagEnv, ranks: np.ndarray
+    env: HeterogeneousDagEnv,
+    ranks: np.ndarray,
+    context: CandidateFeatureContext | None = None,
 ) -> tuple[tuple[tuple[int, int], ...], np.ndarray]:
     scenario = env.scenario
+    if context is None:
+        context = build_candidate_feature_context(scenario, ranks)
     candidates = env.candidate_actions()
-    max_workload = max(task.workload for task in scenario.tasks)
-    max_speed = max(resource.speed for resource in scenario.resources)
-    max_execution = max(
-        scenario.execution_time(task.id, resource.id)
-        for task in scenario.tasks
-        for resource in scenario.resources
-    )
-    total_work = sum(task.workload for task in scenario.tasks)
-    min_speed = min(resource.speed for resource in scenario.resources)
-    time_scale = max(total_work / min_speed, 1.0)
-    max_rank = max(float(np.max(ranks)), 1.0)
-    predecessors = scenario.predecessors()
-    successors = scenario.successors()
-    max_degree = max(
-        1,
-        max(
-            max(len(predecessors[i]), len(successors[i]))
-            for i in range(scenario.task_count)
-        ),
-    )
+    predecessors = env.predecessors
+    successors = env.successors
     ready_tasks = env.ready_tasks()
     heft_task = min(ready_tasks, key=lambda item: (-ranks[item], item))
     heft_resource = min(
         range(scenario.resource_count),
         key=lambda item: (env.earliest_slot(heft_task, item)[1], item),
     )
+    resource_ready = tuple(
+        env.resource_ready_time(resource.id)
+        for resource in scenario.resources
+    )
+    parent_finish = {
+        task_id: max(
+            (env.entries[parent].finish for parent in predecessors[task_id]),
+            default=0.0,
+        )
+        for task_id in ready_tasks
+    }
     rows: list[list[float]] = []
     for task_id, resource_id in candidates:
         task = scenario.tasks[task_id]
         resource = scenario.resources[resource_id]
         start, finish = env.earliest_slot(task_id, resource_id)
         dependency_ready = env.dependency_ready_time(task_id, resource_id)
-        parent_finish = max(
-            (env.entries[parent].finish for parent in predecessors[task_id]),
-            default=0.0,
+        communication_delay = max(
+            0.0,
+            dependency_ready - parent_finish[task_id],
         )
-        communication_delay = max(0.0, dependency_ready - parent_finish)
         rows.append(
             [
-                task.workload / max_workload,
-                scenario.execution_time(task_id, resource_id) / max_execution,
-                resource.speed / max_speed,
-                start / time_scale,
-                finish / time_scale,
-                env.resource_ready_time(resource_id) / time_scale,
-                communication_delay / time_scale,
-                ranks[task_id] / max_rank,
-                len(predecessors[task_id]) / max_degree,
-                len(successors[task_id]) / max_degree,
+                task.workload / context.max_workload,
+                scenario.execution_time(task_id, resource_id)
+                / context.max_execution,
+                resource.speed / context.max_speed,
+                start / context.time_scale,
+                finish / context.time_scale,
+                resource_ready[resource_id] / context.time_scale,
+                communication_delay / context.time_scale,
+                ranks[task_id] / context.max_rank,
+                len(predecessors[task_id]) / context.max_degree,
+                len(successors[task_id]) / context.max_degree,
                 env.progress,
                 1.0 if resource.kind == "device" else 0.0,
                 1.0 if resource.kind == "edge" else 0.0,
@@ -103,6 +100,44 @@ class DistributionCache:
     hidden: np.ndarray
     probabilities: np.ndarray
     temperature: float
+
+
+@dataclass(frozen=True)
+class CandidateFeatureContext:
+    max_workload: float
+    max_speed: float
+    max_execution: float
+    time_scale: float
+    max_rank: float
+    max_degree: int
+
+
+def build_candidate_feature_context(
+    scenario: Scenario,
+    ranks: np.ndarray,
+) -> CandidateFeatureContext:
+    max_workload = max(task.workload for task in scenario.tasks)
+    max_speed = max(resource.speed for resource in scenario.resources)
+    min_speed = min(resource.speed for resource in scenario.resources)
+    predecessors = scenario.predecessors()
+    successors = scenario.successors()
+    return CandidateFeatureContext(
+        max_workload=max_workload,
+        max_speed=max_speed,
+        max_execution=max_workload / min_speed,
+        time_scale=max(
+            sum(task.workload for task in scenario.tasks) / min_speed,
+            1.0,
+        ),
+        max_rank=max(float(np.max(ranks)), 1.0),
+        max_degree=max(
+            1,
+            max(
+                max(len(predecessors[index]), len(successors[index]))
+                for index in range(scenario.task_count)
+            ),
+        ),
+    )
 
 
 class MaskedMLPPolicy:
@@ -134,9 +169,14 @@ class MaskedMLPPolicy:
         self._adam_v = {name: np.zeros_like(value) for name, value in self.params.items()}
         self._adam_step = 0
         self.ranks: np.ndarray | None = None
+        self.feature_context: CandidateFeatureContext | None = None
 
     def reset(self, scenario: Scenario) -> None:
         self.ranks = compute_upward_ranks(scenario)
+        self.feature_context = build_candidate_feature_context(
+            scenario,
+            self.ranks,
+        )
 
     def distribution(
         self, env: HeterogeneousDagEnv, temperature: float = 1.0
@@ -146,7 +186,11 @@ class MaskedMLPPolicy:
         if self.ranks is None:
             self.reset(env.scenario)
         assert self.ranks is not None
-        actions, features = candidate_features(env, self.ranks)
+        actions, features = candidate_features(
+            env,
+            self.ranks,
+            self.feature_context,
+        )
         hidden = np.tanh(features @ self.params["w1"] + self.params["b1"])
         scores = (hidden @ self.params["w2"]) / temperature
         scores = scores - np.max(scores)
