@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：提交正式复核（正式 3-seed 已执行；稳健性选择门禁未通过，按规则保留 MLP）
+- 状态：已关闭（正式 3-seed 未通过稳健性选择门禁；B 独立复核通过，主模型保留 MLP）
 - 前置门禁：[P1-03 第二轮独立复核通过](./P1-03第二轮独立复核记录.md)
 
 ## 1. 目标与单变量边界
@@ -110,7 +110,7 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 | 完整 artifact 与 manifest | 每次 3-seed 微型 run 生成 32 个被 manifest 声明的 artifact；bytes/SHA-256 全部重算一致 | 通过微型 smoke |
 | run 级 staging 事务 | 第二个 PPO epoch 中断后恢复与连续 run 一致；后置 seed 写出失败时正式目录逐字节不变且事务残留为 0 | 通过微型 smoke |
 | 固定 3-seed validation 对照 | GNN mean `0.690460` 对 MLP `0.723193`；90 对为 `50/19/21`，分层配对 bootstrap 95% CI `[-0.083063, 0.007113]` | 已执行；CI 跨 0，未通过选择门禁 |
-| B 独立复核 | 微型 CLI/事务已在远端 `f6301ae7...` 干净 clone 通过；正式 artifact、配对脚本和停止决策待从新不可变提交复核 | 微型通过；正式待复核 |
+| B 独立复核 | 微型 CLI/事务在 `f6301ae7...` 通过；正式结果又在远端 `f4c7e4d...` 重算 artifact、状态、checkpoint、配对 CI 和停止决策 | [正式复核通过](./P1-A03正式结果独立复核记录.md) |
 
 实现位于 `trisched/gnn.py`、`trisched/bc.py` 和 `trisched/ppo.py`，聚焦测试位于 `tests/test_task_gnn.py`、`tests/test_task_gnn_training.py` 与 `tests/test_task_gnn_pipeline.py`。第二阶段增加了从候选分数到节点编码的完整解析反传、梯度累加/裁剪 Adam，以及与 Scenario 内容 hash 绑定的只读 `FrozenTaskGraph/FrozenTaskGNNState`。冻结状态在 live env 继续执行后仍逐数组重放相同 probability，错误 Scenario 会在冻结时拒绝。
 
@@ -136,10 +136,12 @@ B 在远端不可变提交 `f6301ae7...` 上建立干净 clone，完整回归 `1
 
 与冻结 MLP 的 90 对逐实例结果为 GNN/平/MLP `50/19/21`，30 个场景跨 seed 均值为 `20/2/8`；mean ratio 点估计改善 `-0.032733`（相对 `-4.526%`），但固定 10,000 次分层配对 bootstrap 的 95% CI 为 `[-0.083063, 0.007113]`。CI 跨 0，且三个 GNN seed 的 P95 均大于 1，因此不满足预注册的稳健性选择门禁。正式参数量为 `1008/512=1.96875×`，CPU P50 为 `139.893/133.777=1.046×`，未出现数量级时延失控。完整数字、hash、复现命令和限制见 [P1-A03 正式对照报告](./P1-A03正式对照报告.md)。
 
-## 7. 下一步要求
+B 随后从 GitHub 不可变提交 `f4c7e4d...` 建立干净 clone，完整回归 `188 passed in 10.58s`。正式 MLP/GNN manifest 的 `31/32` 项 artifact 均为 0 个 bytes/hash 不一致；三个 GNN 状态经生产加载器验证为 57 个条目、`completed_epoch=2`、best epoch `2/1/0`。B 未导入 A 的比较模块，独立重算得到完全相同的 `50/19/21`、`20/2/8` 和 CI；六个 best checkpoint 的 180 次 validation 复评与 diagnostics 的 makespan 最大误差为 0。完整记录见 [P1-A03 正式结果独立复核](./P1-A03正式结果独立复核记录.md)。
 
-1. 用户推送本次正式结果提交后，成员 B 从该不可变提交建立干净工作区，先运行完整回归并核对比较脚本的输入绑定、方向、tie 容差和 bootstrap 确定性；
-2. B 对本地正式输出重算 32 个 manifest artifact、summary/manifest hash、三个 57-entry 状态和 best epoch，并确认所有 test 边界字段均为 false；
-3. B 从逐实例 diagnostics 独立重算 `50/19/21`、`20/2/8`、mean delta 和 95% CI，并抽查正式 checkpoint 参数量及 CPU 计时口径；
-4. 若数字、hash、代码和停止决策一致，记录正式独立复核并关闭 P1-A03；主模型保持 masked MLP，task-GNN 只作为“方向性改善、未证实”的消融证据；
-5. 不因 CI 跨 0 追加 resource-GNN、课程、新奖励、更多 validation seed 或公开 test 调参；后续任务另行预注册，公开 test/OOD 继续不访问。
+## 7. 关闭结论与任务移交
+
+1. P1-A03 的实现、正式对照和两轮独立复核均已完成，任务状态改为已关闭；
+2. 主模型保持 14 维 masked MLP，task-GNN 只作为“方向性改善、未证实”的消融证据；
+3. 不因 CI 跨 0 追加 resource-GNN、课程、新奖励、更多 validation seed 或公开 test 调参；
+4. 下一任务为 B 主责、A 复核的 P1-B02 评测契约预注册和自动报告设计，先冻结 ID/OOD 切片、统计、计算预算与一次性 test 规则；
+5. P1-B02 的设计阶段不读取公开 test 结果，任何最终泛化结论仍须等待后续双签门禁。

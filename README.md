@@ -18,7 +18,7 @@
 - 在 PPO 主路径删除直接暴露 HEFT 决策的两项二值特征，使用 3 个 seed 和 BC warm-start 回退做 validation 选模；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 已完成正式 validation：点估计改善但配对 bootstrap CI 跨 0，按冻结规则保留 MLP，待 B 复核正式结果后关闭本轮。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。
 
 ## 快速运行
 
@@ -116,7 +116,7 @@ python -m trisched train-ppo --config configs/stg_ppo.json --resume
 
 正式 validation 的 3 个 best seed ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 个 seed，另 1 个按冻结规则回退 BC warm start。seed-level mean 为 `0.723193`，但 population std 为 `0.075948`，每个 seed 仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。B 已在物理删除 test JSON 和 archive 的数据根上复跑正式配置，并完成 checkpoint、manifest、数学分支与配置注入复核。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。详见 [P1-A02 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)、其[独立复核记录](doc/P1-A02独立复核记录.md)和 [P1-03 断点续训契约](doc/P1-03PPO断点续训设计与验收.md)。
 
-## P1-A03 task-GNN（进行中）
+## P1-A03 task-GNN（已关闭）
 
 当前已实现 task-GNN 的前向、完整解析梯度、裁剪 Adam、合法动作接口、只读 frozen graph state 和无 pickle checkpoint。它继续使用相同 14 维 teacher-free 候选特征，仅从其中复用 workload、upward-rank、入度和出度构造任务节点，沿 DAG 分别做一次前驱/后继均值消息传递，再与原候选表示融合打分。该接口已有同 seed 确定性、图结构敏感性、动作 mask、中心有限差分、冻结重放、参数量和 checkpoint 往返测试。
 
@@ -129,7 +129,7 @@ python -m trisched train-task-gnn --config configs/stg_task_gnn.json --resume
 
 恢复沿用同盘 staging 目录交换；微型测试已证明连续/恢复的 summary、曲线和全部模型/状态数组一致，后置 seed 写出失败时正式目录逐字节不变。成员 B 已从远端不可变提交独立复跑 32-artifact、15 对 NPZ、后置失败目录快照和 MLP 旧入口并[复核通过](doc/P1-A03独立复核记录.md)。正式参数量 GNN/MLP 为 `1008/512`；120 个 train 场景的 frozen state 峰值 RSS 增量约 53.42 MiB，graph 按 Scenario 共享。
 
-正式 task-GNN 3-seed validation ratio 为 `0.754139 / 0.633578 / 0.683664`，mean `0.690460`，低于 MLP 的 `0.723193`；90 对逐实例为 `50/19/21`，场景跨 seed 均值为 `20/2/8`，全部合法且零非法动作。但分层配对 bootstrap 的 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，且三个 seed 的 P95 均大于 1。按预先停止规则，主模型继续保留 MLP，task-GNN 只记为方向性改善、未证实，不追加新变量补救。公开 test 仍未访问；完整结果与边界见[正式对照报告](doc/P1-A03正式对照报告.md)。
+正式 task-GNN 3-seed validation ratio 为 `0.754139 / 0.633578 / 0.683664`，mean `0.690460`，低于 MLP 的 `0.723193`；90 对逐实例为 `50/19/21`，场景跨 seed 均值为 `20/2/8`，全部合法且零非法动作。但分层配对 bootstrap 的 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，且三个 seed 的 P95 均大于 1。按预先停止规则，主模型继续保留 MLP，task-GNN 只记为方向性改善、未证实，不追加新变量补救。B 已重算 artifact、状态、配对 CI，并用六个 best checkpoint 复评 180 次 validation 调度，makespan 最大误差为 0。公开 test 仍未访问；完整证据见[正式对照报告](doc/P1-A03正式对照报告.md)和[正式结果独立复核](doc/P1-A03正式结果独立复核记录.md)。
 
 ## openEuler CPU smoke
 
@@ -212,9 +212,9 @@ tests/                   单元与集成测试
 - 目标函数仅为 makespan；
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - task-GNN 已使用一层任务 DAG 消息传递，但资源关系仍只由手工候选特征表达；
-- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 仅完成合成微型 CLI/事务门禁，尚无正式训练、课程或 OOD；
-- 已在公开 STG topology projection 上完成并独立复核 3-seed PPO validation 开发结果；公开 test 最终评测、5-seed 主结果、分层 bootstrap 与竞赛方隐藏测试尚未完成。
-- task-GNN 的 epoch 与目录级断点续训已通过 A 的微型中断/后置失败注入，但尚待 B 从不可变提交独立复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
+- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程或 OOD；
+- 已在公开 STG topology projection 上完成并独立复核 3-seed PPO/task-GNN validation 开发结果及分层配对 bootstrap；公开 test 最终评测、5-seed 主结果和竞赛方隐藏测试尚未完成。
+- task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移，原始文本 hash 还会受 LF/CRLF 检出策略影响，release 前须补规范化 hash 和跨 clone 测试。
 
 ## 开源许可证
 
