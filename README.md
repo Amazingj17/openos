@@ -67,7 +67,7 @@ python -m pytest
 
 `tests/fixtures/golden/optimal_cases.json` 进一步冻结了 10 个小图的 CPOP 完整决策轨迹、解析下界和精确最优 makespan。精确 solver 穷举所有 active schedule，只用于不超过 8 个任务的小图正确性测试；算法定义、证明边界和结果见[CPOP 与小图精确 Oracle 报告](doc/CPOP与精确Oracle设计.md)。
 
-上述输入、环境、HEFT、CPOP、小图最优参考和跨平台证据已汇总到 [G1 正确性门禁评审包](doc/G1正确性门禁评审.md)，并由成员 A [独立复核通过](doc/G1独立复核记录.md)。该结论只覆盖当前静态模型正确性；P0-10 openEuler smoke 已由 B 提交、正等待 A 独立复核，仍不能宣称当前学习策略优于 HEFT。
+上述输入、环境、HEFT、CPOP、小图最优参考和跨平台证据已汇总到 [G1 正确性门禁评审包](doc/G1正确性门禁评审.md)，并由成员 A [独立复核通过](doc/G1独立复核记录.md)。P0-10 openEuler smoke 也已由 A 从远端不可变提交[独立复核通过](doc/P0-10独立复核记录.md)。这些结论只覆盖当前静态模型正确性和 openEuler 用户态兼容性，仍不能宣称当前学习策略优于 HEFT。
 
 ## openEuler CPU smoke
 
@@ -80,7 +80,7 @@ docker pull $image
 Get-Content outputs\p0-10-openeuler\validation.json
 ```
 
-脚本会在全新虚拟环境中安装非 editable 包，执行完整测试、pipeline 和 checkpoint 复评，并把证据写到被 Git 忽略的 `outputs/p0-10-openeuler/`。容器使用 `--rm`，成功或失败退出后均不作为交付物保留。固定镜像、结果、已知失败和 WSL2 容器边界见 [P0-10 openEuler 验证记录](doc/P0-10openEuler验证记录.md)。
+脚本会在全新虚拟环境中安装非 editable 包，执行完整测试、pipeline 和 checkpoint 复评，并把证据写到被 Git 忽略的 `outputs/p0-10-openeuler/`。容器使用 `--rm`，成功或失败退出后均不作为交付物保留。固定镜像、结果、已知失败和 WSL2 容器边界见 [P0-10 openEuler 验证记录](doc/P0-10openEuler验证记录.md)及其[独立复核记录](doc/P0-10独立复核记录.md)。
 
 ## 生成可查看的场景 JSON
 

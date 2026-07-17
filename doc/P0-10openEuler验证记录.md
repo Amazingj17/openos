@@ -3,15 +3,16 @@
 - 任务：P0-10
 - 主责：成员 B
 - 复核：成员 A
-- 状态：部分完成（B 已提交，待 A 复核）
+- 状态：已完成（A 独立复核通过）
 - 日期：2026-07-17
-- 验证提交：`91ae683106663d103c87f70db93ac6813d882dce`
+- B 首轮 smoke 的 Git HEAD：`91ae683106663d103c87f70db93ac6813d882dce`
+- P0-10 实现提交：`03058c582372f4ff80d329f7a259deda0d007b34`
 
 ## 1. 验证结论
 
 TriSched 已在固定的 openEuler 24.03 LTS-SP4 x86_64 用户态镜像中完成一次性 CPU smoke。全新容器内创建独立虚拟环境，安装锁定依赖和非 editable 项目包后，完整测试、pipeline、checkpoint 无训练复评和结构化证据检查均通过。
 
-本记录证明当前代码与 openEuler 24.03 LTS-SP4 用户态、glibc 2.38 和 Python 3.11.6 兼容。由于 Docker Desktop 使用 WSL2 内核，本次结果不等价于原生 openEuler 内核或物理机验证；P0-10 仍须由 A 独立复核，新增的远端 CI job 也须在推送后确认。
+本记录证明当前代码与 openEuler 24.03 LTS-SP4 用户态、glibc 2.38 和 Python 3.11.6 兼容。由于 Docker Desktop 使用 WSL2 内核，本次结果不等价于原生 openEuler 内核或物理机验证。A 已从不可变远端提交完成[独立复核](./P0-10独立复核记录.md)，新增 CI job 也已成功。
 
 ## 2. 固定环境
 
@@ -117,21 +118,21 @@ smoke-attempt2-validation-parser.log 第二次真实失败
 
 ## 7. CI 与复核状态
 
-CI workflow 已增加固定 digest 的 `openeuler-smoke` job，设计为拉取镜像、运行同一容器脚本、校验 `validation.json` 并上传结构化证据。该 job 尚未在远端执行，因为当前变更尚未由用户推送。
+CI workflow 已增加固定 digest 的 `openeuler-smoke` job，负责拉取镜像、运行同一容器脚本、校验 `validation.json` 并上传结构化证据。GitHub Actions run [29547875139](https://github.com/Amazingj17/openos/actions/runs/29547875139) 已成功，openEuler job 与原有六环境矩阵全部通过，artifact `evidence-openeuler-24.03-lts-sp4` 存在且未过期。
 
-A 的独立复核至少应完成：
+A 的独立复核结果：
 
-- [ ] 从已推送的不可变 commit 开始，不复用 B 的容器或虚拟环境；
-- [ ] 核对镜像 digest、发行版、架构、Python、glibc 和 CPU 记录；
-- [ ] 运行完整 smoke，确认 139 项测试、数据集计数、零 hash 交集和 checkpoint 复评；
-- [ ] 确认运行后没有残留临时容器；
-- [ ] 检查 GitHub Actions 的 openEuler job 和 artifact；
-- [ ] 在任务日志记录“通过”或“退回”，再决定 P0-10 是否关闭。
+- [x] 从已推送的不可变 commit 开始，不复用 B 的容器、虚拟环境、输出或 wheelhouse；
+- [x] 核对镜像 digest、发行版、架构、Python、glibc 和 CPU 记录；
+- [x] 运行完整 smoke，确认 139 项测试、数据集计数、零 hash 交集和 checkpoint 复评；
+- [x] 确认运行后没有残留临时容器；
+- [x] 检查 GitHub Actions 的 openEuler job 和 artifact；
+- [x] 在[独立复核记录](./P0-10独立复核记录.md)签字通过。
 
 ## 8. 已知边界
 
 - Docker 容器复用了 WSL2 内核，只证明 openEuler 用户态兼容；原生 openEuler VM/物理机是更强的后续证据。
 - smoke 使用小规模确定性合成数据，只验证安装、正确性闭环和可复现性，不代表真实 benchmark 性能。
 - 当前依赖仍包含网络安装路径；正式离线提交包需要完整 wheelhouse、许可证清单和离线安装演练。
-- 远端 openEuler CI 在用户推送并成功运行前属于待验证项。
-- P0-10 在 A 独立复核前保持“部分完成”。
+- 当前源码安装要求构建目录可写；只读源介质场景应先构建 wheel，再从 wheel 安装。
+- P0-10 已通过并关闭；原生 openEuler 内核和离线发布包仍作为后续增强证据。
