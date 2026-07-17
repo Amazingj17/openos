@@ -126,7 +126,7 @@ mean ± 1.96 × population_std / sqrt(N)
 4. 报告 bootstrap 2.5%/97.5% 分位数；正态近似只保留作调试信息。
 5. 所有 slice 同时给出样本数，样本过少时不得单独作强结论。
 
-P1-B02 将上述方法固化为机器契约：主策略和 Random 使用 5 seeds；确定性 baseline、单 seed BC 和既有 3-seed task-GNN 不复制行伪造相同 seed 数。主策略与 seed 数不同的 comparator 比较时，双方 seed 独立重采样、场景索引共享配对；只有 seed 集完全一致时才额外报告逐 seed×scenario 精确配对。A 首轮独立重算证明统计方法一致，并因报告没有输出第 2 条要求的全部 seed-level mean 而退回；B 的修复候选现已在 JSON 输出稳定有序的 `seed_mean_ratios`，并新增逐 seed CSV 和 manifest hash，仍待 A 二次复核。见 [P1-B02 独立复核](./P1-B02独立复核记录.md)。
+P1-B02 将上述方法固化为机器契约：主策略和 Random 使用 5 seeds；确定性 baseline、单 seed BC 和既有 3-seed task-GNN 不复制行伪造相同 seed 数。主策略与 seed 数不同的 comparator 比较时，双方 seed 独立重采样、场景索引共享配对；只有 seed 集完全一致时才额外报告逐 seed×scenario 精确配对。A 首轮因报告没有输出全部 seed-level mean 而退回；B 在 JSON/逐 seed CSV/manifest 补齐后，A 已用 mean `0.6/1.4` 的不同 seed 独立[二次复核通过](./P1-B02第二轮独立复核记录.md)。
 
 ### 3.5 失败、非法和超时
 
@@ -142,7 +142,7 @@ P1-B02 将上述方法固化为机器契约：主策略和 Random 使用 5 seeds
 | 逐实例 ratio | 每个策略 makespan 除以同实例 HEFT makespan | 正确 | 保持 |
 | train/validation/test | smoke 使用派生 seed；公开 BC/PPO 只用 train 生成 teacher/梯度，validation 选模，test 不加载 | P1-A01/P1-A02 均已由 B 用无 test raw root 复核；PPO 复跑时 test JSON 和 archive 均物理不存在 | test 只留最终评测；task-GNN 继续复用同一门禁 |
 | checkpoint 选择 | legacy smoke 只存 last；公开 BC/PPO 均保存 best/last，PPO 将 warm start 作为 epoch 0 候选 | B 证明 seed 20260718 的 best actor 参数与 BC warm start 相同，未用 last 冒充 best | task-GNN 沿用相同 selection key |
-| CI | smoke 仍为正态近似；P1-A03 对照新增固定双层配对 bootstrap；P1-B02 已冻结 5-seed 与异 seed 数 comparator 统计 | A 已独立重算 P1-B02 单策略/配对 bootstrap 一致；B 已补逐 seed JSON/CSV | A 二次复核后才进入 5-seed development/OOD |
+| CI | smoke 仍为正态近似；P1-A03 对照新增固定双层配对 bootstrap；P1-B02 已冻结 5-seed 与异 seed 数 comparator 统计 | A 二次独立重算单策略/配对 bootstrap、逐 seed JSON/CSV 和四份 artifact 一致 | 先实现并复核 OOD producer，再进入 5-seed development/OOD |
 | 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现并由 A 独立复核 | 保持零失败发布门禁 |
 | HEFT teacher | P1-A01 参考含 `is_heft_task/is_heft_pair`；P1-A02 主路径强制删除 | 同 seed 16/14 维 BC ratio 为 `1.0/0.852539`，teacher accuracy 为 `1.0/0.514`；B 注入任一特征均在训练前失败 | PPO/GNN 主路径保持删除 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
@@ -150,7 +150,7 @@ P1-B02 将上述方法固化为机器契约：主策略和 Random 使用 5 seeds
 | 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | B 已独立复核 3-seed MLP、staging 断点续训和 task-GNN 同预算正式对照 | 保持 MLP 主路径，转入 P1-B02 评测契约 |
 | 图表示 | PPO 主模型为 14 维 MLP；P1-A03 对照为一层双向 task-GNN | GNN mean 点估计改善 `-0.032733`，但配对 CI 跨 0；参数约 `1.969×`、CPU P50 约 `1.046×` | 保留 MLP；GNN 作为未证实消融，不追加新图变量 |
 | checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单；P1-A03 合同可由历史 Git blob 重建，但 clean clone 的 LF/CRLF 工作树字节不同 | release 前规范化文本 hash、补跨 clone 恢复测试，再考虑内嵌 manifest 摘要 |
-| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁；P1-B02 已有原子 receipt 和 final evidence 校验 | A 首轮发现冻结 receipt 名称未执行、伪 UTC 时间被接受；B 已在 claim/final 执行 basename 并严格解析 `utc_seconds_z`，实际 loader 仍未接入 | A 二次复核；随后将 claim 固定在 loader 前和不可覆盖 release artifact |
+| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁；P1-B02 已有原子 receipt 和 final evidence 校验 | A 二次确认 claim/final basename、receipt 字段和 `utc_seconds_z` 均通过；不同目录同 basename 仍可重领，实际 loader 未接入 | 将 claim 固定在 loader 前、固定 release root 和不可覆盖 artifact |
 
 ## 5. 当前结果的正确解释
 
@@ -175,7 +175,7 @@ P1-A02 删除两项直接 HEFT 决策特征后，在相同公开 train/validatio
 
 P1-A03 在相同 14 维输入、奖励、split、训练预算、3 seeds 和选模规则下，只把 MLP 替换为一层双向 task-GNN。三个 best validation ratio 为 `0.754139/0.633578/0.683664`，mean/std 为 `0.690460/0.049453`，failure/illegal 均为 0；与 MLP 的 90 对逐实例为 `50/19/21`。分层配对 bootstrap 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，因此当前只允许表述为“task-GNN 在 validation 上呈方向性改善，但未达到稳健替换门禁”。B 已独立复核通过，主模型继续保留 MLP，公开 test/OOD 未访问；详见 [P1-A03 正式对照报告](./P1-A03正式对照报告.md)和[正式结果独立复核](./P1-A03正式结果独立复核记录.md)。
 
-P1-B02 已把下一阶段的主策略、reference、policy seed 数、ID/OOD 切片、失败惩罚、scheduler-only runtime、交叉分层 bootstrap、主策略配对比较、artifact hash 和一次性 test 工作流写入机器契约。A 首轮独立复核确认正常统计与多数拒绝路径，但因逐 seed mean、receipt basename 和 UTC 三项缺陷未通过；B 已提交对应修复候选，仍待 A 二次复核，详见 [复核记录](./P1-B02独立复核记录.md)。当前尚无真实 OOD/test 结果，也未补齐 5-seed 主模型，不能把“协议候选”写成“泛化已验证”。
+P1-B02 已把下一阶段的主策略、reference、policy seed 数、ID/OOD 切片、失败惩罚、scheduler-only runtime、交叉分层 bootstrap、主策略配对比较、artifact hash 和一次性 test 工作流写入机器契约。首轮退回的逐 seed mean、receipt basename 和 UTC 三项已由 A [二次复核通过](./P1-B02第二轮独立复核记录.md)，契约/聚合器子阶段关闭。当前尚无真实 OOD/test 结果，也未补齐 OOD producer 和 5-seed 主模型，不能把“协议通过”写成“泛化已验证”。
 
 ## 6. 当前 MLP/PPO 与 legacy REINFORCE 的局限
 
@@ -330,4 +330,4 @@ P1-03 epoch 边界状态覆盖 actor/value 参数、两个 Adam、两套 RNG、h
 
 P1-A03 已按上述冻结项实现并运行：节点只复用 14 维输入中的 workload、upward-rank、indegree、outdegree，经一次前驱/后继均值消息传递后与候选表示融合。B 已从远端 `f6301ae7...` 独立重验微型事务；A 随后在提交 `a8c08c0...` 上完成正式 3-seed；B 又从远端 `f4c7e4d...` 重算 31/32-artifact、三个状态、配对 CI，并用六个 checkpoint 复评 180 次 validation 调度，全部一致。GNN/MLP mean 为 `0.690460/0.723193`，90 对为 `50/19/21`，但配对 CI 跨 0；因此停止扩展并保留 MLP。完整证据见 [P1-A03 设计与验收](./P1-A03TaskGNN设计与验收.md)、[微型独立复核](./P1-A03独立复核记录.md)、[正式对照报告](./P1-A03正式对照报告.md)和[正式结果独立复核](./P1-A03正式结果独立复核记录.md)。
 
-P1-B02 候选的统计主路径、失败分母、13 类拒绝、CLI 和 artifact hash 已由 A 独立复核；首轮未通过的逐 seed mean、receipt basename 和 UTC 三项已形成 B 的修复候选，完整历史证据见 [P1-B02 独立复核记录](./P1-B02独立复核记录.md)。下一门禁是用户推送后由 A 从新不可变提交二次复核；通过后才实现 OOD materializer/evidence producer。本阶段仍不读取公开 test，不启动新模型。
+P1-B02 首轮历史见 [独立复核记录](./P1-B02独立复核记录.md)；B 修复后的逐 seed mean、receipt basename 和 UTC 已由 A 从 `071b861...` [二次复核通过](./P1-B02第二轮独立复核记录.md)，契约/聚合器子阶段关闭。下一门禁是 B 实现确定性 OOD materializer/evidence producer，再由 A 独立复核变换、hash、无 test 边界和 scheduler-only 计时。本阶段仍不读取公开 test，不启动新模型。
