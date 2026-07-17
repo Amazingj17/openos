@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：进行中（最小前向、动作接口和 checkpoint 已完成；BC/PPO 尚未接入）
+- 状态：进行中（解析梯度、Adam 和冻结图状态已完成；BC/PPO 尚未接入）
 - 前置门禁：[P1-03 第二轮独立复核通过](./P1-03第二轮独立复核记录.md)
 
 ## 1. 目标与单变量边界
@@ -80,7 +80,7 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 - `hidden_dim/message_dim/seed`；
 - 全部 10 组网络参数。
 
-加载时拒绝 architecture、节点特征、基础特征、参数 shape 或有限性漂移。当前 checkpoint 只覆盖推理参数；Adam、RNG、history、best 选择和事务恢复将在接入 BC/PPO 时沿用 P1-03 状态契约扩展，未完成前不得启动正式 3-seed 训练。
+加载时拒绝 architecture、节点特征、基础特征、参数 shape 或有限性漂移。当前 checkpoint 只覆盖推理参数；内存 clone 已能逐数组复制 Adam、step 和 RNG，但训练状态文件、history、best 选择和事务恢复仍须在接入 BC/PPO 时沿用 P1-03 契约扩展，未完成前不得启动正式 3-seed 训练。
 
 ## 6. 第一阶段验收
 
@@ -92,18 +92,20 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 | 同 seed 确定性 | 参数和 masked probability 逐数组一致 | 通过自动测试 |
 | checkpoint 无损往返 | 全参数和 probability 逐数组一致 | 通过自动测试 |
 | 参数量可机器读取 | metadata 固定输出维度和 parameter count | 通过自动测试 |
-| BC/PPO 梯度与 warm start | 尚未实现 | 未通过，下一提交 |
+| 解析梯度与 Adam | log-probability/entropy 对全部 10 组参数做中心有限差分；裁剪前 norm、更新方向和 optimizer clone 已测 | 通过自动测试 |
+| frozen graph state | 只读 ranks/归一化上下文/节点/邻接/候选张量可脱离 live env 重放；graph hash 与 Scenario 绑定 | 通过自动测试 |
+| BC/PPO 与 warm start | 尚未接入训练入口 | 未通过，下一提交 |
 | PPO epoch 状态与事务恢复 | 尚未扩展到 GNN 参数 | 未通过，下一提交 |
 | 固定 3-seed validation 对照 | 尚未运行 | 未开始 |
 | B 独立复核 | 尚未进行 | 未开始 |
 
-第一阶段实现位于 `trisched/gnn.py`，聚焦测试位于 `tests/test_task_gnn.py`；本地完整回归为 `176 passed in 7.59s`。本阶段只能表述为“task-GNN 最小表示接口通过本地自动测试”，不能表述为“GNN 已训练”“GNN 优于 MLP”或“P1-A03 已完成”。
+实现位于 `trisched/gnn.py`，聚焦测试位于 `tests/test_task_gnn.py`。第二阶段增加了从候选分数到节点编码的完整解析反传、梯度累加/裁剪 Adam，以及与 Scenario 内容 hash 绑定的只读 `FrozenTaskGraph/FrozenTaskGNNState`。冻结状态在 live env 继续执行后仍逐数组重放相同 probability，错误 Scenario 会在冻结时拒绝；本地完整回归为 `179 passed in 7.22s`。本阶段仍只能表述为“task-GNN 表示和梯度门禁通过本地自动测试”，不能表述为“GNN 已训练”“GNN 优于 MLP”或“P1-A03 已完成”。
 
 ## 7. 下一提交要求
 
-1. 为 10 组参数实现解析梯度和 Adam，使用中心有限差分独立核对；
-2. 冻结 teacher state 时携带 task graph 张量，使 BC 与 PPO minibatch 不依赖可变环境对象；
-3. 用 MLP best/warm-start 的可比规则初始化并记录 task-GNN 来源；
+1. 将 `FrozenTaskGraph/FrozenTaskGNNState` 接入 teacher 数据冻结和 PPO transition，不保存 live env；
+2. 用相同 HEFT teacher、14 维输入和训练预算完成 task-GNN BC warm start，并记录初始化来源；
+3. 让 PPO actor 在 frozen graph state 上调用已验收的解析梯度，不改变 critic、奖励或 selection key；
 4. 扩展 checkpoint hash、完整 epoch 状态、损坏状态诊断和 staging 恢复；
 5. 先运行微型 1-seed 连续/恢复，再申请运行冻结 3-seed validation；
 6. 成员 B 从不可变提交复算参数量、CPU 时延、逐实例 win/tie/loss 和失败切片。

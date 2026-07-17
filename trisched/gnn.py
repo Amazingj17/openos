@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -30,11 +31,32 @@ TASK_NODE_FEATURE_NAMES = (
 
 
 @dataclass(frozen=True)
+class FrozenTaskGraph:
+    scenario_id: str
+    scenario_sha256: str
+    task_count: int
+    ranks: np.ndarray
+    feature_context: CandidateFeatureContext
+    node_features: np.ndarray
+    predecessor_adjacency: np.ndarray
+    successor_adjacency: np.ndarray
+
+
+@dataclass(frozen=True)
+class FrozenTaskGNNState:
+    graph: FrozenTaskGraph
+    actions: tuple[tuple[int, int], ...]
+    features: np.ndarray
+
+
+@dataclass(frozen=True)
 class TaskGNNDistributionCache:
     actions: tuple[tuple[int, int], ...]
     features: np.ndarray
     task_indices: np.ndarray
     node_features: np.ndarray
+    predecessor_adjacency: np.ndarray
+    successor_adjacency: np.ndarray
     node_hidden: np.ndarray
     predecessor_hidden: np.ndarray
     successor_hidden: np.ndarray
@@ -91,6 +113,64 @@ def _task_node_features(
             for task in scenario.tasks
         ],
         dtype=np.float64,
+    )
+
+
+def _read_only(values: np.ndarray) -> np.ndarray:
+    result = np.asarray(values, dtype=np.float64).copy()
+    result.setflags(write=False)
+    return result
+
+
+def freeze_task_graph(
+    scenario: Scenario,
+) -> FrozenTaskGraph:
+    ranks = compute_upward_ranks(scenario)
+    context = build_candidate_feature_context(scenario, ranks)
+    predecessor, successor = _mean_adjacency(scenario)
+    return FrozenTaskGraph(
+        scenario_id=scenario.id,
+        scenario_sha256=scenario.content_hash(),
+        task_count=scenario.task_count,
+        ranks=_read_only(ranks),
+        feature_context=context,
+        node_features=_read_only(
+            _task_node_features(scenario, ranks, context)
+        ),
+        predecessor_adjacency=_read_only(predecessor),
+        successor_adjacency=_read_only(successor),
+    )
+
+
+def freeze_task_gnn_state(
+    env: HeterogeneousDagEnv,
+    *,
+    graph: FrozenTaskGraph | None = None,
+) -> FrozenTaskGNNState:
+    scenario = env.scenario
+    resolved_graph = (
+        freeze_task_graph(scenario)
+        if graph is None
+        else graph
+    )
+    if (
+        resolved_graph.scenario_sha256 != scenario.content_hash()
+        or resolved_graph.task_count != scenario.task_count
+    ):
+        raise ValueError("frozen task graph does not match the environment")
+    actions, features = candidate_features(
+        env,
+        resolved_graph.ranks,
+        resolved_graph.feature_context,
+    )
+    selected = features[
+        :,
+        [FEATURE_NAMES.index(name) for name in TASK_GNN_FEATURE_NAMES],
+    ]
+    return FrozenTaskGNNState(
+        graph=resolved_graph,
+        actions=actions,
+        features=_read_only(selected),
     )
 
 
@@ -174,12 +254,17 @@ class TaskGNNPolicy:
                 hidden_dim,
             ),
         }
+        self._adam_m = {
+            name: np.zeros_like(value) for name, value in self.params.items()
+        }
+        self._adam_v = {
+            name: np.zeros_like(value) for name, value in self.params.items()
+        }
+        self._adam_step = 0
         self.ranks: np.ndarray | None = None
         self.feature_context: CandidateFeatureContext | None = None
         self._scenario: Scenario | None = None
-        self._node_features: np.ndarray | None = None
-        self._predecessor_adjacency: np.ndarray | None = None
-        self._successor_adjacency: np.ndarray | None = None
+        self._graph: FrozenTaskGraph | None = None
 
     @property
     def parameter_count(self) -> int:
@@ -187,20 +272,9 @@ class TaskGNNPolicy:
 
     def reset(self, scenario: Scenario) -> None:
         self._scenario = scenario
-        self.ranks = compute_upward_ranks(scenario)
-        self.feature_context = build_candidate_feature_context(
-            scenario,
-            self.ranks,
-        )
-        self._node_features = _task_node_features(
-            scenario,
-            self.ranks,
-            self.feature_context,
-        )
-        (
-            self._predecessor_adjacency,
-            self._successor_adjacency,
-        ) = _mean_adjacency(scenario)
+        self._graph = freeze_task_graph(scenario)
+        self.ranks = self._graph.ranks
+        self.feature_context = self._graph.feature_context
 
     def select_feature_columns(self, features: np.ndarray) -> np.ndarray:
         values = np.asarray(features, dtype=np.float64)
@@ -216,19 +290,14 @@ class TaskGNNPolicy:
 
     def _encode_tasks(
         self,
+        graph: FrozenTaskGraph,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        if (
-            self._node_features is None
-            or self._predecessor_adjacency is None
-            or self._successor_adjacency is None
-        ):
-            raise RuntimeError("task-GNN must be reset with a scenario before use")
         node_hidden = np.tanh(
-            self._node_features @ self.params["node_w"]
+            graph.node_features @ self.params["node_w"]
             + self.params["node_b"]
         )
-        predecessor_hidden = self._predecessor_adjacency @ node_hidden
-        successor_hidden = self._successor_adjacency @ node_hidden
+        predecessor_hidden = graph.predecessor_adjacency @ node_hidden
+        successor_hidden = graph.successor_adjacency @ node_hidden
         node_context = np.tanh(
             node_hidden @ self.params["message_self_w"]
             + predecessor_hidden @ self.params["message_predecessor_w"]
@@ -249,6 +318,36 @@ class TaskGNNPolicy:
         actions: tuple[tuple[int, int], ...],
         temperature: float = 1.0,
     ) -> TaskGNNDistributionCache:
+        if self._graph is None:
+            raise RuntimeError("task-GNN must be reset with a scenario before use")
+        return self._distribution_with_graph(
+            features,
+            actions=actions,
+            graph=self._graph,
+            temperature=temperature,
+        )
+
+    def distribution_from_frozen_state(
+        self,
+        state: FrozenTaskGNNState,
+        *,
+        temperature: float = 1.0,
+    ) -> TaskGNNDistributionCache:
+        return self._distribution_with_graph(
+            state.features,
+            actions=state.actions,
+            graph=state.graph,
+            temperature=temperature,
+        )
+
+    def _distribution_with_graph(
+        self,
+        features: np.ndarray,
+        *,
+        actions: tuple[tuple[int, int], ...],
+        graph: FrozenTaskGraph,
+        temperature: float,
+    ) -> TaskGNNDistributionCache:
         if temperature <= 0:
             raise ValueError("temperature must be positive")
         selected = self.select_feature_columns(features)
@@ -256,13 +355,11 @@ class TaskGNNPolicy:
             raise ValueError("candidate feature matrix must not be empty")
         if len(actions) != selected.shape[0]:
             raise ValueError("candidate actions and features must have equal length")
-        if self._scenario is None or self._node_features is None:
-            raise RuntimeError("task-GNN must be reset with a scenario before use")
         task_indices = np.asarray(
             [task_id for task_id, _ in actions], dtype=np.int64
         )
         if np.any(task_indices < 0) or np.any(
-            task_indices >= self._scenario.task_count
+            task_indices >= graph.task_count
         ):
             raise ValueError("candidate action contains an unknown task id")
         (
@@ -270,7 +367,7 @@ class TaskGNNPolicy:
             predecessor_hidden,
             successor_hidden,
             node_context,
-        ) = self._encode_tasks()
+        ) = self._encode_tasks(graph)
         hidden = np.tanh(
             selected @ self.params["pair_w"]
             + node_context[task_indices] @ self.params["context_w"]
@@ -284,7 +381,9 @@ class TaskGNNPolicy:
             actions=actions,
             features=selected,
             task_indices=task_indices,
-            node_features=self._node_features,
+            node_features=graph.node_features,
+            predecessor_adjacency=graph.predecessor_adjacency,
+            successor_adjacency=graph.successor_adjacency,
             node_hidden=node_hidden,
             predecessor_hidden=predecessor_hidden,
             successor_hidden=successor_hidden,
@@ -332,7 +431,154 @@ class TaskGNNPolicy:
         index = int(self.rng.choice(len(cache.actions), p=cache.probabilities))
         return cache.actions[index], index, cache
 
-    def clone(self, *, deterministic: bool = True) -> TaskGNNPolicy:
+    def empty_gradients(self) -> dict[str, np.ndarray]:
+        return {
+            name: np.zeros_like(value) for name, value in self.params.items()
+        }
+
+    def log_probability_gradients(
+        self,
+        cache: TaskGNNDistributionCache,
+        selected_index: int,
+    ) -> dict[str, np.ndarray]:
+        if not 0 <= selected_index < len(cache.probabilities):
+            raise IndexError("selected_index is outside the masked distribution")
+        d_scores = -cache.probabilities.copy()
+        d_scores[selected_index] += 1.0
+        return self.score_gradients(cache, d_scores)
+
+    def entropy_gradients(
+        self,
+        cache: TaskGNNDistributionCache,
+    ) -> dict[str, np.ndarray]:
+        probabilities = cache.probabilities
+        log_probabilities = np.log(probabilities + 1e-12)
+        entropy = -float(np.sum(probabilities * log_probabilities))
+        d_scores = -probabilities * (log_probabilities + entropy)
+        return self.score_gradients(cache, d_scores)
+
+    def score_gradients(
+        self,
+        cache: TaskGNNDistributionCache,
+        d_scores: np.ndarray,
+    ) -> dict[str, np.ndarray]:
+        score_gradient = np.asarray(d_scores, dtype=np.float64).copy()
+        if score_gradient.shape != cache.probabilities.shape:
+            raise ValueError("score gradient shape does not match probabilities")
+        score_gradient /= cache.temperature
+
+        output_w = cache.hidden.T @ score_gradient
+        pair_hidden_gradient = (
+            score_gradient[:, None] * self.params["output_w"][None, :]
+        ) * (1.0 - cache.hidden**2)
+        pair_w = cache.features.T @ pair_hidden_gradient
+        context_w = (
+            cache.node_context[cache.task_indices].T @ pair_hidden_gradient
+        )
+        pair_b = np.sum(pair_hidden_gradient, axis=0)
+
+        node_context_gradient = np.zeros_like(cache.node_context)
+        np.add.at(
+            node_context_gradient,
+            cache.task_indices,
+            pair_hidden_gradient @ self.params["context_w"].T,
+        )
+        message_gradient = node_context_gradient * (
+            1.0 - cache.node_context**2
+        )
+        message_self_w = cache.node_hidden.T @ message_gradient
+        message_predecessor_w = (
+            cache.predecessor_hidden.T @ message_gradient
+        )
+        message_successor_w = cache.successor_hidden.T @ message_gradient
+        message_b = np.sum(message_gradient, axis=0)
+
+        node_hidden_gradient = (
+            message_gradient @ self.params["message_self_w"].T
+            + cache.predecessor_adjacency.T
+            @ (message_gradient @ self.params["message_predecessor_w"].T)
+            + cache.successor_adjacency.T
+            @ (message_gradient @ self.params["message_successor_w"].T)
+        )
+        node_input_gradient = node_hidden_gradient * (
+            1.0 - cache.node_hidden**2
+        )
+        node_w = cache.node_features.T @ node_input_gradient
+        node_b = np.sum(node_input_gradient, axis=0)
+        return {
+            "node_w": node_w,
+            "node_b": node_b,
+            "message_self_w": message_self_w,
+            "message_predecessor_w": message_predecessor_w,
+            "message_successor_w": message_successor_w,
+            "message_b": message_b,
+            "pair_w": pair_w,
+            "context_w": context_w,
+            "pair_b": pair_b,
+            "output_w": output_w,
+        }
+
+    @staticmethod
+    def add_gradients(
+        target: dict[str, np.ndarray],
+        source: dict[str, np.ndarray],
+        scale: float = 1.0,
+    ) -> None:
+        if set(target) != set(source):
+            raise ValueError("gradient dictionaries have different parameters")
+        for name in target:
+            if target[name].shape != source[name].shape:
+                raise ValueError(f"gradient shape mismatch for {name!r}")
+            target[name] += source[name] * scale
+
+    def apply_gradients(
+        self,
+        gradients: dict[str, np.ndarray],
+        learning_rate: float,
+        clip_norm: float,
+    ) -> float:
+        if learning_rate <= 0:
+            raise ValueError("learning_rate must be positive")
+        if set(gradients) != set(self.params):
+            raise ValueError("gradients do not match task-GNN parameters")
+        checked: dict[str, np.ndarray] = {}
+        for name, parameter in self.params.items():
+            gradient = np.asarray(gradients[name], dtype=np.float64)
+            if gradient.shape != parameter.shape or not np.all(
+                np.isfinite(gradient)
+            ):
+                raise ValueError(f"invalid gradient for {name!r}")
+            checked[name] = gradient
+        norm = float(
+            np.sqrt(
+                sum(float(np.sum(value * value)) for value in checked.values())
+            )
+        )
+        if norm > clip_norm > 0:
+            scale = clip_norm / (norm + 1e-12)
+            checked = {name: value * scale for name, value in checked.items()}
+        self._adam_step += 1
+        beta1, beta2 = 0.9, 0.999
+        for name, gradient in checked.items():
+            self._adam_m[name] = (
+                beta1 * self._adam_m[name] + (1.0 - beta1) * gradient
+            )
+            self._adam_v[name] = beta2 * self._adam_v[name] + (
+                1.0 - beta2
+            ) * (gradient * gradient)
+            m_hat = self._adam_m[name] / (1.0 - beta1**self._adam_step)
+            v_hat = self._adam_v[name] / (1.0 - beta2**self._adam_step)
+            self.params[name] += learning_rate * m_hat / (
+                np.sqrt(v_hat) + 1e-8
+            )
+        return norm
+
+    def clone(
+        self,
+        *,
+        deterministic: bool = True,
+        include_optimizer: bool = True,
+    ) -> TaskGNNPolicy:
         clone = TaskGNNPolicy(
             hidden_dim=self.hidden_dim,
             message_dim=self.message_dim,
@@ -342,6 +588,14 @@ class TaskGNNPolicy:
         )
         for name in clone.params:
             clone.params[name] = self.params[name].copy()
+            if include_optimizer:
+                clone._adam_m[name] = self._adam_m[name].copy()
+                clone._adam_v[name] = self._adam_v[name].copy()
+        if include_optimizer:
+            clone._adam_step = self._adam_step
+            clone.rng.bit_generator.state = copy.deepcopy(
+                self.rng.bit_generator.state
+            )
         return clone
 
     def save(self, path: str | Path) -> None:

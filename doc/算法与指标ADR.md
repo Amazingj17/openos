@@ -145,7 +145,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | B 独立推导通过；正式最大恒等式误差 `1.78e-15`，`gamma=0.99` 注入被拒绝 | task-GNN 保持奖励与 `gamma=1.0` 不变 |
 | 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | B 已独立复核 3-seed validation 与 staging 断点续训 run 级事务边界 | 启动 task-GNN 单变量对照 |
-| 图表示 | PPO 主路径仍为 14 维 MLP；P1-A03 已实现复用同一输入的一层双向 task-GNN 最小前向 | 动作 mask、图敏感性和 checkpoint 已测；尚无 BC/PPO 或性能结果 | 接解析梯度和状态后做单变量对照 |
+| 图表示 | PPO 主路径仍为 14 维 MLP；P1-A03 已实现复用同一输入的一层双向 task-GNN 前向/梯度和 frozen state | 有限差分、动作 mask、图敏感性、冻结重放和 checkpoint 已测；尚无训练或性能结果 | 接 BC/PPO 与 epoch 状态后做单变量对照 |
 | checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单 | 后续 checkpoint 内嵌 manifest 摘要 |
 | test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁且正式运行未访问 | B 已在物理删除 test JSON 与 archive 的 raw root 上完成 P1-A02 正式复跑，manifest 固定 `test_accessed=false` | 最终阶段另建一次性公开 test 评测命令 |
 
@@ -321,4 +321,4 @@ P1-03 epoch 边界状态覆盖 actor/value 参数、两个 Adam、两套 RNG、h
 - 正式 task-GNN 训练前，P1-03 断点续训及中断/损坏状态注入必须由 B 复核通过；
 - 报告逐实例配对结果、参数量、CPU 推理 P50/P95 和失败切片，未出现固定 validation 配对优势则回退 MLP。
 
-P1-A03 第一阶段已按上述冻结项实现最小前向：节点只复用 14 维输入中的 workload、upward-rank、indegree、outdegree，经一次前驱/后继均值消息传递后与候选表示融合；完整公式、参数量和未完成门禁见 [P1-A03 task-GNN 设计与验收](./P1-A03TaskGNN设计与验收.md)。该阶段不包含训练或性能结论。
+P1-A03 已按上述冻结项实现前向、完整解析梯度、裁剪 Adam 和只读 frozen graph state：节点只复用 14 维输入中的 workload、upward-rank、indegree、outdegree，经一次前驱/后继均值消息传递后与候选表示融合；完整公式、参数量和未完成门禁见 [P1-A03 task-GNN 设计与验收](./P1-A03TaskGNN设计与验收.md)。当前仍未接入 BC/PPO，不包含训练或性能结论。
