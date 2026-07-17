@@ -134,7 +134,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | 项目 | 当前实现 | 审计结论 | 后续动作 |
 | --- | --- | --- | --- |
 | 逐实例 ratio | 每个策略 makespan 除以同实例 HEFT makespan | 正确 | 保持 |
-| train/validation/test | smoke 使用派生 seed；P1-B01 已提交公开 STG 120/30/30 冻结 manifest | 数据层已固定、待 A 复核 | P1-A01 只用 train/validation 生成 teacher/选模，test 禁止调参 |
+| train/validation/test | smoke 使用派生 seed；P1-B01 公开 STG 120/30/30 manifest 已由 A 独立复核 | 数据层已固定并通过互审 | P1-A01 只用 train 生成 teacher、validation 诊断/选模，test 禁止进入训练与调参 |
 | checkpoint 选择 | 只保存训练结束模型，没有 best-by-validation | 不满足正式实验 | 增加 validation 早停与 best/last 双 checkpoint |
 | CI | 正态近似、总体标准差 | 仅适合 smoke | 改为分层 bootstrap |
 | 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现并由 A 独立复核 | 保持零失败发布门禁 |

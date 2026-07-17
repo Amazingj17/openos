@@ -82,7 +82,7 @@ python scripts/fetch_stg_benchmark.py
 python scripts/fetch_stg_benchmark.py --offline
 ```
 
-脚本先校验 125,500 字节 archive 的 SHA-256，再安全解包并逐个重算 source/Scenario hash；任何源文件、projection 或 split 变动都会失败。当前投影只保留 STG topology、duration 和 predecessor output data，不保留上游 GPU/core/memory capability，不能表述为完整 GrapheonRL 系统复现。许可证决策、固定 hash 和 A 的复核清单见 [P1-B01 公开基准、许可证与冻结划分](doc/P1-B01公开基准与许可证.md)。
+脚本先校验 125,500 字节 archive 的 SHA-256，再安全解包并逐个重算 source/Scenario hash；任何源文件、projection 或 split 变动都会失败。当前投影只保留 STG topology、duration 和 predecessor output data，不保留上游 GPU/core/memory capability，不能表述为完整 GrapheonRL 系统复现。许可证决策与固定 hash 见 [P1-B01 公开基准、许可证与冻结划分](doc/P1-B01公开基准与许可证.md)，远端 CI、10 实例抽查和故障注入见 [A 的独立复核记录](doc/P1-B01独立复核记录.md)。
 
 ## openEuler CPU smoke
 

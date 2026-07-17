@@ -37,4 +37,6 @@ GrapheonRL heterogeneous system benchmark.
 
 See [`stg-rnc50-hetero-v1.json`](stg-rnc50-hetero-v1.json) for every source and
 scenario hash, and [`doc/P1-B01公开基准与许可证.md`](../../doc/P1-B01公开基准与许可证.md)
-for the license audit, split protocol and known limitations.
+for the license audit, split protocol and known limitations. The immutable-CI,
+ten-instance projection and fault-injection review is recorded in
+[`doc/P1-B01独立复核记录.md`](../../doc/P1-B01独立复核记录.md).
