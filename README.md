@@ -16,9 +16,10 @@
 - 保留 HEFT 行为克隆 + episodic REINFORCE 作为 legacy smoke，并在公开 STG 路径实现 clipped PPO + GAE；
 - 在公开 STG 冻结 split 上生成生产/独立 HEFT 双签 teacher，并只用 validation 选择 BC best checkpoint；
 - 在 PPO 主路径删除直接暴露 HEFT 决策的两项二值特征，使用 3 个 seed 和 BC warm-start 回退做 validation 选模；
+- 用机器可读契约冻结 ID/OOD、5-seed、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的评测契约与自动报告候选现已由 B 提交，等待 A 独立注入复核；本阶段没有读取公开 test/OOD，也没有启动新训练。
 
 ## 快速运行
 
@@ -131,6 +132,19 @@ python -m trisched train-task-gnn --config configs/stg_task_gnn.json --resume
 
 正式 task-GNN 3-seed validation ratio 为 `0.754139 / 0.633578 / 0.683664`，mean `0.690460`，低于 MLP 的 `0.723193`；90 对逐实例为 `50/19/21`，场景跨 seed 均值为 `20/2/8`，全部合法且零非法动作。但分层配对 bootstrap 的 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，且三个 seed 的 P95 均大于 1。按预先停止规则，主模型继续保留 MLP，task-GNN 只记为方向性改善、未证实，不追加新变量补救。B 已重算 artifact、状态、配对 CI，并用六个 best checkpoint 复评 180 次 validation 调度，makespan 最大误差为 0。公开 test 仍未访问；完整证据见[正式对照报告](doc/P1-A03正式对照报告.md)和[正式结果独立复核](doc/P1-A03正式结果独立复核记录.md)。
 
+## P1-B02 评测契约与自动报告（待 A 复核）
+
+机器可读契约 [`configs/p1_b02_evaluation_contract.json`](configs/p1_b02_evaluation_contract.json) 已冻结 masked MLP 的 5 seeds、HEFT 参考、全部 baseline/ablation seed 数、ID + 三类 OOD 切片、失败惩罚 `10.0`、scheduler-only wall-clock 时延、10,000 次 seed→scenario bootstrap 和一次性公开 test gate。报告器严格检查 `seed × scenario` 笛卡尔积、场景 ID/hash、HEFT=1、失败计分、evidence hash 和 gate receipt，并输出 JSON、策略切片 CSV、主策略配对 CSV 和 artifact manifest。
+
+```powershell
+python -m trisched build-report `
+  --contract configs/p1_b02_evaluation_contract.json `
+  --evidence <development-evidence.json> `
+  --output <empty-output-directory>
+```
+
+本提交只有合成 fixture 验证，没有真实 OOD/test evidence。`claim-test-gate` 目前提供原子 receipt 和同路径二次拒绝，但尚未直接接到 public-test loader，且不是密码学签名；完成 A 的独立拒绝路径复核和 loader 接入前不得访问公开 test。完整契约、字段、统计方法和后续顺序见 [P1-B02 评测契约与自动报告](doc/P1-B02评测契约与自动报告.md)。
+
 ## openEuler CPU smoke
 
 在已启动 Docker Linux engine 的 Windows 或 Linux 主机上，使用固定 digest 的 openEuler 24.03 LTS-SP4 镜像执行一次性 CPU smoke：
@@ -187,6 +201,7 @@ configs/smoke.json       最小训练与评测配置
 configs/stg_bc.json      公开 STG teacher/BC 冻结配置
 configs/stg_ppo.json     公开 STG 3-seed masked PPO 配置
 configs/stg_task_gnn.json 公开 STG 3-seed task-GNN 单变量配置
+configs/p1_b02_evaluation_contract.json ID/OOD、5-seed 与 test gate 契约
 schemas/                 Scenario JSON Schema
 trisched/scenario.py     场景 schema、校验、生成和 hash
 trisched/env.py          调度环境、插入式时间线和生产合法性检查
@@ -199,6 +214,7 @@ trisched/gnn.py          14 维输入 task-GNN、DAG 消息传递和 checkpoint
 trisched/bc.py           MLP/task-GNN 冻结 teacher、BC best/last 和防 test 泄漏流程
 trisched/ppo.py          MLP/task-GNN 增量奖励、GAE/PPO、epoch 状态与 run 事务
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
+trisched/reporting.py    P1-B02 evidence 校验、配对统计与自动报告
 trisched/cli.py          pipeline/train-bc/train-ppo/train-task-gnn 等命令
 trisched/benchmark.py    公开 STG loader、冻结 split 与来源校验
 data/benchmarks/         第三方来源/许可证元数据和冻结 manifest
@@ -212,8 +228,9 @@ tests/                   单元与集成测试
 - 目标函数仅为 makespan；
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - task-GNN 已使用一层任务 DAG 消息传递，但资源关系仍只由手工候选特征表达；
-- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程或 OOD；
-- 已在公开 STG topology projection 上完成并独立复核 3-seed PPO/task-GNN validation 开发结果及分层配对 bootstrap；公开 test 最终评测、5-seed 主结果和竞赛方隐藏测试尚未完成。
+- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程或真实 OOD 结果；
+- P1-B02 已冻结 ID/OOD、5-seed 和自动报告口径，但只通过合成 fixture 测试，尚待 A 独立复核并实现 OOD materializer/evidence producer；
+- 已在公开 STG topology projection 上完成并独立复核 3-seed PPO/task-GNN validation 开发结果及分层配对 bootstrap；公开 test 最终评测、5-seed 主结果和竞赛方隐藏测试尚未完成；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移，原始文本 hash 还会受 LF/CRLF 检出策略影响，release 前须补规范化 hash 和跨 clone 测试。
 
 ## 开源许可证

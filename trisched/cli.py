@@ -25,6 +25,11 @@ from .evaluation import (
 )
 from .learning import MaskedMLPPolicy, train_policy
 from .ppo import run_ppo_pipeline, run_task_gnn_pipeline
+from .reporting import (
+    EvaluationReportError,
+    build_evaluation_report,
+    claim_public_test_gate,
+)
 from .scenario import Scenario, ScenarioValidationError, generate_dataset
 from .schedulers import SchedulerAdapterError
 
@@ -130,9 +135,7 @@ def write_run_manifest(
     dataset_inputs = {
         name: {
             "count": manifest["count"],
-            "scenario_hashes_sha256": _json_sha256(
-                manifest["scenario_hashes"]
-            ),
+            "scenario_hashes_sha256": _json_sha256(manifest["scenario_hashes"]),
         }
         for name, manifest in sorted(dataset_manifests.items())
     }
@@ -173,9 +176,7 @@ def write_run_manifest(
                 "source_name": config_source.name,
                 "source_sha256": _file_sha256(config_source),
                 "resolved_path": "resolved_config.json",
-                "resolved_sha256": _file_sha256(
-                    output_dir / "resolved_config.json"
-                ),
+                "resolved_sha256": _file_sha256(output_dir / "resolved_config.json"),
             },
             "datasets": dataset_inputs,
             "dataset_manifest_sha256": _file_sha256(
@@ -188,9 +189,7 @@ def write_run_manifest(
             "dependency_lock": dependency_lock,
         },
         "scoring": {
-            "failure_penalty_ratio": config["evaluation"][
-                "failure_penalty_ratio"
-            ],
+            "failure_penalty_ratio": config["evaluation"]["failure_penalty_ratio"],
             "failures_remain_in_denominator": True,
             "publishable_requires_zero_failures": True,
         },
@@ -221,9 +220,7 @@ def load_config(path: str | Path) -> dict[str, Any]:
     if not isinstance(evaluation, dict):
         raise ValueError("evaluation must be an object")
     evaluation["failure_penalty_ratio"] = resolve_failure_penalty_ratio(
-        evaluation.get(
-            "failure_penalty_ratio", DEFAULT_FAILURE_PENALTY_RATIO
-        )
+        evaluation.get("failure_penalty_ratio", DEFAULT_FAILURE_PENALTY_RATIO)
     )
     return config
 
@@ -278,8 +275,7 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
     print("[1/4] generating deterministic train/validation/test scenarios")
     splits = build_splits(config)
     manifests = {
-        name: dataset_manifest(scenarios, name)
-        for name, scenarios in splits.items()
+        name: dataset_manifest(scenarios, name) for name, scenarios in splits.items()
     }
     (output_dir / "dataset_manifest.json").write_text(
         json.dumps(manifests, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -433,16 +429,13 @@ def evaluate_checkpoint(
     )
     ratio = metrics[policy.name]["mean_ratio"]
     print(
-        f"done: {split_name} mean_ratio={ratio:.4f} "
-        "(loaded checkpoint; no training)"
+        f"done: {split_name} mean_ratio={ratio:.4f} " "(loaded checkpoint; no training)"
     )
     print(f"summary: {summary_path.resolve()}")
     return summary_path
 
 
-def generate_scenarios(
-    config_path: str | Path, destination: str | Path
-) -> None:
+def generate_scenarios(config_path: str | Path, destination: str | Path) -> None:
     config = load_config(config_path)
     output = Path(destination)
     output.mkdir(parents=True, exist_ok=True)
@@ -581,6 +574,27 @@ def build_parser() -> argparse.ArgumentParser:
         "validate-scenario", help="validate one Scenario JSON with structured errors"
     )
     validate.add_argument("--input", required=True)
+    claim_gate = subparsers.add_parser(
+        "claim-test-gate",
+        help="atomically claim the frozen one-time public-test gate",
+    )
+    claim_gate.add_argument(
+        "--contract",
+        default="configs/p1_b02_evaluation_contract.json",
+    )
+    claim_gate.add_argument("--authorization", required=True)
+    claim_gate.add_argument("--receipt", required=True)
+    build_report = subparsers.add_parser(
+        "build-report",
+        help="validate a frozen multi-seed evidence package and aggregate it",
+    )
+    build_report.add_argument(
+        "--contract",
+        default="configs/p1_b02_evaluation_contract.json",
+    )
+    build_report.add_argument("--evidence", required=True)
+    build_report.add_argument("--output", required=True)
+    build_report.add_argument("--test-receipt", default=None)
     return parser
 
 
@@ -592,9 +606,7 @@ def main(argv: list[str] | None = None) -> int:
             failure = _evaluation_failure_report(summary_path)
             if failure is not None:
                 print(
-                    json.dumps(
-                        {"ok": False, "error": failure}, ensure_ascii=False
-                    ),
+                    json.dumps({"ok": False, "error": failure}, ensure_ascii=False),
                     file=sys.stderr,
                 )
                 return 3
@@ -613,30 +625,45 @@ def main(argv: list[str] | None = None) -> int:
             failure = _evaluation_failure_report(summary_path)
             if failure is not None:
                 print(
-                    json.dumps(
-                        {"ok": False, "error": failure}, ensure_ascii=False
-                    ),
+                    json.dumps({"ok": False, "error": failure}, ensure_ascii=False),
                     file=sys.stderr,
                 )
                 return 3
         elif args.command == "validate-scenario":
             if not validate_scenario_file(args.input):
                 return 2
+        elif args.command == "claim-test-gate":
+            receipt_path = claim_public_test_gate(
+                args.contract,
+                args.authorization,
+                args.receipt,
+            )
+            print(receipt_path.resolve())
+        elif args.command == "build-report":
+            report_path = build_evaluation_report(
+                args.contract,
+                args.evidence,
+                args.output,
+                test_receipt_path=args.test_receipt,
+            )
+            print(report_path.resolve())
         else:
             raise AssertionError(f"unknown command: {args.command}")
+    except EvaluationReportError as error:
+        print(
+            json.dumps({"ok": False, "error": error.to_dict()}, ensure_ascii=False),
+            file=sys.stderr,
+        )
+        return 4
     except BehaviorCloningError as error:
         print(
-            json.dumps(
-                {"ok": False, "error": error.to_dict()}, ensure_ascii=False
-            ),
+            json.dumps({"ok": False, "error": error.to_dict()}, ensure_ascii=False),
             file=sys.stderr,
         )
         return 2
     except SchedulerAdapterError as error:
         print(
-            json.dumps(
-                {"ok": False, "error": error.to_dict()}, ensure_ascii=False
-            ),
+            json.dumps({"ok": False, "error": error.to_dict()}, ensure_ascii=False),
             file=sys.stderr,
         )
         return 3
