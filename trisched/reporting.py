@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from datetime import datetime
 import hashlib
 import json
 import math
@@ -127,6 +128,39 @@ def _hex(value: Any, path: str, length: int, *, code: str) -> str:
         or any(character not in "0123456789abcdef" for character in value)
     ):
         _fail(code, path, f"expected {length} lowercase hex characters")
+    return value
+
+
+def _json_filename(value: Any, path: str) -> str:
+    if (
+        not isinstance(value, str)
+        or not value
+        or value.startswith(".")
+        or not value.endswith(".json")
+        or any(
+            character not in "abcdefghijklmnopqrstuvwxyz0123456789._-"
+            for character in value
+        )
+        or "/" in value
+        or "\\" in value
+    ):
+        _fail(
+            "report_contract",
+            path,
+            "expected a safe lowercase JSON basename",
+        )
+    return value
+
+
+def _utc_timestamp(value: Any, path: str, *, code: str) -> str:
+    if not isinstance(value, str):
+        _fail(code, path, "expected UTC timestamp YYYY-MM-DDTHH:MM:SSZ")
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        _fail(code, path, "expected UTC timestamp YYYY-MM-DDTHH:MM:SSZ")
+    if parsed.strftime("%Y-%m-%dT%H:%M:%SZ") != value:
+        _fail(code, path, "expected canonical UTC timestamp YYYY-MM-DDTHH:MM:SSZ")
     return value
 
 
@@ -350,6 +384,13 @@ def load_evaluation_contract(path: str | Path) -> dict[str, Any]:
             "$.test_gate.require_clean_commit",
             "final test must require a clean commit",
         )
+    _json_filename(gate.get("receipt_name"), "$.test_gate.receipt_name")
+    if gate.get("authorization_time_format") != "utc_seconds_z":
+        _fail(
+            "report_contract",
+            "$.test_gate.authorization_time_format",
+            "expected utc_seconds_z",
+        )
     return contract
 
 
@@ -363,6 +404,17 @@ def claim_public_test_gate(
     receipt = Path(receipt_path)
     contract = load_evaluation_contract(contract_source)
     contract_hash = canonical_json_sha256(contract)
+    expected_receipt_name = contract["test_gate"]["receipt_name"]
+    if receipt.name != expected_receipt_name:
+        _fail(
+            "report_test_gate",
+            "$receipt",
+            "receipt basename does not match the frozen contract",
+            details={
+                "expected": expected_receipt_name,
+                "actual": receipt.name,
+            },
+        )
     authorization = _load_object(authorization_source, code="report_test_gate")
     if authorization.get("format_version") != 1:
         _fail("report_test_gate", "$.format_version", "expected format version 1")
@@ -397,15 +449,11 @@ def claim_public_test_gate(
         64,
         code="report_test_gate",
     )
-    if (
-        not isinstance(authorization.get("authorized_at_utc"), str)
-        or not authorization["authorized_at_utc"]
-    ):
-        _fail(
-            "report_test_gate",
-            "$.authorized_at_utc",
-            "expected a non-empty timestamp",
-        )
+    authorized_at_utc = _utc_timestamp(
+        authorization.get("authorized_at_utc"),
+        "$.authorized_at_utc",
+        code="report_test_gate",
+    )
     if receipt.exists():
         _fail(
             "report_test_gate_consumed",
@@ -421,8 +469,9 @@ def claim_public_test_gate(
         "contract_sha256": contract_hash,
         "release_commit": commit,
         "test_slice_id": contract["test_gate"]["slice_id"],
+        "receipt_name": expected_receipt_name,
         "authorized_by": signers,
-        "authorized_at_utc": authorization["authorized_at_utc"],
+        "authorized_at_utc": authorized_at_utc,
         "authorization_nonce": nonce,
         "authorization_file_sha256": file_sha256(authorization_source),
         "test_accessed": False,
@@ -484,7 +533,24 @@ def _validate_test_receipt(
             "$receipt",
             "final-test evidence requires a gate receipt",
         )
+    expected_receipt_name = contract["test_gate"]["receipt_name"]
+    actual_receipt_name = Path(receipt_path).name
+    if actual_receipt_name != expected_receipt_name:
+        _fail(
+            "report_test_gate",
+            "$receipt",
+            "receipt basename does not match the frozen contract",
+            details={
+                "expected": expected_receipt_name,
+                "actual": actual_receipt_name,
+            },
+        )
     receipt = _load_object(receipt_path, code="report_test_gate")
+    _utc_timestamp(
+        receipt.get("authorized_at_utc"),
+        "$receipt.authorized_at_utc",
+        code="report_test_gate",
+    )
     expected = {
         "format_version": 1,
         "mode": "public_test_gate_receipt",
@@ -492,6 +558,7 @@ def _validate_test_receipt(
         "contract_sha256": contract_hash,
         "release_commit": commit,
         "test_slice_id": contract["test_gate"]["slice_id"],
+        "receipt_name": expected_receipt_name,
         "authorized_by": contract["test_gate"]["required_signers"],
         "test_accessed": False,
     }
@@ -886,6 +953,10 @@ def _aggregate_policy(
         "timeout_count": timeout_count,
         "timeout_rate": timeout_count / len(records),
         "mean_ratio": float(np.mean(flat)),
+        "seed_mean_ratios": [
+            {"seed": int(seed), "mean_ratio": float(seed_means[index])}
+            for index, seed in enumerate(seeds)
+        ],
         "seed_mean_ratio_std": float(np.std(seed_means)),
         "median_ratio": float(np.percentile(flat, 50)),
         "p95_ratio": float(np.percentile(flat, 95)),
@@ -907,6 +978,42 @@ def _aggregate_policy(
             "mean_ratio_lower": float(lower),
             "mean_ratio_upper": float(upper),
         },
+    }
+
+
+def _aggregate_seed(
+    records: list[dict[str, Any]],
+    *,
+    timeout_error_code: str,
+) -> dict[str, Any]:
+    ratios = np.asarray(
+        [float(row["score_ratio"]) for row in records],
+        dtype=np.float64,
+    )
+    runtimes = np.asarray(
+        [float(row["runtime_ms"]) for row in records],
+        dtype=np.float64,
+    )
+    failure_count = sum(row["status"] == "failure" for row in records)
+    success_count = len(records) - failure_count
+    illegal_action_count = sum(int(row["illegal_action_count"]) for row in records)
+    illegal_record_count = sum(int(row["illegal_action_count"]) > 0 for row in records)
+    timeout_count = sum(row.get("error_code") == timeout_error_code for row in records)
+    return {
+        "record_count": len(records),
+        "success_count": success_count,
+        "failure_count": failure_count,
+        "failure_rate": failure_count / len(records),
+        "valid_schedule_rate": success_count / len(records),
+        "illegal_action_count": illegal_action_count,
+        "illegal_record_count": illegal_record_count,
+        "timeout_count": timeout_count,
+        "mean_ratio": float(np.mean(ratios)),
+        "p50_ratio": float(np.percentile(ratios, 50)),
+        "p95_ratio": float(np.percentile(ratios, 95)),
+        "runtime_mean_ms": float(np.mean(runtimes)),
+        "runtime_p50_ms": float(np.percentile(runtimes, 50)),
+        "runtime_p95_ms": float(np.percentile(runtimes, 95)),
     }
 
 
@@ -1059,6 +1166,7 @@ def build_evaluation_report(
     required_slices = contract["modes"][evidence["mode"]]
     slice_reports: list[dict[str, Any]] = []
     csv_rows: list[dict[str, Any]] = []
+    seed_csv_rows: list[dict[str, Any]] = []
     comparison_csv_rows: list[dict[str, Any]] = []
     for slice_id in required_slices:
         scenario_ids = [item["scenario_id"] for item in scenarios[slice_id]]
@@ -1072,6 +1180,25 @@ def build_evaluation_report(
                 for scenario_id in scenario_ids
             ]
             policy_rows[policy_id] = rows
+            for seed in seeds:
+                seed_records = [
+                    indexed[(slice_id, policy_id, seed, scenario_id)]
+                    for scenario_id in scenario_ids
+                ]
+                seed_metrics = _aggregate_seed(
+                    seed_records,
+                    timeout_error_code=contract["metrics"]["timeout_error_code"],
+                )
+                seed_csv_rows.append(
+                    {
+                        "slice_id": slice_id,
+                        "slice_role": slices[slice_id]["role"],
+                        "policy": policy_id,
+                        "policy_role": policy["role"],
+                        "seed": seed,
+                        **seed_metrics,
+                    }
+                )
             metrics = _aggregate_policy(
                 rows,
                 seeds,
@@ -1233,6 +1360,7 @@ def build_evaluation_report(
     }
     report_path = destination / "evaluation_report.json"
     csv_path = destination / "evaluation_per_slice.csv"
+    seed_csv_path = destination / "evaluation_per_seed.csv"
     comparison_csv_path = destination / "evaluation_primary_comparisons.csv"
     try:
         _write_json(report_path, report)
@@ -1240,6 +1368,10 @@ def build_evaluation_report(
             writer = csv.DictWriter(handle, fieldnames=list(csv_rows[0]))
             writer.writeheader()
             writer.writerows(csv_rows)
+        with seed_csv_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(seed_csv_rows[0]))
+            writer.writeheader()
+            writer.writerows(seed_csv_rows)
         with comparison_csv_path.open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(
                 handle,
@@ -1277,6 +1409,10 @@ def build_evaluation_report(
                 csv_path.name: {
                     "bytes": csv_path.stat().st_size,
                     "sha256": file_sha256(csv_path),
+                },
+                seed_csv_path.name: {
+                    "bytes": seed_csv_path.stat().st_size,
+                    "sha256": file_sha256(seed_csv_path),
                 },
                 comparison_csv_path.name: {
                     "bytes": comparison_csv_path.stat().st_size,

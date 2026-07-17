@@ -78,6 +78,7 @@ def tiny_contract() -> dict[str, object]:
             "required_signers": ["A", "B"],
             "require_clean_commit": True,
             "receipt_name": "public_test_gate_receipt.json",
+            "authorization_time_format": "utc_seconds_z",
         },
     }
 
@@ -182,6 +183,33 @@ def test_tracked_p1_b02_contract_is_strict_and_five_seed() -> None:
         "timeout_error_code": "scheduler_timeout",
         "failures_remain_in_denominator": True,
     }
+    assert contract["test_gate"]["authorization_time_format"] == "utc_seconds_z"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_path"),
+    [
+        ("receipt_name", "../receipt.json", "$.test_gate.receipt_name"),
+        (
+            "authorization_time_format",
+            "free_text",
+            "$.test_gate.authorization_time_format",
+        ),
+    ],
+)
+def test_contract_rejects_unfrozen_gate_schema(
+    tmp_path: Path,
+    field: str,
+    value: str,
+    expected_path: str,
+) -> None:
+    contract = tiny_contract()
+    contract["test_gate"][field] = value  # type: ignore[index]
+    contract_path = write_json(tmp_path / "contract.json", contract)
+    with pytest.raises(EvaluationReportError) as captured:
+        load_evaluation_contract(contract_path)
+    assert captured.value.code == "report_contract"
+    assert captured.value.path == expected_path
 
 
 def test_development_report_is_deterministic_and_hashes_artifacts(
@@ -206,6 +234,10 @@ def test_development_report_is_deterministic_and_hashes_artifacts(
     assert first["gate"]["release_publishable"] is False
     primary = first["slices"][0]["policies"]["masked_mlp"]
     assert primary["mean_ratio"] == pytest.approx(0.95)
+    assert [item["seed"] for item in primary["seed_mean_ratios"]] == [11, 12]
+    assert [
+        item["mean_ratio"] for item in primary["seed_mean_ratios"]
+    ] == pytest.approx([1.0, 0.9])
     assert primary["success_count"] == 4
     assert primary["failure_count"] == 0
     assert primary["valid_schedule_rate"] == pytest.approx(1.0)
@@ -235,6 +267,19 @@ def test_development_report_is_deterministic_and_hashes_artifacts(
         )
     )
     assert len(csv_rows) == 3
+    seed_csv_rows = list(
+        csv.DictReader(
+            (tmp_path / "first" / "evaluation_per_seed.csv").open(
+                encoding="utf-8", newline=""
+            )
+        )
+    )
+    assert len(seed_csv_rows) == 4
+    masked_seed_rows = [row for row in seed_csv_rows if row["policy"] == "masked_mlp"]
+    assert [row["seed"] for row in masked_seed_rows] == ["11", "12"]
+    assert [float(row["mean_ratio"]) for row in masked_seed_rows] == pytest.approx(
+        [1.0, 0.9]
+    )
     manifest = json.loads(
         (tmp_path / "first" / "evaluation_report_manifest.json").read_text(
             encoding="utf-8"
@@ -244,6 +289,7 @@ def test_development_report_is_deterministic_and_hashes_artifacts(
     assert set(manifest["artifacts"]) == {
         "evaluation_report.json",
         "evaluation_per_slice.csv",
+        "evaluation_per_seed.csv",
         "evaluation_primary_comparisons.csv",
     }
     for name, metadata in manifest["artifacts"].items():
@@ -482,6 +528,8 @@ def test_public_test_gate_is_one_time_and_binds_final_report(
     )
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     assert receipt["status"] == "claimed"
+    assert receipt["receipt_name"] == "public_test_gate_receipt.json"
+    assert receipt["authorized_at_utc"] == "2026-07-17T00:00:00Z"
     assert receipt["test_accessed"] is False
     with pytest.raises(EvaluationReportError) as captured:
         claim_public_test_gate(contract_path, authorization_path, receipt_path)
@@ -502,6 +550,126 @@ def test_public_test_gate_is_one_time_and_binds_final_report(
     assert report["test_gate_receipt"]["sha256"] == file_sha256(receipt_path)
 
 
+def test_public_test_gate_rejects_nonfrozen_receipt_basename(tmp_path: Path) -> None:
+    contract = tiny_contract()
+    contract_path = write_json(tmp_path / "contract.json", contract)
+    authorization_path = write_json(
+        tmp_path / "authorization.json",
+        authorization(contract),
+    )
+    with pytest.raises(EvaluationReportError) as captured:
+        claim_public_test_gate(
+            contract_path,
+            authorization_path,
+            tmp_path / "receipt-one.json",
+        )
+    assert captured.value.code == "report_test_gate"
+    assert captured.value.path == "$receipt"
+    assert captured.value.details == {
+        "expected": "public_test_gate_receipt.json",
+        "actual": "receipt-one.json",
+    }
+
+
+def test_final_report_rejects_nonfrozen_receipt_basename(tmp_path: Path) -> None:
+    contract = tiny_contract()
+    contract_path = write_json(tmp_path / "contract.json", contract)
+    authorization_path = write_json(
+        tmp_path / "authorization.json",
+        authorization(contract),
+    )
+    receipt_path = tmp_path / "public_test_gate_receipt.json"
+    claim_public_test_gate(contract_path, authorization_path, receipt_path)
+    wrong_receipt_path = write_json(
+        tmp_path / "receipt-one.json",
+        json.loads(receipt_path.read_text(encoding="utf-8")),
+    )
+    evidence_path = write_json(
+        tmp_path / "final_evidence.json",
+        evidence_package(contract, mode="final_test"),
+    )
+    with pytest.raises(EvaluationReportError) as captured:
+        build_evaluation_report(
+            contract_path,
+            evidence_path,
+            tmp_path / "out",
+            test_receipt_path=wrong_receipt_path,
+        )
+    assert captured.value.code == "report_test_gate"
+    assert captured.value.path == "$receipt"
+
+
+@pytest.mark.parametrize(
+    "invalid_timestamp",
+    [
+        "not-a-timestamp",
+        "2026-07-17T00:00:00",
+        "2026-07-17T00:00:00+00:00",
+        "2026-02-30T00:00:00Z",
+        "2026-07-17T00:00:00.000Z",
+        "2026-7-17T00:00:00Z",
+    ],
+)
+def test_public_test_gate_rejects_noncanonical_utc_timestamp(
+    tmp_path: Path,
+    invalid_timestamp: str,
+) -> None:
+    contract = tiny_contract()
+    contract_path = write_json(tmp_path / "contract.json", contract)
+    payload = authorization(contract)
+    payload["authorized_at_utc"] = invalid_timestamp
+    authorization_path = write_json(tmp_path / "authorization.json", payload)
+    with pytest.raises(EvaluationReportError) as captured:
+        claim_public_test_gate(
+            contract_path,
+            authorization_path,
+            tmp_path / "public_test_gate_receipt.json",
+        )
+    assert captured.value.code == "report_test_gate"
+    assert captured.value.path == "$.authorized_at_utc"
+
+
+def test_public_test_gate_accepts_canonical_utc_leap_day(tmp_path: Path) -> None:
+    contract = tiny_contract()
+    contract_path = write_json(tmp_path / "contract.json", contract)
+    payload = authorization(contract)
+    payload["authorized_at_utc"] = "2028-02-29T23:59:59Z"
+    authorization_path = write_json(tmp_path / "authorization.json", payload)
+    receipt_path = tmp_path / "public_test_gate_receipt.json"
+    claim_public_test_gate(contract_path, authorization_path, receipt_path)
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["authorized_at_utc"] == "2028-02-29T23:59:59Z"
+
+
+def test_final_report_rejects_receipt_with_noncanonical_utc_timestamp(
+    tmp_path: Path,
+) -> None:
+    contract = tiny_contract()
+    contract_path = write_json(tmp_path / "contract.json", contract)
+    authorization_path = write_json(
+        tmp_path / "authorization.json",
+        authorization(contract),
+    )
+    receipt_path = tmp_path / "public_test_gate_receipt.json"
+    claim_public_test_gate(contract_path, authorization_path, receipt_path)
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["authorized_at_utc"] = "not-a-timestamp"
+    write_json(receipt_path, receipt)
+    evidence_path = write_json(
+        tmp_path / "final_evidence.json",
+        evidence_package(contract, mode="final_test"),
+    )
+    with pytest.raises(EvaluationReportError) as captured:
+        build_evaluation_report(
+            contract_path,
+            evidence_path,
+            tmp_path / "out",
+            test_receipt_path=receipt_path,
+        )
+    assert captured.value.code == "report_test_gate"
+    assert captured.value.path == "$receipt.authorized_at_utc"
+
+
 def test_public_test_gate_reports_invalid_commit_as_gate_error(tmp_path: Path) -> None:
     contract = tiny_contract()
     contract_path = write_json(tmp_path / "contract.json", contract)
@@ -515,7 +683,7 @@ def test_public_test_gate_reports_invalid_commit_as_gate_error(tmp_path: Path) -
         claim_public_test_gate(
             contract_path,
             authorization_path,
-            tmp_path / "receipt.json",
+            tmp_path / "public_test_gate_receipt.json",
         )
     assert captured.value.code == "report_test_gate"
     assert captured.value.path == "$.release_commit"

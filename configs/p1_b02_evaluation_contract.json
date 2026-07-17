@@ -160,6 +160,7 @@
     "policy": "one_time_final_only",
     "required_signers": ["A", "B"],
     "require_clean_commit": true,
-    "receipt_name": "public_test_gate_receipt.json"
+    "receipt_name": "public_test_gate_receipt.json",
+    "authorization_time_format": "utc_seconds_z"
   }
 }
