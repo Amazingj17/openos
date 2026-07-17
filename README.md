@@ -18,7 +18,7 @@
 - 在 PPO 主路径删除直接暴露 HEFT 决策的两项二值特征，使用 3 个 seed 和 BC warm-start 回退做 validation 选模；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。下一主任务为只替换 MLP 表示的 P1-A03 task-GNN。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 已完成正式 validation：点估计改善但配对 bootstrap CI 跨 0，按冻结规则保留 MLP，待 B 复核正式结果后关闭本轮。
 
 ## 快速运行
 
@@ -127,7 +127,9 @@ python -m trisched train-task-gnn --config configs/stg_task_gnn.json
 python -m trisched train-task-gnn --config configs/stg_task_gnn.json --resume
 ```
 
-恢复沿用同盘 staging 目录交换；微型测试已证明连续/恢复的 summary、曲线和全部模型/状态数组一致，后置 seed 写出失败时正式目录逐字节不变。成员 B 已从远端不可变提交独立复跑 32-artifact、15 对 NPZ、后置失败目录快照和 MLP 旧入口并[复核通过](doc/P1-A03独立复核记录.md)。正式参数量 GNN/MLP 为 `1008/512`；120 个 train 场景的 frozen state 峰值 RSS 增量约 53.42 MiB，graph 按 Scenario 共享。冻结的正式 3-seed validation 尚未运行，因此目前没有 GNN 性能结论，也没有新增公开 test 访问。冻结张量、状态格式、产物契约和下一步见 [P1-A03 task-GNN 设计与验收契约](doc/P1-A03TaskGNN设计与验收.md)。
+恢复沿用同盘 staging 目录交换；微型测试已证明连续/恢复的 summary、曲线和全部模型/状态数组一致，后置 seed 写出失败时正式目录逐字节不变。成员 B 已从远端不可变提交独立复跑 32-artifact、15 对 NPZ、后置失败目录快照和 MLP 旧入口并[复核通过](doc/P1-A03独立复核记录.md)。正式参数量 GNN/MLP 为 `1008/512`；120 个 train 场景的 frozen state 峰值 RSS 增量约 53.42 MiB，graph 按 Scenario 共享。
+
+正式 task-GNN 3-seed validation ratio 为 `0.754139 / 0.633578 / 0.683664`，mean `0.690460`，低于 MLP 的 `0.723193`；90 对逐实例为 `50/19/21`，场景跨 seed 均值为 `20/2/8`，全部合法且零非法动作。但分层配对 bootstrap 的 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，且三个 seed 的 P95 均大于 1。按预先停止规则，主模型继续保留 MLP，task-GNN 只记为方向性改善、未证实，不追加新变量补救。公开 test 仍未访问；完整结果与边界见[正式对照报告](doc/P1-A03正式对照报告.md)。
 
 ## openEuler CPU smoke
 
