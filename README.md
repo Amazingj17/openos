@@ -18,7 +18,7 @@
 - 在 PPO 主路径删除直接暴露 HEFT 决策的两项二值特征，使用 3 个 seed 和 BC warm-start 回退做 validation 选模；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 已完成 masked PPO 的 3-seed validation 正式运行，但仍待成员 B 独立复核；复核通过后才能单独比较任务图 GNN 与当前候选特征 MLP。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；下一轮将在冻结其余条件后，单独比较 task-GNN 与当前候选特征 MLP。
 
 ## 快速运行
 
@@ -106,7 +106,7 @@ python scripts/fetch_stg_benchmark.py --offline
 python -m trisched train-ppo --config configs/stg_ppo.json
 ```
 
-正式 validation 的 3 个 best seed ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 个 seed，另 1 个按冻结规则回退 BC warm start。seed-level mean 为 `0.723193`，但 population std 为 `0.075948`，每个 seed 仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。数学、配置、逐 seed 结果、hash 和 B 的待复核清单见 [P1-A02 Masked PPO 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)。
+正式 validation 的 3 个 best seed ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 个 seed，另 1 个按冻结规则回退 BC warm start。seed-level mean 为 `0.723193`，但 population std 为 `0.075948`，每个 seed 仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。B 已在物理删除 test JSON 和 archive 的数据根上复跑正式配置，并完成 checkpoint、manifest、数学分支与配置注入复核。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。详见 [P1-A02 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)及其[独立复核记录](doc/P1-A02独立复核记录.md)。
 
 ## openEuler CPU smoke
 
@@ -188,7 +188,7 @@ tests/                   单元与集成测试
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - 学习策略使用手工候选特征，还未使用 GNN；
 - legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO 路径，但尚未加入课程学习、OOD 数据和 task-GNN；
-- 已在公开 STG topology projection 上完成 3-seed PPO validation 开发结果，但仍待 B 独立复核；公开 test 最终评测、5-seed 主结果、分层 bootstrap 与竞赛方隐藏测试尚未完成。
+- 已在公开 STG topology projection 上完成并独立复核 3-seed PPO validation 开发结果；公开 test 最终评测、5-seed 主结果、分层 bootstrap 与竞赛方隐藏测试尚未完成。
 
 ## 开源许可证
 

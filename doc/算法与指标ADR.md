@@ -3,7 +3,7 @@
 - 任务：P0-A01
 - 主责：成员 A
 - 复核：成员 B
-- 状态：提交复核
+- 状态：已完成（B 复核通过；持续维护至 P1-A02）
 - 日期：2026-07-16
 - 适用版本：首次 GitHub 基线 `28f6305` 之后的 P0-A01 工作区
 
@@ -25,7 +25,7 @@
 6. 当前 masked MLP 的 test `mean_ratio = 1.0`，只能证明训练—评测闭环成立，不能宣称性能领先。
 7. 在 G1 正确性门禁通过前不开始 GNN/PPO；正确性通过后，先建立 PPO，再单独验证 task-GNN，禁止同时改变模型、奖励和数据分布。
 8. P1-A01 已由 B 在远端不可变提交 `180a713...` 上独立复核通过：完全不含 test 原始字节的 raw root 可连续两次重生成相同核心构件，best/last 复评均为 validation ratio 1.0、零失败、零非法动作。该结论允许开始 P1-A02，但不构成优于 HEFT 的证据。
-9. P1-A02 已由 A 在干净实现提交 `1bab5fa...` 上完成 3-seed validation 正式运行：主路径删除两项 HEFT 决策特征，以负增量 makespan/HEFT 奖励、GAE 和 clipped PPO 训练。三个 best ratio 均低于 1 且零失败/非法，但 1/3 seed 回退 BC warm start、各 seed P95 均高于 1；B 复核和最终 test 前只能写“validation 门禁通过”。
+9. P1-A02 已由 B 在远端不可变提交 `0794d18...` 上独立复核通过：物理删除 test JSON 和相关 archive 后可重生成相同 3-seed validation 指标，checkpoint、31 个 artifact、奖励/GAE/clipping 数学和配置注入均通过。三个 best ratio 均低于 1 且零失败/非法，但 1/3 seed 回退 BC warm start、各 seed P95 均高于 1；最终 test 前仍只能写“validation 门禁通过”。
 
 ## 2. 本次审计范围与证据
 
@@ -136,17 +136,17 @@ mean ± 1.96 × population_std / sqrt(N)
 | 项目 | 当前实现 | 审计结论 | 后续动作 |
 | --- | --- | --- | --- |
 | 逐实例 ratio | 每个策略 makespan 除以同实例 HEFT makespan | 正确 | 保持 |
-| train/validation/test | smoke 使用派生 seed；公开 BC/PPO 只用 train 生成 teacher/梯度，validation 选模，test 不加载 | P1-A01 已由 B 用无 test raw root 复核；P1-A02 正式 manifest 记录未访问 test | B 用无 test raw root 独立复跑 P1-A02；test 只留最终评测 |
-| checkpoint 选择 | legacy smoke 只存 last；公开 BC/PPO 均保存 best/last，PPO 将 warm start 作为 epoch 0 候选 | seed 20260718 的 PPO 退化时正确回退 warm start，未用 last 冒充 best | B 独立重算 selection key |
+| train/validation/test | smoke 使用派生 seed；公开 BC/PPO 只用 train 生成 teacher/梯度，validation 选模，test 不加载 | P1-A01/P1-A02 均已由 B 用无 test raw root 复核；PPO 复跑时 test JSON 和 archive 均物理不存在 | test 只留最终评测；task-GNN 继续复用同一门禁 |
+| checkpoint 选择 | legacy smoke 只存 last；公开 BC/PPO 均保存 best/last，PPO 将 warm start 作为 epoch 0 候选 | B 证明 seed 20260718 的 best actor 参数与 BC warm start 相同，未用 last 冒充 best | task-GNN 沿用相同 selection key |
 | CI | 正态近似、总体标准差 | 仅适合 smoke | 改为分层 bootstrap |
 | 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现并由 A 独立复核 | 保持零失败发布门禁 |
-| HEFT teacher | P1-A01 参考含 `is_heft_task/is_heft_pair`；P1-A02 主路径强制删除 | 同 seed 16/14 维 BC ratio 为 `1.0/0.852539`，teacher accuracy 为 `1.0/0.514` | 复核配置注入门禁；PPO/GNN 主路径保持删除 |
+| HEFT teacher | P1-A01 参考含 `is_heft_task/is_heft_pair`；P1-A02 主路径强制删除 | 同 seed 16/14 维 BC ratio 为 `1.0/0.852539`，teacher accuracy 为 `1.0/0.514`；B 注入任一特征均在训练前失败 | PPO/GNN 主路径保持删除 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
-| 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | 正式最大恒等式误差 `1.78e-15`，与主指标对齐 | B 独立推导 telescope 与 GAE bootstrap |
-| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | 3-seed validation 门禁通过；PPO 只改善 2/3 seed | B 复核后分析 seed 回退与稳定性，再决定 task-GNN |
-| 图表示 | PPO 主路径使用 14 维手工候选特征和 mean/max critic pooling | 无消息传递、全局结构弱 | P1-A02 复核通过后单独加入 task-GNN |
+| 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | B 独立推导通过；正式最大恒等式误差 `1.78e-15`，`gamma=0.99` 注入被拒绝 | task-GNN 保持奖励与 `gamma=1.0` 不变 |
+| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | B 独立复核 3-seed validation 门禁；PPO 只改善 2/3 seed | 先补断点续训，再启动 task-GNN 单变量对照 |
+| 图表示 | PPO 主路径使用 14 维手工候选特征和 mean/max critic pooling | 无消息传递、全局结构弱 | 沿用其他契约，只将 MLP 替换为 task-GNN |
 | checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单 | 后续 checkpoint 内嵌 manifest 摘要 |
-| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁且正式运行未访问 | P1-A02 run manifest 和所有 summary 固定 `test_accessed=false`，待 B 以物理删除 test 的 raw root 复核 | 最终阶段另建一次性公开 test 评测命令 |
+| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁且正式运行未访问 | B 已在物理删除 test JSON 与 archive 的 raw root 上完成 P1-A02 正式复跑，manifest 固定 `test_accessed=false` | 最终阶段另建一次性公开 test 评测命令 |
 
 ## 5. 当前结果的正确解释
 
@@ -167,11 +167,11 @@ mean ± 1.96 × population_std / sqrt(N)
 
 P1-A01 另在公开 STG topology projection 上冻结了 120 个 train teacher 和 30 个 validation reference。单 seed 纯 BC 在 epoch 1 达到 validation teacher action accuracy 1.0、mean ratio 1.0、failure/illegal action rate 0；test 未访问。B 已用完全不含 test 字节的数据根双次重跑并独立复核通过。该结果同样只允许表述为“公开数据上复现 HEFT”，详见 [P1-A01 记录](./P1-A01HEFT教师与BC基线.md)及其[独立复核记录](./P1-A01独立复核记录.md)。
 
-P1-A02 删除两项直接 HEFT 决策特征后，在相同公开 train/validation 契约上完成 BC warm start + masked PPO。3 个 best validation ratio 为 `0.807240/0.623254/0.739086`，mean/std 为 `0.723193/0.075948`，failure/illegal 均为 0；PPO 改善 2 个 seed，另 1 个回退 warm start。每个 seed 仍有退化实例且 P95 ratio 均大于 1，test 未访问、B 尚未复核。因此当前只允许表述为“3-seed validation 开发门禁通过，尚无稳定 PPO 收益或最终泛化结论”，详见 [P1-A02 设计与验收](./P1-A02MaskedPPO设计与验收.md)。
+P1-A02 删除两项直接 HEFT 决策特征后，在相同公开 train/validation 契约上完成 BC warm start + masked PPO。3 个 best validation ratio 为 `0.807240/0.623254/0.739086`，mean/std 为 `0.723193/0.075948`，failure/illegal 均为 0；PPO 改善 2 个 seed，另 1 个回退 warm start。B 已在完全无 test 字节的数据根上复跑并独立复核通过。由于每个 seed 仍有退化实例且 P95 ratio 均大于 1，当前仍只允许表述为“3-seed validation 开发门禁通过，尚无稳定 PPO 收益或最终泛化结论”，详见 [P1-A02 设计与验收](./P1-A02MaskedPPO设计与验收.md)及其[独立复核记录](./P1-A02独立复核记录.md)。
 
 ## 6. 当前 MLP/PPO 与 legacy REINFORCE 的局限
 
-1. **teacher 泄漏边界**：P1-A01 的 16 维 BC 参考仍直接包含 HEFT 决策；P1-A02 主路径已强制删除，但仍须 B 注入复核。
+1. **teacher 泄漏边界**：P1-A01 的 16 维 BC 参考仍直接包含 HEFT 决策；P1-A02 主路径已强制删除，并由 B 完成训练前注入复核。
 2. **无图消息传递**：入度、出度和 upward rank 不能完整表达多跳依赖、关键汇合点和并行分支竞争。
 3. **资源关系被压扁**：资源只以单候选的速度、类型和当前可用时刻出现，没有资源—链路图的联合表示。
 4. **联合候选扩张**：动作数为 ready tasks 与 resources 的乘积，大图上采样、归一化和探索成本都会上升。
@@ -179,7 +179,7 @@ P1-A02 删除两项直接 HEFT 决策特征后，在相同公开 train/validatio
 6. **PPO 收益不稳定**：虽然已有 value、GAE、clipping 和 KL 诊断，仍有 1/3 seed 回退 warm start，seed std 为 `0.07595`。
 7. **训练与部署策略不一致**：PPO 训练随机采样、validation 使用确定性 argmax；训练均值不能替代部署策略结果。
 8. **两条训练路径并存**：公开 PPO 已统一 best/last 与 warm-start 回退，legacy smoke 仍只保存最终 REINFORCE 模型。
-9. **公开数据仍只有 validation 证据**：P1-A02 已不再只是复制 HEFT，但尚无公开 test、CCR、OOD 或外部泛化证据。
+9. **公开数据仍只有 validation 证据**：P1-A02 已完成独立复核且不再只是复制 HEFT，但尚无公开 test、CCR、OOD 或外部泛化证据。
 10. **统计证据不足**：已有 3 个开发 seed × 30 validation，但尚无最终 5-seed、分层 bootstrap CI 或一次性 test 结果。
 11. **失败惩罚仍需 benchmark 冻结**：P0-08 已实现真实失败记录和可配置惩罚，但默认 10.0 只是工程值，正式实验必须只在 validation 上冻结。
 12. **checkpoint 未内嵌完整元数据**：外部 run manifest 已记录配置、数据、commit、依赖和 checkpoint hash；模型文件本身仍只保存维度、seed、特征名和权重。
@@ -188,9 +188,9 @@ P1-A02 删除两项直接 HEFT 决策特征后，在相同公开 train/validatio
 
 G1 通过后的唯一允许顺序：
 
-1. 去掉/保留 HEFT 二值特征做严格消融，建立 BC-only 基线。（A 已提交，待 B 复核）
-2. 在相同 MLP 和相同数据上用 PPO + GAE 替换 REINFORCE。（A 已提交 3 seeds，待 B 复核）
-3. B 复核 P1-A02 且解释 warm-start 回退/P95 退化后，只把 MLP 替换为 task-GNN，其他条件不变。
+1. 去掉/保留 HEFT 二值特征做严格消融，建立 BC-only 基线。（已由 B 复核）
+2. 在相同 MLP 和相同数据上用 PPO + GAE 替换 REINFORCE。（3 seeds 已由 B 复核）
+3. 先补齐 P1-03 断点续训，再只把 MLP 替换为 task-GNN；14 维基础输入、奖励、数据 split、3 seeds 和选模规则不变。
 4. task-GNN 有配对统计优势后，才考虑 residual、resource-GNN 或 OOD 课程中的一项。
 
 ## 7. 三个独立手算案例
@@ -307,27 +307,15 @@ ratio=4.50/4.75=18/19\approx0.94737
 
 这个案例证明 HEFT 对 T1 选择“局部更早完成”的 R0，会给汇合任务 T3 引入通信和资源约束；它是学习策略应捕捉的全局结构信号，也是 task-GNN 可能产生价值的最小反例。
 
-## 8. B 的复核步骤
+## 8. 复核状态与下一冻结契约
 
-成员 B 应在独立终端执行：
+P0-A01 的指标解释、checkpoint 加载和三个手算案例已由 B 独立复核通过。P1-A02 又在同一指标契约上完成更严格的无 test 正式复跑：远端 7 环境全绿，31 个 artifact、180 份 validation checkpoint 复评、奖励/GAE/clipping 数学与配置注入全部通过，完整证据见 [P1-A02 独立复核记录](./P1-A02独立复核记录.md)。
 
-```powershell
-python -m pytest -q
-python -m trisched pipeline --config configs/smoke.json
-python -m trisched evaluate `
-  --config configs/smoke.json `
-  --checkpoint outputs/smoke/masked_mlp.npz `
-  --split test `
-  --output outputs/b-review-p0-a01
-```
+下一主任务 P1-A03 必须遵守以下冻结项：
 
-复核判据：
-
-- 测试全部通过；
-- `evaluate` 明确显示未重新训练；
-- `evaluation_summary.json` 中 checkpoint hash 与文件 SHA-256 一致；
-- 20 个 test 的 masked MLP makespan 与 pipeline 原结果逐实例一致；
-- B 能解释为什么“训练 epoch ratio 略低于 1”不等于“冻结 test 优于 HEFT”；
-- B 独立复核三个手算案例，尤其是案例 3 的 `4.75`、`4.50` 和 `0.94737`。
-
-复核完成前，P0-A01 保持“提交复核”，不得标记“已完成”。
+- 沿用相同 14 维基础输入及特征含义，不恢复 HEFT 决策位；
+- 沿用增量 makespan/HEFT 奖励、`gamma=1.0`、相同 split 和 test 禁用门禁；
+- 沿用 `20260717/20260718/20260719`、checkpoint selection key 和 warm-start 回退；
+- 第一轮只将 MLP 表示替换为 task-GNN，不同时加入 resource-GNN、课程、OOD 或新奖励；
+- 正式 task-GNN 训练前先补齐 P1-03 断点续训及中断/损坏状态注入测试；
+- 报告逐实例配对结果、参数量、CPU 推理 P50/P95 和失败切片，未出现固定 validation 配对优势则回退 MLP。
