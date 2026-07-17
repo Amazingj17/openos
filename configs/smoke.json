@@ -20,6 +20,7 @@
   },
   "evaluation": {
     "random_seed": 991,
+    "failure_penalty_ratio": 10.0,
     "schedulers": ["heft", "cpop", "greedy_eft", "random", "masked_mlp"]
   }
 }

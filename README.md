@@ -44,16 +44,20 @@ masked_mlp.npz                  可加载的策略参数
 training_history.json           模仿学习和 REINFORCE 训练记录
 dataset_manifest.json           场景 ID、hash 和规模清单
 resolved_config.json            本次运行的完整配置
+run_manifest.json               代码、输入、运行时和产物 SHA-256
+*_failures.jsonl                逐实例结构化失败；无失败时为空文件
 *_example_schedule.json         首个场景的完整调度轨迹
 ```
 
-主指标为：
+主指标使用失败惩罚后的 score：
 
 ```text
-mean_ratio = mean(masked_mlp_makespan / HEFT_makespan)
+成功：score_ratio = masked_mlp_makespan / HEFT_makespan
+失败：score_ratio = evaluation.failure_penalty_ratio（默认 10.0）
+mean_ratio = mean(score_ratio)，失败仍保留在总样本分母中
 ```
 
-数值越低越好，`1.0` 表示与 HEFT 持平。
+数值越低越好，`1.0` 表示与 HEFT 持平。摘要还同时报告 `failure_count`、真实 `failure_rate`、`valid_schedule_rate` 和成功子集均值；失败明细写入 JSONL。完整字段、CLI 非零退出和 manifest 契约见 [P0-08 失败统计与运行清单](doc/P0-08失败统计与运行清单.md)。
 
 ## 运行测试
 
@@ -116,7 +120,7 @@ python -m trisched evaluate `
   --output outputs/checkpoint-eval
 ```
 
-命令会生成 `evaluation_summary.json`、逐实例 CSV 和示例调度，其中摘要记录 checkpoint 的 SHA-256。
+命令会生成 `evaluation_summary.json`、逐实例 CSV、失败 JSONL、示例调度和 `run_manifest.json`；摘要记录 checkpoint 的 SHA-256，manifest 记录配置、数据、代码、依赖及所有声明产物的 SHA-256。
 
 ## 目录
 

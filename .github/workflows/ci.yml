@@ -25,6 +25,9 @@ jobs:
     name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    env:
+      TRISCHED_GIT_HEAD: ${{ github.sha }}
+      TRISCHED_GIT_DIRTY: "false"
     strategy:
       fail-fast: false
       matrix:
@@ -58,12 +61,17 @@ jobs:
 
       - name: Validate structured evidence
         run: >-
-          python -c "import json,pathlib;
-          p=pathlib.Path('outputs/ci-eval/evaluation_summary.json');
-          s=json.loads(p.read_text(encoding='utf-8'));
+          python -c "import hashlib,json,pathlib;
+          root=pathlib.Path('outputs/ci-eval');
+          s=json.loads((root/'evaluation_summary.json').read_text(encoding='utf-8'));
+          m=json.loads((root/'run_manifest.json').read_text(encoding='utf-8'));
           assert s['dataset']['count']==20;
           assert s['metrics']['masked_mlp']['valid_schedule_rate']==1.0;
-          assert len(s['checkpoint']['sha256'])==64"
+          assert s['metrics']['masked_mlp']['failure_rate']==0.0;
+          assert len(s['checkpoint']['sha256'])==64;
+          assert m['code']['commit']=='${{ github.sha }}';
+          assert m['code']['working_tree_dirty'] is False;
+          assert all(hashlib.sha256((root/name).read_bytes()).hexdigest()==item['sha256'] for name,item in m['artifacts'].items())"
 
       - name: Upload CI evidence
         if: always()
@@ -73,8 +81,12 @@ jobs:
           path: |
             outputs/ci-smoke/summary.json
             outputs/ci-smoke/test_per_instance.csv
+            outputs/ci-smoke/test_failures.jsonl
+            outputs/ci-smoke/run_manifest.json
             outputs/ci-eval/evaluation_summary.json
             outputs/ci-eval/test_per_instance.csv
+            outputs/ci-eval/test_failures.jsonl
+            outputs/ci-eval/run_manifest.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -93,6 +105,7 @@ jobs:
           docker pull "${image}"
           docker run --rm \
             --env "TRISCHED_GIT_HEAD=${GITHUB_SHA}" \
+            --env "TRISCHED_GIT_DIRTY=false" \
             --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace" \
             "${image}" \
             bash /workspace/scripts/openeuler_smoke.sh \
@@ -121,7 +134,11 @@ jobs:
             outputs/ci-openeuler/sha256.txt
             outputs/ci-openeuler/pipeline/summary.json
             outputs/ci-openeuler/pipeline/test_per_instance.csv
+            outputs/ci-openeuler/pipeline/test_failures.jsonl
+            outputs/ci-openeuler/pipeline/run_manifest.json
             outputs/ci-openeuler/evaluate/evaluation_summary.json
             outputs/ci-openeuler/evaluate/test_per_instance.csv
+            outputs/ci-openeuler/evaluate/test_failures.jsonl
+            outputs/ci-openeuler/evaluate/run_manifest.json
           if-no-files-found: warn
           retention-days: 14

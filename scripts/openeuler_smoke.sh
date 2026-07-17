@@ -92,10 +92,25 @@ expected_policies = ("heft", "cpop", "greedy_eft", "random", "masked_mlp")
 for policy in expected_policies:
     assert summary["test"][policy]["count"] == 20
     assert summary["test"][policy]["valid_schedule_rate"] == 1.0
+    assert summary["test"][policy]["failure_rate"] == 0.0
 assert summary["test"]["masked_mlp"]["mean_ratio"] == 1.0
 assert evaluation["dataset"]["count"] == 20
 assert evaluation["metrics"]["masked_mlp"]["mean_ratio"] == 1.0
 assert evaluation["metrics"]["masked_mlp"]["valid_schedule_rate"] == 1.0
+assert evaluation["metrics"]["masked_mlp"]["failure_rate"] == 0.0
+
+for run_directory in (output / "pipeline", output / "evaluate"):
+    run_manifest = json.loads(
+        (run_directory / "run_manifest.json").read_text()
+    )
+    assert run_manifest["code"]["commit"] == git_head
+    assert run_manifest["code"]["working_tree_dirty"] is False
+    for name, metadata in run_manifest["artifacts"].items():
+        artifact = run_directory / name
+        assert artifact.stat().st_size == metadata["bytes"]
+        assert hashlib.sha256(artifact.read_bytes()).hexdigest() == metadata[
+            "sha256"
+        ]
 
 manifests = summary["datasets"]
 hashes = {
@@ -135,6 +150,9 @@ evidence = {
     "masked_mlp_mean_ratio": evaluation["metrics"]["masked_mlp"][
         "mean_ratio"
     ],
+    "masked_mlp_failure_rate": evaluation["metrics"]["masked_mlp"][
+        "failure_rate"
+    ],
     "checkpoint_sha256": checkpoint_sha256,
 }
 print(json.dumps(evidence, indent=2, sort_keys=True))
@@ -144,6 +162,8 @@ sha256sum \
   "${REPOSITORY}/requirements-lock.txt" \
   "${REPOSITORY}/LICENSE" \
   "${OUTPUT}/pipeline/masked_mlp.npz" \
+  "${OUTPUT}/pipeline/run_manifest.json" \
+  "${OUTPUT}/evaluate/run_manifest.json" \
   > "${OUTPUT}/sha256.txt"
 
 echo "openEuler CPU smoke: PASS"

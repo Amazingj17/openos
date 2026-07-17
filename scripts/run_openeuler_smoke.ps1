@@ -9,6 +9,13 @@ $gitHead = (git -C $repository rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $gitHead.Length -ne 40) {
     throw "Cannot resolve the repository commit"
 }
+$gitStatus = @(git -C $repository status --porcelain --untracked-files=all)
+if ($LASTEXITCODE -ne 0) {
+    throw "Cannot inspect the repository working tree"
+}
+if ($gitStatus.Count -ne 0) {
+    throw "openEuler release evidence requires a clean Git working tree"
+}
 
 docker info | Out-Null
 if ($LASTEXITCODE -ne 0) {
@@ -36,6 +43,7 @@ if (Test-Path -LiteralPath $numpyWheel) {
 docker run --rm `
     --name trisched-openeuler-smoke `
     --env "TRISCHED_GIT_HEAD=$gitHead" `
+    --env "TRISCHED_GIT_DIRTY=false" `
     --mount "type=bind,source=$repository,target=/workspace" `
     $Image `
     bash /workspace/scripts/openeuler_smoke.sh `

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import numpy as np
@@ -171,3 +172,20 @@ def test_checkpoint_can_be_evaluated_without_retraining(tmp_path) -> None:
     assert summary["metrics"]["cpop"]["valid_schedule_rate"] == 1.0
     assert len(summary["checkpoint"]["sha256"]) == 64
     assert (evaluation_output / "test_per_instance.csv").exists()
+    assert (evaluation_output / "test_failures.jsonl").read_text(
+        encoding="utf-8"
+    ) == ""
+    manifest = json.loads(
+        (evaluation_output / "run_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["mode"] == "checkpoint_evaluation"
+    assert manifest["split"] == "test"
+    assert manifest["inputs"]["checkpoint"]["sha256"] == summary[
+        "checkpoint"
+    ]["sha256"]
+    for name, metadata in manifest["artifacts"].items():
+        artifact = evaluation_output / name
+        assert artifact.stat().st_size == metadata["bytes"]
+        assert hashlib.sha256(artifact.read_bytes()).hexdigest() == metadata[
+            "sha256"
+        ]

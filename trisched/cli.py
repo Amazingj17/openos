@@ -3,12 +3,25 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import platform
+import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .evaluation import dataset_manifest, evaluate_split, write_summary
+import numpy as np
+
+from . import __version__
+from .evaluation import (
+    DEFAULT_FAILURE_PENALTY_RATIO,
+    dataset_manifest,
+    evaluate_split,
+    resolve_failure_penalty_ratio,
+    write_summary,
+)
 from .learning import MaskedMLPPolicy, train_policy
 from .scenario import Scenario, ScenarioValidationError, generate_dataset
 from .schedulers import SchedulerAdapterError
@@ -20,6 +33,172 @@ def _file_sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _json_sha256(value: Any) -> str:
+    encoded = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _git_metadata(repository_hint: Path | None = None) -> dict[str, Any]:
+    environment_head = os.environ.get("TRISCHED_GIT_HEAD", "").strip()
+    if environment_head:
+        dirty_value = os.environ.get("TRISCHED_GIT_DIRTY", "").strip().lower()
+        environment_dirty = {
+            "true": True,
+            "1": True,
+            "false": False,
+            "0": False,
+        }.get(dirty_value)
+        return {
+            "commit": environment_head,
+            "working_tree_dirty": environment_dirty,
+            "source": "TRISCHED_GIT_HEAD",
+        }
+
+    candidates = []
+    if repository_hint is not None:
+        candidates.append(repository_hint.resolve())
+    candidates.append(Path(__file__).resolve().parents[1])
+    for repository in candidates:
+        try:
+            commit = subprocess.run(
+                ["git", "-C", str(repository), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            ).stdout.strip()
+            status = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repository),
+                    "status",
+                    "--porcelain",
+                    "--untracked-files=all",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            ).stdout
+        except (OSError, subprocess.SubprocessError):
+            continue
+        return {
+            "commit": commit,
+            "working_tree_dirty": bool(status.strip()),
+            "source": "git",
+        }
+    return {
+        "commit": None,
+        "working_tree_dirty": None,
+        "source": "unavailable",
+    }
+
+
+def write_run_manifest(
+    output_dir: Path,
+    *,
+    mode: str,
+    config_source: Path,
+    config: dict[str, Any],
+    dataset_manifests: dict[str, dict[str, Any]],
+    checkpoint: Path,
+    artifact_names: list[str],
+    split: str | None = None,
+) -> Path:
+    """Write a non-circular manifest for one completed pipeline/evaluation run."""
+
+    artifacts: dict[str, dict[str, Any]] = {}
+    for name in artifact_names:
+        path = output_dir / name
+        if not path.is_file():
+            raise RuntimeError(f"run artifact is missing: {name}")
+        artifacts[Path(name).as_posix()] = {
+            "bytes": path.stat().st_size,
+            "sha256": _file_sha256(path),
+        }
+
+    dataset_inputs = {
+        name: {
+            "count": manifest["count"],
+            "scenario_hashes_sha256": _json_sha256(
+                manifest["scenario_hashes"]
+            ),
+        }
+        for name, manifest in sorted(dataset_manifests.items())
+    }
+    lockfile_candidates = [
+        parent / "requirements-lock.txt"
+        for parent in (config_source.parent, *config_source.parents)
+    ]
+    lockfile_candidates.append(
+        Path(__file__).resolve().parents[1] / "requirements-lock.txt"
+    )
+    lockfile = next(
+        (candidate for candidate in lockfile_candidates if candidate.is_file()),
+        None,
+    )
+    dependency_lock = (
+        {"path": lockfile.name, "sha256": _file_sha256(lockfile)}
+        if lockfile is not None
+        else None
+    )
+    manifest = {
+        "format_version": 1,
+        "mode": mode,
+        "split": split,
+        "created_at_utc": datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
+        "hash_algorithm": "sha256",
+        "path_convention": "output-relative POSIX paths",
+        "code": _git_metadata(config_source.parent),
+        "runtime": {
+            "trisched": __version__,
+            "python": sys.version,
+            "platform": platform.platform(),
+            "numpy": np.__version__,
+        },
+        "inputs": {
+            "config": {
+                "source_name": config_source.name,
+                "source_sha256": _file_sha256(config_source),
+                "resolved_path": "resolved_config.json",
+                "resolved_sha256": _file_sha256(
+                    output_dir / "resolved_config.json"
+                ),
+            },
+            "datasets": dataset_inputs,
+            "dataset_manifest_sha256": _file_sha256(
+                output_dir / "dataset_manifest.json"
+            ),
+            "checkpoint": {
+                "name": checkpoint.name,
+                "sha256": _file_sha256(checkpoint),
+            },
+            "dependency_lock": dependency_lock,
+        },
+        "scoring": {
+            "failure_penalty_ratio": config["evaluation"][
+                "failure_penalty_ratio"
+            ],
+            "failures_remain_in_denominator": True,
+            "publishable_requires_zero_failures": True,
+        },
+        "artifacts": dict(sorted(artifacts.items())),
+    }
+    path = output_dir / "run_manifest.json"
+    path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return path
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -36,6 +215,14 @@ def load_config(path: str | Path) -> dict[str, Any]:
     task_range = dataset.get("task_range")
     if not isinstance(task_range, list) or len(task_range) != 2:
         raise ValueError("dataset.task_range must be a two-element list")
+    evaluation = config["evaluation"]
+    if not isinstance(evaluation, dict):
+        raise ValueError("evaluation must be an object")
+    evaluation["failure_penalty_ratio"] = resolve_failure_penalty_ratio(
+        evaluation.get(
+            "failure_penalty_ratio", DEFAULT_FAILURE_PENALTY_RATIO
+        )
+    )
     return config
 
 
@@ -108,6 +295,7 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
 
     print("[3/4] evaluating configured schedulers through one validated path")
     random_seed = int(config["evaluation"].get("random_seed", 991))
+    failure_penalty_ratio = config["evaluation"]["failure_penalty_ratio"]
     validation_metrics, _ = evaluate_split(
         splits["validation"],
         policy,
@@ -116,6 +304,7 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
         random_seed,
         config["evaluation"].get("schedulers"),
         config_source.parent,
+        failure_penalty_ratio,
     )
     test_metrics, _ = evaluate_split(
         splits["test"],
@@ -125,6 +314,7 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
         random_seed,
         config["evaluation"].get("schedulers"),
         config_source.parent,
+        failure_penalty_ratio,
     )
 
     training_history["wall_clock_seconds"] = time.perf_counter() - started
@@ -136,6 +326,27 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
         validation_metrics,
         test_metrics,
         manifests,
+    )
+    write_run_manifest(
+        output_dir,
+        mode="pipeline",
+        config_source=config_source,
+        config=config,
+        dataset_manifests=manifests,
+        checkpoint=checkpoint,
+        artifact_names=[
+            "resolved_config.json",
+            "dataset_manifest.json",
+            "training_history.json",
+            "masked_mlp.npz",
+            "validation_per_instance.csv",
+            "validation_failures.jsonl",
+            "validation_example_schedule.json",
+            "test_per_instance.csv",
+            "test_failures.jsonl",
+            "test_example_schedule.json",
+            "summary.json",
+        ],
     )
     ratio = test_metrics["masked_mlp"]["mean_ratio"]
     print(f"done: test mean_ratio={ratio:.4f} (lower is better; HEFT=1.0)")
@@ -159,7 +370,17 @@ def evaluate_checkpoint(
     policy = MaskedMLPPolicy.load(checkpoint)
     destination = Path(output_dir)
     destination.mkdir(parents=True, exist_ok=True)
+    (destination / "resolved_config.json").write_text(
+        json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    split_manifest = dataset_manifest(splits[split_name], split_name)
+    evaluation_manifests = {split_name: split_manifest}
+    (destination / "dataset_manifest.json").write_text(
+        json.dumps(evaluation_manifests, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     random_seed = int(config["evaluation"].get("random_seed", 991))
+    failure_penalty_ratio = config["evaluation"]["failure_penalty_ratio"]
     metrics, _ = evaluate_split(
         splits[split_name],
         policy,
@@ -168,21 +389,45 @@ def evaluate_checkpoint(
         random_seed,
         config["evaluation"].get("schedulers"),
         config_source.parent,
+        failure_penalty_ratio,
     )
     payload = {
-        "format_version": 1,
+        "format_version": 2,
         "mode": "checkpoint_evaluation",
         "split": split_name,
         "checkpoint": {
             "path": checkpoint.name,
             "sha256": _file_sha256(checkpoint),
         },
-        "dataset": dataset_manifest(splits[split_name], split_name),
+        "dataset": split_manifest,
         "metrics": metrics,
+        "scoring": {
+            "failure_penalty_ratio": failure_penalty_ratio,
+            "failures_remain_in_denominator": True,
+            "publishable_requires_zero_failures": True,
+        },
+        "run_manifest": "run_manifest.json",
     }
     summary_path = destination / "evaluation_summary.json"
     summary_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    write_run_manifest(
+        destination,
+        mode="checkpoint_evaluation",
+        split=split_name,
+        config_source=config_source,
+        config=config,
+        dataset_manifests=evaluation_manifests,
+        checkpoint=checkpoint,
+        artifact_names=[
+            "resolved_config.json",
+            "dataset_manifest.json",
+            f"{split_name}_per_instance.csv",
+            f"{split_name}_failures.jsonl",
+            f"{split_name}_example_schedule.json",
+            "evaluation_summary.json",
+        ],
     )
     ratio = metrics[policy.name]["mean_ratio"]
     print(
@@ -236,6 +481,46 @@ def validate_scenario_file(path: str | Path) -> bool:
     return True
 
 
+def _evaluation_failure_report(summary_path: Path) -> dict[str, Any] | None:
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    if summary.get("mode") == "checkpoint_evaluation":
+        groups = [(str(summary["split"]), summary["metrics"])]
+    else:
+        groups = [
+            ("validation", summary.get("validation", {})),
+            ("test", summary.get("test", {})),
+        ]
+    failures = []
+    total = 0
+    for split_name, metrics in groups:
+        for scheduler, values in metrics.items():
+            failure_count = int(values.get("failure_count", 0))
+            if not failure_count:
+                continue
+            total += failure_count
+            failures.append(
+                {
+                    "split": split_name,
+                    "scheduler": scheduler,
+                    "failure_count": failure_count,
+                    "failure_rate": values["failure_rate"],
+                    "error_counts": values["error_counts"],
+                }
+            )
+    if not failures:
+        return None
+    return {
+        "code": "evaluation_contains_failures",
+        "message": "evaluation completed with scheduler failures",
+        "details": {
+            "failure_count": total,
+            "results": failures,
+            "summary": summary_path.name,
+            "run_manifest": "run_manifest.json",
+        },
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="trisched",
@@ -270,13 +555,31 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "pipeline":
-            run_pipeline(args.config, args.output)
+            summary_path = run_pipeline(args.config, args.output)
+            failure = _evaluation_failure_report(summary_path)
+            if failure is not None:
+                print(
+                    json.dumps(
+                        {"ok": False, "error": failure}, ensure_ascii=False
+                    ),
+                    file=sys.stderr,
+                )
+                return 3
         elif args.command == "generate":
             generate_scenarios(args.config, args.output)
         elif args.command == "evaluate":
-            evaluate_checkpoint(
+            summary_path = evaluate_checkpoint(
                 args.config, args.checkpoint, args.split, args.output
             )
+            failure = _evaluation_failure_report(summary_path)
+            if failure is not None:
+                print(
+                    json.dumps(
+                        {"ok": False, "error": failure}, ensure_ascii=False
+                    ),
+                    file=sys.stderr,
+                )
+                return 3
         elif args.command == "validate-scenario":
             if not validate_scenario_file(args.input):
                 return 2

@@ -73,7 +73,7 @@ M_i=\max_{v\in V} finish(v)
 - 任务执行时长与场景的 workload/speed 一致；
 - 报告的 makespan 与任务完成时刻重算值一致。
 
-当前 `run_policy` 会在每个实例结束后依次调用生产 validator 和独立 validator；非法结果会使整个批次明确失败，因此成功写出的结果都经过双检。但 `evaluation.py` 的 `valid_schedule_rate` 仍固定写为 `1.0`，尚不能保留失败行并统计真实失败率。G1 只据此确认成功调度的语义正确性，不把该字段当作正式失败率证据；P0-08/P1-B02 必须在正式性能实验前补齐失败行和真实失败率统计。
+当前 `run_policy` 会在每个实例结束后依次调用生产 validator 和独立 validator，因此成功结果都经过双检。P0-08 起，统一 evaluator 会保留非 HEFT scheduler 的失败行，按冻结惩罚计入主指标，并从 `success_count/failure_count` 计算真实合法率和失败率；HEFT 基线失败因 ratio 分母不可定义而明确终止。字段和发布规则见[P0-08 失败统计与运行清单](./P0-08失败统计与运行清单.md)。
 
 ### 3.2 主指标
 
@@ -127,7 +127,7 @@ mean ± 1.96 × population_std / sqrt(N)
 - 非法或不完整调度触发一票否决：该 run 不具备主结果发布资格。
 - 评测器仍需保留失败实例行，写明异常类型和 `failure_rate`，禁止因异常删除困难实例。
 - 超时阈值和惩罚规则必须在 validation 上冻结；test 开始后不得调整。
-- 在规则尚未实现前，任何“合法率 100%”必须同时说明这是“成功完成的实例”，不能掩盖批次中断。
+- 带失败的 run 即使已生成完整统计也不具备主结果发布资格；CLI 必须非零退出，报告必须同时给出惩罚后主指标和 failure rate。
 
 ## 4. 当前实现审计
 
@@ -137,13 +137,13 @@ mean ± 1.96 × population_std / sqrt(N)
 | train/validation/test | 使用不同派生 seed 生成，并以内容 hash 检查交集 | MVP 可用 | 固定公开数据清单并冻结 test |
 | checkpoint 选择 | 只保存训练结束模型，没有 best-by-validation | 不满足正式实验 | 增加 validation 早停与 best/last 双 checkpoint |
 | CI | 正态近似、总体标准差 | 仅适合 smoke | 改为分层 bootstrap |
-| 合法率 | 成功评测后硬编码 1.0 | 不能表达失败 | 保留失败行并计算真实合法率/失败率 |
+| 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现 | A 独立注入并重算后关闭任务 |
 | HEFT teacher | 输入含 `is_heft_task`、`is_heft_pair` | 易直接复制 HEFT | 主消融必须比较移除 teacher 二值特征 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | 每个 episode 终局 `-policy/HEFT` | 与主指标对齐 | 加 value/GAE 前不得改变主奖励定义 |
 | 训练算法 | episodic REINFORCE + batch mean baseline | 方差高、无 trust region | G1 后替换为 PPO + GAE |
 | 图表示 | 16 维手工候选特征 | 无消息传递、全局结构弱 | PPO 稳定后单独加入 task-GNN |
-| checkpoint 元数据 | 保存维度、seed、特征名和权重 | 缺配置/数据/代码 hash | 正式 manifest 补齐 hash 和版本 |
+| checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单 | 后续 checkpoint 内嵌 manifest 摘要 |
 | test 使用 | 每次 pipeline 都生成并评测 test | 容易反复观察 test | 增加 validation-only 开发命令，最终阶段才解锁 test |
 
 ## 5. 当前结果的正确解释
@@ -156,7 +156,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | REINFORCE epoch 5 训练 mean ratio | 约 0.99923 | 来自随机采样训练轨迹，不能替代冻结策略测试结果 |
 | deterministic test mean ratio | 1.0 | 与 HEFT 完全持平 |
 | test win/tie/loss | 0% / 100% / 0% | 20 个实例全部复制 HEFT 结果 |
-| test 合法率 | 100% | 成功完成的当前批次全部合法 |
+| test 合法率 | 100%，failure rate 0% | P0-08 的逐实例真实计数；仍只覆盖当前 smoke |
 | 平均推理时间 | MLP 约 3.003 ms；HEFT 约 1.162 ms | 当前 MLP 约为 HEFT 的 2.58 倍，未体现工程效率优势 |
 
 因此当前唯一允许的表述是：
@@ -175,8 +175,8 @@ mean ± 1.96 × population_std / sqrt(N)
 8. **没有 validation 选模**：当前保存最后模型，不保存 best-by-validation，无法证明 checkpoint 选择公平。
 9. **数据覆盖不足**：单个训练 seed、小规模合成 DAG、固定 3 资源，没有 STG、CCR 或 OOD 证据。
 10. **统计证据不足**：只有一次训练、20 个 test 实例，当前 CI 还是正态近似。
-11. **失败报告不完整**：非法策略会中断批次，评测摘要中的合法率不是从失败记录计算得到。
-12. **可追溯元数据不全**：checkpoint 未内嵌配置 hash、数据 hash、commit 和依赖版本。
+11. **失败惩罚仍需 benchmark 冻结**：P0-08 已实现真实失败记录和可配置惩罚，但默认 10.0 只是工程值，正式实验必须只在 validation 上冻结。
+12. **checkpoint 未内嵌完整元数据**：外部 run manifest 已记录配置、数据、commit、依赖和 checkpoint hash；模型文件本身仍只保存维度、seed、特征名和权重。
 
 ### 算法推进顺序
 
