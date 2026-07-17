@@ -4,8 +4,10 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：部分完成（A 已提交，待 B 独立复核）
+- 状态：已完成（B 独立复核通过）
 - 不可变实现提交：`2eda5ae0eeca87affd54f4067ba17d4cdff1f766`
+- 被复核远端提交：`180a7130517df425bf53dab945f3760e5bcdba72`
+- 独立复核：[P1-A01 独立复核记录](./P1-A01独立复核记录.md)
 - 数据契约：`stg-rnc50-hetero-trisched-v1`
 
 ## 1. 目标与非目标
@@ -166,20 +168,22 @@ python -m trisched train-bc `
   --output outputs/p1-a01-reproduction
 ```
 
-## 9. B 独立复核要求
+## 9. B 独立复核结论
 
-B 必须在用户推送后的不可变提交上执行，且不得复用 A 的 `outputs/p1-a01-*`：
+B 已在远端不可变提交 `180a7130517df425bf53dab945f3760e5bcdba72` 上完成复核，且没有复用 A 的输出：
 
-1. 确认远端 SHA、七环境 CI 和 artifact；
-2. 创建 detached worktree，并只复制 120 train + 30 validation 源 JSON，完全不提供 test 原始文件；
-3. 用该 150 文件 raw root 连续运行两次，比较 teacher 聚合 hash、训练曲线逐字节、best/last parameter hash；
-4. 独立抽查至少 10 个 teacher 轨迹，比较生产/独立 HEFT、动作序列和 makespan；
-5. 分别尝试把 test 用于 teacher、training、model selection，确认均在读取 test JSON 前返回 `split_usage`；
-6. 篡改一条 teacher action 或 trace hash，确认训练前失败；
-7. 加载 best/last，在 30 个 validation 场景运行双 validator，重算 ratio、accuracy、failure/illegal rate；
-8. 重算 run manifest 全部构件并执行完整测试。
+| 复核项 | 结果 |
+| --- | --- |
+| 远端与 CI | Windows/Ubuntu × Python 3.10/3.11/3.12，加 openEuler 24.03 LTS SP4，共 7 个 job 全部成功 |
+| 无 test 原始字节 | 只保留 120 train + 30 validation，确认 test 0/30；连续两次训练成功 |
+| 可重生成 | 10 个核心构件两次逐字节相同，best/last NPZ 和参数 hash 与正式值一致 |
+| teacher 抽查 | 固定抽查 10 个 train 场景，生产/独立 HEFT、动作、makespan、hash 和双 validator 全部一致 |
+| 用途门禁 | test 用于 teacher、training、model selection 均在读取 JSON 前以 `split_usage` 失败 |
+| 篡改注入 | trace hash 篡改返回 `teacher_trace_hash`；非法动作返回 `teacher_illegal_action` |
+| checkpoint 复评 | best/last 均为 validation 30/30 成功、ratio 1.0、failure/illegal action 0 |
+| 完整测试 | `165 passed in 5.57s`，隔离 worktree 保持干净 |
 
-通过前 P1-A01/P1-02 保持“部分完成”，不得开始 P1-A02 PPO。
+详细 SHA、抽查索引、run manifest 和结论边界见[独立复核记录](./P1-A01独立复核记录.md)。P1-A01/P1-02 状态改为“已完成（B 独立复核通过）”，下一主任务为 P1-A02 masked PPO。
 
 ## 10. 已知限制
 

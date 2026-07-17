@@ -24,6 +24,7 @@
 5. 最终主结果必须同时满足：合法调度率 100%、`mean_ratio < 1`、固定 test、逐实例结果可追溯。内部冲奖目标为 `mean_ratio ≤ 0.95`。
 6. 当前 masked MLP 的 test `mean_ratio = 1.0`，只能证明训练—评测闭环成立，不能宣称性能领先。
 7. 在 G1 正确性门禁通过前不开始 GNN/PPO；正确性通过后，先建立 PPO，再单独验证 task-GNN，禁止同时改变模型、奖励和数据分布。
+8. P1-A01 已由 B 在远端不可变提交 `180a713...` 上独立复核通过：完全不含 test 原始字节的 raw root 可连续两次重生成相同核心构件，best/last 复评均为 validation ratio 1.0、零失败、零非法动作。该结论允许开始 P1-A02，但不构成优于 HEFT 的证据。
 
 ## 2. 本次审计范围与证据
 
@@ -134,7 +135,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | 项目 | 当前实现 | 审计结论 | 后续动作 |
 | --- | --- | --- | --- |
 | 逐实例 ratio | 每个策略 makespan 除以同实例 HEFT makespan | 正确 | 保持 |
-| train/validation/test | smoke 使用派生 seed；公开 STG 只用 train 生成 teacher、validation 选模，`train-bc` 不加载 test | P1-A01 已提交用途硬门禁，待 B 复核 | B 用完全不含 test JSON 的 raw root 重跑 |
+| train/validation/test | smoke 使用派生 seed；公开 STG 只用 train 生成 teacher、validation 选模，`train-bc` 不加载 test | B 已在完全不含 test JSON 的 raw root 双次重跑，并注入三类 test 用途，复核通过 | PPO 继续复用相同用途门禁；test 只留最终评测 |
 | checkpoint 选择 | legacy smoke 只存 last；公开 BC 保存 best/last，并只按 validation ratio/accuracy/earlier epoch 选择 | P1-A01 已形成公平基线 | PPO 必须复用相同 best/last 与 test 禁用规则 |
 | CI | 正态近似、总体标准差 | 仅适合 smoke | 改为分层 bootstrap |
 | 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现并由 A 独立复核 | 保持零失败发布门禁 |
@@ -144,7 +145,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | 训练算法 | episodic REINFORCE + batch mean baseline | 方差高、无 trust region | G1 后替换为 PPO + GAE |
 | 图表示 | 16 维手工候选特征 | 无消息传递、全局结构弱 | PPO 稳定后单独加入 task-GNN |
 | checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单 | 后续 checkpoint 内嵌 manifest 摘要 |
-| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc` 对 test 设用途门禁且正式运行未访问 | 公开 BC 开发路径满足隔离要求，待 B 复核 | 最终阶段另建一次性公开 test 评测命令 |
+| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc` 对 test 设用途门禁且正式运行未访问 | B 以 test 0/30 的 raw root 双次训练，并确认错误路径也不读取 test，隔离要求已复核 | 最终阶段另建一次性公开 test 评测命令 |
 
 ## 5. 当前结果的正确解释
 
@@ -163,7 +164,7 @@ mean ± 1.96 × population_std / sqrt(N)
 
 > TriSched MVP 已打通受约束策略训练、checkpoint 保存/加载和统一评测闭环；在当前 20 个合成测试实例上，masked MLP 复现 HEFT 调度，尚未获得性能提升。
 
-P1-A01 另在公开 STG topology projection 上冻结了 120 个 train teacher 和 30 个 validation reference。单 seed 纯 BC 在 epoch 1 达到 validation teacher action accuracy 1.0、mean ratio 1.0、failure/illegal action rate 0；test 未访问。该结果同样只允许表述为“公开数据上复现 HEFT”，详见 [P1-A01 记录](./P1-A01HEFT教师与BC基线.md)。
+P1-A01 另在公开 STG topology projection 上冻结了 120 个 train teacher 和 30 个 validation reference。单 seed 纯 BC 在 epoch 1 达到 validation teacher action accuracy 1.0、mean ratio 1.0、failure/illegal action rate 0；test 未访问。B 已用完全不含 test 字节的数据根双次重跑并独立复核通过。该结果同样只允许表述为“公开数据上复现 HEFT”，详见 [P1-A01 记录](./P1-A01HEFT教师与BC基线.md)及其[独立复核记录](./P1-A01独立复核记录.md)。
 
 ## 6. 当前 MLP/REINFORCE 的局限
 

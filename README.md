@@ -94,7 +94,7 @@ python scripts/fetch_stg_benchmark.py --offline
 python -m trisched train-bc --config configs/stg_bc.json
 ```
 
-命令生成 teacher/reference manifest、训练曲线、best/last checkpoint、逐实例 validation 诊断、空失败 JSONL 和可核验 run manifest。训练入口只加载 train/validation；test 被用途门禁禁止用于 teacher、梯度或 checkpoint 选择，本任务不会输出 test 指标。当前 BC 的 validation ratio 为 1.0，表示成功复制 HEFT，不代表性能领先。契约、结果、hash 和 B 的独立复核清单见 [P1-A01 HEFT teacher 与公开 STG 行为克隆基线](doc/P1-A01HEFT教师与BC基线.md)。
+命令生成 teacher/reference manifest、训练曲线、best/last checkpoint、逐实例 validation 诊断、空失败 JSONL 和可核验 run manifest。训练入口只加载 train/validation；test 被用途门禁禁止用于 teacher、梯度或 checkpoint 选择，本任务不会输出 test 指标。当前 BC 的 validation ratio 为 1.0，表示成功复制 HEFT，不代表性能领先。契约、结果和 hash 见 [P1-A01 HEFT teacher 与公开 STG 行为克隆基线](doc/P1-A01HEFT教师与BC基线.md)；B 已在完全不含 test 原始字节的隔离数据根上双次重跑，并[独立复核通过](doc/P1-A01独立复核记录.md)。
 
 ## openEuler CPU smoke
 
