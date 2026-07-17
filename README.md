@@ -116,6 +116,12 @@ python -m trisched train-ppo --config configs/stg_ppo.json --resume
 
 正式 validation 的 3 个 best seed ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 个 seed，另 1 个按冻结规则回退 BC warm start。seed-level mean 为 `0.723193`，但 population std 为 `0.075948`，每个 seed 仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。B 已在物理删除 test JSON 和 archive 的数据根上复跑正式配置，并完成 checkpoint、manifest、数学分支与配置注入复核。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。详见 [P1-A02 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)、其[独立复核记录](doc/P1-A02独立复核记录.md)和 [P1-03 断点续训契约](doc/P1-03PPO断点续训设计与验收.md)。
 
+## P1-A03 task-GNN（进行中）
+
+当前已实现 task-GNN 的最小前向、合法动作接口和无 pickle checkpoint。它继续使用相同 14 维 teacher-free 候选特征，仅从其中复用 workload、upward-rank、入度和出度构造任务节点，沿 DAG 分别做一次前驱/后继均值消息传递，再与原候选表示融合打分。该接口已有同 seed 确定性、图结构敏感性、动作 mask、参数量和 checkpoint 往返测试。
+
+task-GNN 尚未接入 BC/PPO 梯度、epoch 状态和 3-seed validation，因此目前没有 GNN 性能结论，也没有新增公开 test 访问。冻结张量、参数量公式、验收门禁和下一提交要求见 [P1-A03 task-GNN 设计与验收契约](doc/P1-A03TaskGNN设计与验收.md)。
+
 ## openEuler CPU smoke
 
 在已启动 Docker Linux engine 的 Windows 或 Linux 主机上，使用固定 digest 的 openEuler 24.03 LTS-SP4 镜像执行一次性 CPU smoke：
@@ -179,6 +185,7 @@ trisched/exact.py        小图精确分支定界 solver 与解析下界
 trisched/policies.py     统一策略接口与 HEFT/CPOP/Greedy/Random
 trisched/schedulers.py   scheduler registry、外部进程 adapter 和稳定诊断
 trisched/learning.py     可变特征 Masked MLP、HEFT 模仿和 legacy REINFORCE
+trisched/gnn.py          14 维输入 task-GNN、DAG 消息传递和 checkpoint
 trisched/bc.py           冻结 teacher、BC best/last 和防 test 泄漏流程
 trisched/ppo.py          增量 ratio 奖励、GAE、clipped PPO、多 seed 清单和断点续训
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
@@ -195,7 +202,7 @@ tests/                   单元与集成测试
 - 目标函数仅为 makespan；
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - 学习策略使用手工候选特征，还未使用 GNN；
-- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO 路径，但尚未加入课程学习、OOD 数据和 task-GNN；
+- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 只有最小前向/checkpoint，尚未接入 BC/PPO、课程或 OOD；
 - 已在公开 STG topology projection 上完成并独立复核 3-seed PPO validation 开发结果；公开 test 最终评测、5-seed 主结果、分层 bootstrap 与竞赛方隐藏测试尚未完成。
 - epoch 边界断点续训已通过 A 的微型中断注入，但尚待 B 从不可变提交独立复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 
