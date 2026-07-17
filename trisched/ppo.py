@@ -31,15 +31,18 @@ from .bc import (
     freeze_task_gnn_teacher_dataset,
     freeze_teacher_dataset,
     policy_parameter_hash,
+    train_task_gnn_bc_baseline,
     train_bc_baseline,
 )
 from .benchmark import load_benchmark_manifest, load_frozen_split
 from .env import HeterogeneousDagEnv, validate_schedule
 from .gnn import (
+    TASK_GNN_FEATURE_NAMES,
     FrozenTaskGNNState,
     TaskGNNPolicy,
     freeze_task_gnn_state,
     freeze_task_graph,
+    task_gnn_metadata,
     task_gnn_parameter_hash,
 )
 from .learning import (
@@ -313,6 +316,112 @@ def load_ppo_config(path: str | Path) -> dict[str, Any]:
             "teacher_feature_reference_seed": reference_seed,
         },
     }
+
+
+def load_task_gnn_config(path: str | Path) -> dict[str, Any]:
+    """Load the P1-A03 task-GNN contract without changing masked-MLP PPO."""
+
+    source = Path(path)
+    base = load_ppo_config(source)
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        _fail("config_read", "$", str(error))
+    allowed_keys = {
+        "$": {
+            "format_version",
+            "seeds",
+            "output_dir",
+            "benchmark",
+            "features",
+            "task_gnn",
+            "behavior_cloning",
+            "ppo",
+            "selection",
+        },
+        "$.benchmark": {"manifest", "raw_root"},
+        "$.features": {"exclude"},
+        "$.task_gnn": {"architecture", "message_dim"},
+        "$.behavior_cloning": {
+            "hidden_dim",
+            "epochs",
+            "learning_rate",
+            "gradient_clip",
+            "shuffle_seed_offset",
+        },
+        "$.ppo": {
+            "epochs",
+            "episodes_per_epoch",
+            "update_epochs",
+            "minibatch_size",
+            "actor_learning_rate",
+            "value_learning_rate",
+            "value_hidden_dim",
+            "gamma",
+            "gae_lambda",
+            "clip_ratio",
+            "entropy_coefficient",
+            "target_kl",
+            "gradient_clip",
+            "shuffle_seed_offset",
+        },
+        "$.selection": {
+            "metric",
+            "failure_penalty_ratio",
+            "target_ratio",
+        },
+    }
+    config_objects = {
+        "$": payload,
+        "$.benchmark": payload.get("benchmark"),
+        "$.features": payload.get("features"),
+        "$.task_gnn": payload.get("task_gnn"),
+        "$.behavior_cloning": payload.get("behavior_cloning"),
+        "$.ppo": payload.get("ppo"),
+        "$.selection": payload.get("selection"),
+    }
+    for object_path, allowed in allowed_keys.items():
+        value = config_objects[object_path]
+        if not isinstance(value, dict):
+            continue
+        unknown_keys = sorted(set(value) - allowed)
+        if unknown_keys:
+            _fail(
+                "task_gnn_config_variable",
+                object_path,
+                "task-GNN v1 rejects unreviewed experiment variables",
+                details={"unknown": unknown_keys},
+            )
+    task_gnn = payload.get("task_gnn")
+    if not isinstance(task_gnn, dict):
+        _fail("config_type", "$.task_gnn", "expected an object")
+    architecture = task_gnn.get("architecture")
+    if architecture != TaskGNNPolicy.architecture:
+        _fail(
+            "task_gnn_architecture",
+            "$.task_gnn.architecture",
+            f"expected {TaskGNNPolicy.architecture!r}",
+        )
+    if tuple(base["features"]["selected"]) != TASK_GNN_FEATURE_NAMES:
+        _fail(
+            "task_gnn_feature_schema",
+            "$.features.exclude",
+            "task-GNN v1 requires the canonical 14-D teacher-free schema",
+            details={
+                "expected": list(TASK_GNN_FEATURE_NAMES),
+                "actual": base["features"]["selected"],
+            },
+        )
+    normalized = dict(base)
+    normalized.pop("ablation", None)
+    normalized["task_gnn"] = {
+        "architecture": architecture,
+        "message_dim": _positive_integer(
+            task_gnn.get("message_dim", 8),
+            "$.task_gnn.message_dim",
+        ),
+    }
+    return normalized
 
 
 class ValueNetwork:
@@ -2152,6 +2261,27 @@ def _checkpoint_metadata(
     }
 
 
+def _task_gnn_checkpoint_metadata(
+    actor_path: Path,
+    actor: TaskGNNPolicy,
+    value_path: Path,
+    critic: ValueNetwork,
+) -> dict[str, Any]:
+    return {
+        "actor": {
+            "name": actor_path.name,
+            "sha256": _file_hash(actor_path),
+            "parameter_sha256": task_gnn_parameter_hash(actor),
+            **task_gnn_metadata(actor),
+        },
+        "value": {
+            "name": value_path.name,
+            "sha256": _file_hash(value_path),
+            "parameter_sha256": value_parameter_hash(critic),
+        },
+    }
+
+
 def _run_ppo_pipeline_in_directory(
     config_path: str | Path,
     output_override: str | Path | None = None,
@@ -2858,4 +2988,668 @@ def run_ppo_pipeline(
         raise
 
     _publish_resume_staging(staging_dir, output_dir)
+    return output_dir / staged_summary.name
+
+
+def _run_task_gnn_pipeline_in_directory(
+    config_path: str | Path,
+    output_override: str | Path | None = None,
+    *,
+    resume: bool = False,
+) -> Path:
+    """Run P1-A03 against a new directory or a copied resume staging tree."""
+
+    config_source = Path(config_path).resolve()
+    config = load_task_gnn_config(config_source)
+    manifest_path = _resolve_config_path(
+        config_source, config["benchmark"]["manifest"]
+    )
+    raw_root = _resolve_config_path(config_source, config["benchmark"]["raw_root"])
+    output_dir = (
+        _resolve_config_path(config_source, config["output_dir"])
+        if output_override is None
+        else Path(output_override).resolve()
+    )
+    if resume:
+        if not output_dir.is_dir() or not any(output_dir.iterdir()):
+            _fail(
+                "task_gnn_resume_output_missing",
+                "$.output_dir",
+                f"resume output does not exist or is empty: {output_dir}",
+            )
+        resolved_path = output_dir / "resolved_config.json"
+        try:
+            previous_config = json.loads(resolved_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            _fail(
+                "task_gnn_resume_config_read",
+                "$.output_dir.resolved_config",
+                str(error),
+            )
+        if previous_config != config:
+            _fail(
+                "task_gnn_resume_config_mismatch",
+                "$.output_dir.resolved_config",
+                "current normalized config differs from the interrupted run",
+                details={
+                    "previous_sha256": _canonical_sha256(previous_config),
+                    "current_sha256": _canonical_sha256(config),
+                },
+            )
+    else:
+        if output_dir.exists() and any(output_dir.iterdir()):
+            _fail(
+                "output_not_empty",
+                "$.output_dir",
+                f"refusing to mix evidence in {output_dir}",
+            )
+        output_dir.mkdir(parents=True, exist_ok=True)
+        _write_json(output_dir / "resolved_config.json", config)
+
+    print("[1/6] loading verified task-GNN train and validation splits")
+    benchmark_manifest = load_benchmark_manifest(manifest_path)
+    manifest_sha256 = _file_hash(manifest_path)
+    train_scenarios = load_frozen_split(
+        raw_root,
+        manifest_path,
+        "train",
+        purpose="teacher",
+    )
+    validation_scenarios = load_frozen_split(
+        raw_root,
+        manifest_path,
+        "validation",
+        purpose="model_selection",
+    )
+    train_entries = [
+        entry for entry in benchmark_manifest["entries"] if entry["split"] == "train"
+    ]
+    validation_entries = [
+        entry
+        for entry in benchmark_manifest["entries"]
+        if entry["split"] == "validation"
+    ]
+    repository = Path(__file__).resolve().parents[1]
+    code_metadata = _git_metadata(repository)
+    code_source_sha256 = {
+        path.relative_to(repository).as_posix(): _file_hash(path)
+        for path in sorted((repository / "trisched").glob("*.py"))
+    }
+
+    print("[2/6] generating production/independent HEFT manifests")
+    train_teacher = build_teacher_manifest(
+        train_scenarios,
+        train_entries,
+        split="train",
+        purpose="behavior_cloning_teacher",
+        benchmark_manifest_name=manifest_path.name,
+        benchmark_manifest_sha256=manifest_sha256,
+        benchmark_id=benchmark_manifest["benchmark_id"],
+        code_metadata=code_metadata,
+    )
+    validation_reference = build_teacher_manifest(
+        validation_scenarios,
+        validation_entries,
+        split="validation",
+        purpose="model_selection_reference",
+        benchmark_manifest_name=manifest_path.name,
+        benchmark_manifest_sha256=manifest_sha256,
+        benchmark_id=benchmark_manifest["benchmark_id"],
+        code_metadata=code_metadata,
+    )
+    teacher_artifacts = {
+        "train_teacher_manifest.json": train_teacher,
+        "validation_reference_manifest.json": validation_reference,
+    }
+    if resume:
+        for name, expected in teacher_artifacts.items():
+            path = output_dir / name
+            try:
+                actual = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError) as error:
+                _fail(
+                    "task_gnn_resume_artifact_read",
+                    f"$.output_dir.{name}",
+                    str(error),
+                )
+            if actual != expected:
+                _fail(
+                    "task_gnn_resume_artifact_mismatch",
+                    f"$.output_dir.{name}",
+                    "resume provenance artifact differs from the current run",
+                    details={
+                        "previous_sha256": _canonical_sha256(actual),
+                        "current_sha256": _canonical_sha256(expected),
+                    },
+                )
+        failure_path = output_dir / "teacher_failures.jsonl"
+        try:
+            failure_bytes = failure_path.read_bytes()
+        except OSError as error:
+            _fail(
+                "task_gnn_resume_artifact_read",
+                "$.output_dir.teacher_failures.jsonl",
+                str(error),
+            )
+        if failure_bytes:
+            _fail(
+                "task_gnn_resume_artifact_mismatch",
+                "$.output_dir.teacher_failures.jsonl",
+                "teacher failure evidence must remain empty",
+            )
+    else:
+        for name, value in teacher_artifacts.items():
+            _write_json(output_dir / name, value)
+        _write_jsonl(output_dir / "teacher_failures.jsonl", [])
+
+    print("[3/6] freezing the canonical 14-D task-GNN states")
+    train_states = freeze_task_gnn_teacher_dataset(
+        train_scenarios,
+        train_teacher,
+        split="train",
+        purpose="behavior_cloning_teacher",
+    )
+    validation_states = freeze_task_gnn_teacher_dataset(
+        validation_scenarios,
+        validation_reference,
+        split="validation",
+        purpose="model_selection_reference",
+    )
+    bc_common = {
+        **config["behavior_cloning"],
+        "message_dim": config["task_gnn"]["message_dim"],
+        "failure_penalty_ratio": config["selection"]["failure_penalty_ratio"],
+    }
+
+    print("[4/6] training task-GNN BC warm starts plus PPO across seeds")
+    artifact_names = [
+        "resolved_config.json",
+        "train_teacher_manifest.json",
+        "validation_reference_manifest.json",
+        "teacher_failures.jsonl",
+    ]
+    seed_results: list[dict[str, Any]] = []
+    resumed_seeds: list[int] = []
+    architecture_metadata: dict[str, Any] | None = None
+    for seed in config["seeds"]:
+        prefix = f"seed_{seed}_task_gnn"
+        warm_actor, _, warm_curve = train_task_gnn_bc_baseline(
+            train_scenarios,
+            train_teacher,
+            validation_scenarios,
+            validation_reference,
+            bc_common,
+            seed=int(seed),
+            train_frozen_states=train_states,
+            validation_frozen_states=validation_states,
+        )
+        architecture_metadata = task_gnn_metadata(warm_actor)
+        warm_metrics, _ = evaluate_bc_policy(
+            warm_actor,
+            validation_scenarios,
+            validation_reference,
+            failure_penalty_ratio=config["selection"]["failure_penalty_ratio"],
+            frozen_task_gnn_states=validation_states,
+        )
+        warm_path = output_dir / f"{prefix}_bc_warm_start.npz"
+        warm_actor.save(warm_path)
+        resume_state_path = output_dir / f"{prefix}_ppo_training_state.npz"
+        state_exists = resume_state_path.is_file()
+        completed_output_names = [
+            f"{prefix}_ppo_best_policy.npz",
+            f"{prefix}_ppo_last_policy.npz",
+            f"{prefix}_ppo_best_value.npz",
+            f"{prefix}_ppo_last_value.npz",
+            f"{prefix}_training_curve.json",
+            f"{prefix}_validation_diagnostics.json",
+            f"{prefix}_validation_failures.jsonl",
+        ]
+        if resume and not state_exists and any(
+            (output_dir / name).exists() for name in completed_output_names
+        ):
+            _fail(
+                "ppo_resume_state_missing",
+                "$.resume",
+                f"seed {seed} has task-GNN PPO outputs but no training state",
+            )
+        resume_contract = {
+            "format_version": 1,
+            "algorithm": "task_gnn_masked_ppo_epoch_boundary_resume",
+            "seed": int(seed),
+            "normalized_config": config,
+            "config_source_sha256": _file_hash(config_source),
+            "benchmark_manifest_sha256": manifest_sha256,
+            "code": {
+                "git": code_metadata,
+                "sources": code_source_sha256,
+            },
+            "architecture": architecture_metadata,
+            "features": config["features"]["selected"],
+            "ppo": {
+                **config["ppo"],
+                "failure_penalty_ratio": config["selection"][
+                    "failure_penalty_ratio"
+                ],
+            },
+            "warm_start_parameter_sha256": task_gnn_parameter_hash(warm_actor),
+            "train": {
+                "scenario_hashes": [
+                    scenario.content_hash() for scenario in train_scenarios
+                ],
+                "teacher_trace_hashes_sha256": train_teacher[
+                    "trace_hashes_sha256"
+                ],
+                "teacher_schedule_hashes_sha256": train_teacher[
+                    "schedule_hashes_sha256"
+                ],
+            },
+            "validation": {
+                "scenario_hashes": [
+                    scenario.content_hash() for scenario in validation_scenarios
+                ],
+                "reference_trace_hashes_sha256": validation_reference[
+                    "trace_hashes_sha256"
+                ],
+                "reference_schedule_hashes_sha256": validation_reference[
+                    "schedule_hashes_sha256"
+                ],
+            },
+            "test_accessed": False,
+        }
+        resume_seed = resume and state_exists
+        if resume_seed:
+            resumed_seeds.append(int(seed))
+        (
+            best_actor,
+            last_actor,
+            best_value,
+            last_value,
+            ppo_curve,
+        ) = train_task_gnn_ppo(
+            warm_actor,
+            train_scenarios,
+            train_teacher,
+            validation_scenarios,
+            validation_reference,
+            {
+                **config["ppo"],
+                "failure_penalty_ratio": config["selection"][
+                    "failure_penalty_ratio"
+                ],
+            },
+            seed=int(seed),
+            validation_frozen_states=validation_states,
+            resume_state_path=resume_state_path,
+            resume_contract=resume_contract,
+            resume=resume_seed,
+        )
+        best_metrics, best_rows = evaluate_bc_policy(
+            best_actor,
+            validation_scenarios,
+            validation_reference,
+            failure_penalty_ratio=config["selection"]["failure_penalty_ratio"],
+            frozen_task_gnn_states=validation_states,
+        )
+        last_metrics, last_rows = evaluate_bc_policy(
+            last_actor,
+            validation_scenarios,
+            validation_reference,
+            failure_penalty_ratio=config["selection"]["failure_penalty_ratio"],
+            frozen_task_gnn_states=validation_states,
+        )
+        best_actor_path = output_dir / f"{prefix}_ppo_best_policy.npz"
+        last_actor_path = output_dir / f"{prefix}_ppo_last_policy.npz"
+        best_value_path = output_dir / f"{prefix}_ppo_best_value.npz"
+        last_value_path = output_dir / f"{prefix}_ppo_last_value.npz"
+        best_actor.save(best_actor_path)
+        last_actor.save(last_actor_path)
+        best_value.save(best_value_path)
+        last_value.save(last_value_path)
+        curve_path = output_dir / f"{prefix}_training_curve.json"
+        diagnostics_path = output_dir / f"{prefix}_validation_diagnostics.json"
+        failures_path = output_dir / f"{prefix}_validation_failures.jsonl"
+        _write_json(
+            curve_path,
+            {
+                "format_version": 1,
+                "seed": seed,
+                "architecture": architecture_metadata,
+                "behavior_cloning": warm_curve,
+                "ppo": ppo_curve,
+            },
+        )
+        _write_json(
+            diagnostics_path,
+            {
+                "format_version": 1,
+                "seed": seed,
+                "split": "validation",
+                "test_accessed": False,
+                "best": {"metrics": best_metrics, "per_instance": best_rows},
+                "last": {"metrics": last_metrics, "per_instance": last_rows},
+            },
+        )
+        _write_jsonl(
+            failures_path,
+            [row for row in best_rows if row["status"] == "failure"],
+        )
+        best_checkpoint = _task_gnn_checkpoint_metadata(
+            best_actor_path,
+            best_actor,
+            best_value_path,
+            best_value,
+        )
+        last_checkpoint = _task_gnn_checkpoint_metadata(
+            last_actor_path,
+            last_actor,
+            last_value_path,
+            last_value,
+        )
+        training_state = {
+            "name": resume_state_path.name,
+            "sha256": _file_hash(resume_state_path),
+            "format_version": 1,
+            "completed_epoch": int(config["ppo"]["epochs"]),
+            "boundary": "completed_ppo_epoch",
+        }
+        seed_results.append(
+            {
+                "seed": seed,
+                "warm_start_validation": warm_metrics,
+                "selection": ppo_curve["selection"],
+                "best_validation": best_metrics,
+                "last_validation": last_metrics,
+                "best_checkpoint": best_checkpoint,
+                "last_checkpoint": last_checkpoint,
+                "training_state": training_state,
+                "improved_over_warm_start": best_metrics["mean_ratio"]
+                < warm_metrics["mean_ratio"] - 1e-12,
+                "selected_warm_start": ppo_curve["selection"]["best_epoch"] == 0,
+            }
+        )
+        artifact_names.extend(
+            [
+                warm_path.name,
+                best_actor_path.name,
+                last_actor_path.name,
+                best_value_path.name,
+                last_value_path.name,
+                curve_path.name,
+                diagnostics_path.name,
+                failures_path.name,
+                resume_state_path.name,
+            ]
+        )
+    assert architecture_metadata is not None
+
+    print("[5/6] aggregating the task-GNN validation gate")
+    seed_ratios = [
+        float(result["best_validation"]["mean_ratio"])
+        for result in seed_results
+    ]
+    validation_gate_passed = all(
+        result["best_validation"]["failure_count"] == 0
+        and result["best_validation"]["illegal_action_count"] == 0
+        and result["best_validation"]["mean_ratio"]
+        <= float(config["selection"]["target_ratio"]) + 1e-12
+        for result in seed_results
+    )
+    summary = {
+        "format_version": 1,
+        "mode": "stg_task_gnn_ppo",
+        "benchmark_id": benchmark_manifest["benchmark_id"],
+        "data_access": {
+            "loaded_splits": ["train", "validation"],
+            "teacher_split": "train",
+            "training_split": "train",
+            "model_selection_split": "validation",
+            "test_accessed": False,
+            "test_status": "forbidden_until_final_evaluation",
+        },
+        "architecture": architecture_metadata,
+        "features": config["features"],
+        "teacher": {
+            "scenario_count": train_teacher["scenario_count"],
+            "action_count": train_teacher["action_count"],
+            "failure_count": train_teacher["failure_count"],
+            "trace_hashes_sha256": train_teacher["trace_hashes_sha256"],
+            "schedule_hashes_sha256": train_teacher["schedule_hashes_sha256"],
+        },
+        "seeds": seed_results,
+        "aggregate_validation": {
+            "seed_count": len(seed_results),
+            "mean_of_seed_mean_ratios": float(np.mean(seed_ratios)),
+            "std_of_seed_mean_ratios": float(np.std(seed_ratios)),
+            "min_seed_mean_ratio": float(np.min(seed_ratios)),
+            "max_seed_mean_ratio": float(np.max(seed_ratios)),
+            "improved_seed_count": sum(
+                int(result["improved_over_warm_start"])
+                for result in seed_results
+            ),
+            "warm_start_fallback_count": sum(
+                int(result["selected_warm_start"]) for result in seed_results
+            ),
+            "failure_count": sum(
+                int(result["best_validation"]["failure_count"])
+                for result in seed_results
+            ),
+            "illegal_action_count": sum(
+                int(result["best_validation"]["illegal_action_count"])
+                for result in seed_results
+            ),
+        },
+        "selection": {
+            **config["selection"],
+            "split": "validation",
+            "test_accessed": False,
+        },
+        "resumability": {
+            "state_format_version": 1,
+            "boundary": "completed_ppo_epoch",
+            "state_artifacts": [
+                result["training_state"]["name"] for result in seed_results
+            ],
+            "test_accessed": False,
+        },
+        "validation_gate_passed": validation_gate_passed,
+        "recommendation": (
+            "proceed_to_independent_review"
+            if validation_gate_passed
+            else "retain_masked_mlp_baseline_and_tune_only_on_validation"
+        ),
+        "run_manifest": "task_gnn_run_manifest.json",
+    }
+    summary_path = output_dir / "task_gnn_summary.json"
+    _write_json(summary_path, summary)
+    artifact_names.append(summary_path.name)
+
+    print("[6/6] writing the task-GNN reproducibility manifest")
+    artifacts = {
+        name: {
+            "bytes": (output_dir / name).stat().st_size,
+            "sha256": _file_hash(output_dir / name),
+        }
+        for name in sorted(artifact_names)
+    }
+    lockfile = repository / "requirements-lock.txt"
+    run_manifest = {
+        "format_version": 1,
+        "mode": "stg_task_gnn_ppo",
+        "created_at_utc": datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
+        "code": code_metadata,
+        "runtime": {
+            "trisched": __version__,
+            "python": sys.version,
+            "platform": platform.platform(),
+            "numpy": np.__version__,
+        },
+        "execution": {
+            "resume_requested": resume,
+            "resumed_seeds": resumed_seeds,
+            "resume_boundary": "completed_ppo_epoch",
+            "publication_mode": (
+                "staging_directory_swap" if resume else "direct_new_directory"
+            ),
+        },
+        "inputs": {
+            "config": {
+                "name": config_source.name,
+                "sha256": _file_hash(config_source),
+            },
+            "normalized_config_sha256": _canonical_sha256(config),
+            "benchmark_manifest": {
+                "name": manifest_path.name,
+                "sha256": manifest_sha256,
+            },
+            "dependency_lock": {
+                "name": lockfile.name,
+                "sha256": _file_hash(lockfile),
+            }
+            if lockfile.is_file()
+            else None,
+            "splits": {
+                "train": benchmark_manifest["splits"]["train"],
+                "validation": benchmark_manifest["splits"]["validation"],
+            },
+            "architecture": architecture_metadata,
+            "feature_names": config["features"]["selected"],
+            "seeds": config["seeds"],
+            "test_accessed": False,
+        },
+        "checkpoints": {
+            str(result["seed"]): {
+                "best": result["best_checkpoint"],
+                "last": result["last_checkpoint"],
+                "training_state": result["training_state"],
+            }
+            for result in seed_results
+        },
+        "artifacts": artifacts,
+    }
+    _write_json(output_dir / "task_gnn_run_manifest.json", run_manifest)
+    print(
+        "done: task-GNN seed mean ratios="
+        + ", ".join(f"{ratio:.6f}" for ratio in seed_ratios)
+        + f", validation_gate_passed={validation_gate_passed}"
+    )
+    print(f"summary: {summary_path.resolve()}")
+    return summary_path
+
+
+def _task_gnn_resume_transaction_path(output_dir: Path, role: str) -> Path:
+    return output_dir.with_name(
+        f".{output_dir.name}.task-gnn-resume-{role}-{uuid.uuid4().hex}"
+    )
+
+
+def _publish_task_gnn_resume_staging(
+    staging_dir: Path,
+    output_dir: Path,
+) -> None:
+    backup_dir = _task_gnn_resume_transaction_path(output_dir, "backup")
+    try:
+        os.replace(output_dir, backup_dir)
+    except OSError as error:
+        try:
+            _remove_resume_tree(staging_dir)
+        except OSError:
+            pass
+        _fail(
+            "task_gnn_resume_publish",
+            "$.output_dir",
+            f"could not move the previous evidence directory aside: {error}",
+        )
+    try:
+        os.replace(staging_dir, output_dir)
+    except OSError as error:
+        rollback_error: OSError | None = None
+        try:
+            os.replace(backup_dir, output_dir)
+        except OSError as captured:
+            rollback_error = captured
+        try:
+            _remove_resume_tree(staging_dir)
+        except OSError:
+            pass
+        _fail(
+            "task_gnn_resume_publish",
+            "$.output_dir",
+            f"could not publish the completed resume transaction: {error}",
+            details={
+                "rollback_error": str(rollback_error)
+                if rollback_error is not None
+                else None,
+                "backup_dir": str(backup_dir) if rollback_error is not None else None,
+            },
+        )
+    try:
+        _remove_resume_tree(backup_dir)
+    except OSError as error:
+        _fail(
+            "task_gnn_resume_publish",
+            "$.output_dir",
+            f"published resume output but could not remove its backup: {error}",
+            details={"backup_dir": str(backup_dir)},
+        )
+
+
+def run_task_gnn_pipeline(
+    config_path: str | Path,
+    output_override: str | Path | None = None,
+    *,
+    resume: bool = False,
+) -> Path:
+    """Run the no-test multi-seed task-GNN pipeline with transactional resume."""
+
+    if not resume:
+        return _run_task_gnn_pipeline_in_directory(
+            config_path,
+            output_override,
+            resume=False,
+        )
+
+    config_source = Path(config_path).resolve()
+    config = load_task_gnn_config(config_source)
+    output_dir = (
+        _resolve_config_path(config_source, config["output_dir"])
+        if output_override is None
+        else Path(output_override).resolve()
+    )
+    if not output_dir.is_dir() or not any(output_dir.iterdir()):
+        _fail(
+            "task_gnn_resume_output_missing",
+            "$.output_dir",
+            f"resume output does not exist or is empty: {output_dir}",
+        )
+
+    staging_dir = _task_gnn_resume_transaction_path(output_dir, "staging")
+    try:
+        shutil.copytree(output_dir, staging_dir)
+    except (OSError, shutil.Error) as error:
+        try:
+            _remove_resume_tree(staging_dir)
+        except OSError:
+            pass
+        _fail(
+            "task_gnn_resume_stage_write",
+            "$.output_dir",
+            f"could not create resume transaction staging: {error}",
+        )
+
+    try:
+        staged_summary = _run_task_gnn_pipeline_in_directory(
+            config_source,
+            staging_dir,
+            resume=True,
+        )
+    except BaseException:
+        try:
+            _remove_resume_tree(staging_dir)
+        except OSError:
+            pass
+        raise
+
+    _publish_task_gnn_resume_staging(staging_dir, output_dir)
     return output_dir / staged_summary.name

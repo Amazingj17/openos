@@ -24,7 +24,7 @@ from .evaluation import (
     write_summary,
 )
 from .learning import MaskedMLPPolicy, train_policy
-from .ppo import run_ppo_pipeline
+from .ppo import run_ppo_pipeline, run_task_gnn_pipeline
 from .scenario import Scenario, ScenarioValidationError, generate_dataset
 from .schedulers import SchedulerAdapterError
 
@@ -551,6 +551,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="resume each seed from its last complete PPO epoch state",
     )
+    train_task_gnn = subparsers.add_parser(
+        "train-task-gnn",
+        help="train multi-seed task-GNN BC plus PPO on STG train/validation",
+    )
+    train_task_gnn.add_argument(
+        "--config",
+        default="configs/stg_task_gnn.json",
+    )
+    train_task_gnn.add_argument("--output", default=None)
+    train_task_gnn.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume task-GNN seeds from their last complete PPO epoch state",
+    )
     generate = subparsers.add_parser(
         "generate", help="materialize deterministic scenario JSON files"
     )
@@ -588,6 +602,8 @@ def main(argv: list[str] | None = None) -> int:
             run_bc_pipeline(args.config, args.output)
         elif args.command == "train-ppo":
             run_ppo_pipeline(args.config, args.output, resume=args.resume)
+        elif args.command == "train-task-gnn":
+            run_task_gnn_pipeline(args.config, args.output, resume=args.resume)
         elif args.command == "generate":
             generate_scenarios(args.config, args.output)
         elif args.command == "evaluate":

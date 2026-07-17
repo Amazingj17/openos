@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：进行中（微型 1-seed epoch 恢复已完成；CLI staging 与正式 3-seed 尚未完成）
+- 状态：进行中（微型 CLI/目录事务已完成；待 B 独立复核和正式 3-seed）
 - 前置门禁：[P1-03 第二轮独立复核通过](./P1-03第二轮独立复核记录.md)
 
 ## 1. 目标与单变量边界
@@ -90,7 +90,7 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 - 外部 contract SHA-256、BC warm-start 独立参数 SHA-256、`test_accessed=false`；
 - 对 metadata 和 56 个数值数组计算的 payload SHA-256。
 
-状态文件使用同目录临时文件、flush/fsync 和 `os.replace` 原子发布。加载会重算 payload、Adam step 与 history，并拒绝缺失、已存在、损坏、hash、contract、warm-start 或维度错配。该原子性只覆盖单个状态文件；完整 run 输出目录的 staging/rollback 尚未接入，未完成前不得启动正式 3-seed 训练。
+状态文件使用同目录临时文件、flush/fsync 和 `os.replace` 原子发布。加载会重算 payload、Adam step 与 history，并拒绝缺失、已存在、损坏、hash、contract、warm-start 或维度错配。CLI 恢复时先把正式目录复制到同盘唯一 staging；配置、teacher/reference、全部 seed、summary 和 manifest 都在 staging 内成功后才交换目录。任一后置校验、训练或写出失败都会删除 staging，正式目录保持逐字节不变。
 
 ## 6. 第一阶段验收
 
@@ -106,11 +106,13 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 | frozen graph state | 只读 ranks/归一化上下文/节点/邻接/候选张量可脱离 live env 重放；graph hash 与 Scenario 绑定 | 通过自动测试 |
 | BC/PPO 与 warm start | 专用训练函数在 4/2/0 微型数据上完成 BC、PPO、validation 选模和 epoch-0 回退；直接调用仍拒绝 `gamma != 1` | 通过微型 smoke |
 | PPO epoch 状态 | 连续/中断/恢复 summary、4 个返回模型和 57 个 NPZ 条目逐数组一致；hash/contract/warm-start/损坏/缺失诊断通过 | 通过微型 smoke |
-| run 级 staging 事务 | 尚未把 task-GNN CLI 全部 artifact 放入 staging 后统一发布 | 未通过，下一提交 |
+| 独立配置与 CLI | `stg_task_gnn.json` 固定 architecture/message dim；`train-task-gnn` 不改变 `train-ppo` 默认 MLP | 通过微型 smoke |
+| 完整 artifact 与 manifest | 每次 3-seed 微型 run 生成 32 个被 manifest 声明的 artifact；bytes/SHA-256 全部重算一致 | 通过微型 smoke |
+| run 级 staging 事务 | 第二个 PPO epoch 中断后恢复与连续 run 一致；后置 seed 写出失败时正式目录逐字节不变且事务残留为 0 | 通过微型 smoke |
 | 固定 3-seed validation 对照 | 尚未运行 | 未开始 |
 | B 独立复核 | 尚未进行 | 未开始 |
 
-实现位于 `trisched/gnn.py`，聚焦测试位于 `tests/test_task_gnn.py`。第二阶段增加了从候选分数到节点编码的完整解析反传、梯度累加/裁剪 Adam，以及与 Scenario 内容 hash 绑定的只读 `FrozenTaskGraph/FrozenTaskGNNState`。冻结状态在 live env 继续执行后仍逐数组重放相同 probability，错误 Scenario 会在冻结时拒绝。
+实现位于 `trisched/gnn.py`、`trisched/bc.py` 和 `trisched/ppo.py`，聚焦测试位于 `tests/test_task_gnn.py`、`tests/test_task_gnn_training.py` 与 `tests/test_task_gnn_pipeline.py`。第二阶段增加了从候选分数到节点编码的完整解析反传、梯度累加/裁剪 Adam，以及与 Scenario 内容 hash 绑定的只读 `FrozenTaskGraph/FrozenTaskGNNState`。冻结状态在 live env 继续执行后仍逐数组重放相同 probability，错误 Scenario 会在冻结时拒绝。
 
 第三阶段在 `trisched/bc.py` 和 `trisched/ppo.py` 增加专用 task-GNN 训练类型，不修改原 MLP 的 frozen state 或 PPO transition：
 
@@ -124,11 +126,14 @@ task-GNN checkpoint 使用无 pickle NPZ，并内嵌：
 
 第四阶段使用同一类 4/2/0 合成数据和 seed 79，将 PPO 扩展为 2 epochs，并在第二次 update 前注入中断。恢复状态停在 `completed_epoch=1`；恢复后与连续运行的 summary、best/last actor、best/last critic 和最终状态 57 个 NPZ 条目逐数组一致。状态包含 56 个数值数组，Adam step 由 history 的 update 数与 minibatch 数独立重算；actor/training RNG 均为 PCG64。测试还分别得到 `ppo_resume_state_exists/missing/hash/mismatch/read/corrupt`，其中 mismatch 同时覆盖外部 contract 和 BC warm-start 参数变化，corrupt 额外覆盖重签名后仍多出未知数组的严格 schema 拒绝。新增恢复测试后本地完整回归为 `184 passed in 7.54s`。
 
-## 7. 下一提交要求
+第五阶段新增 `configs/stg_task_gnn.json` 和 `train-task-gnn`，把 task-GNN 与现有 `train-ppo` 的 MLP 默认入口分离。微型 CLI 使用 3 seeds、4 train / 2 validation，并物理删除 test raw 文件；每个 seed 输出 BC warm start、actor/value best/last、epoch state、curve、validation diagnostics 和 failure JSONL，run 级另输出 resolved config、双签 teacher/reference、summary 与 manifest。manifest 声明 32 个 artifact，逐个重算 bytes/SHA-256 通过，`test_accessed=false`，首次发布为 `direct_new_directory`。
 
-1. 为 task-GNN 增加冻结配置校验和 CLI，但不得改变现有 `train-ppo` 默认 MLP 行为；
-2. 输出 actor/value best/last、training state、curve、summary、逐实例 validation 和 run manifest，并记录参数 hash；
-3. 复用 P1-03 staging 事务发布，注入状态损坏和后置 seed 失败并证明正式目录不变；
-4. CLI 微型连续/中断/恢复与全部 artifact 一致后，再申请运行冻结 3-seed validation；
-5. 正式训练前测算完整 frozen graph transition 的峰值内存，必要时按 scenario 共享 graph；
-6. 成员 B 从不可变提交复算参数量、CPU 时延、逐实例 win/tie/loss 和失败切片。
+目录事务测试把 PPO 扩为 2 epochs，在 seed 41 第二次 update 前中断；恢复 run 与连续 run 的 summary、3 条曲线、12 个 actor/value checkpoint 和 3 个训练状态均逐数组一致，manifest 记录 `resumed_seeds=[41]` 与 `publication_mode=staging_directory_swap`。随后在 staging 写 seed 42 曲线时注入异常，正式目录前后逐字节一致，staging/backup 残留为 0。配置测试还拒绝 resource-GNN、课程字段与 14 维 schema 漂移。MLP/task-GNN 聚焦回归通过，完整回归为 `187 passed`。这些仍是事务与闭环证据，不是正式性能证据。
+
+## 7. 下一步要求
+
+1. 用户推送本提交后，成员 B 从不可变提交独立复跑 CLI 首次运行、中断恢复和后置失败目录快照；
+2. B 重算全部 artifact hash、参数量与完整 frozen graph transition 的峰值内存，并确认 MLP `train-ppo` 未漂移；
+3. B 通过后才允许 A 运行冻结 `20260717/20260718/20260719` 正式 validation，公开 test 继续物理隔离；
+4. 正式 run 同时保留 task-GNN 与既有 MLP 的逐实例配对，报告 win/tie/loss、bootstrap CI、训练时长、CPU 推理 P50/P95 和失败切片；
+5. 若固定 validation 未产生配对优势或失败/时延明显恶化，保留 MLP 并关闭本轮，不加入 resource-GNN、课程或新奖励补救。
