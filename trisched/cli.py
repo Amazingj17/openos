@@ -546,6 +546,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     train_ppo.add_argument("--config", default="configs/stg_ppo.json")
     train_ppo.add_argument("--output", default=None)
+    train_ppo.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume each seed from its last complete PPO epoch state",
+    )
     generate = subparsers.add_parser(
         "generate", help="materialize deterministic scenario JSON files"
     )
@@ -582,7 +587,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "train-bc":
             run_bc_pipeline(args.config, args.output)
         elif args.command == "train-ppo":
-            run_ppo_pipeline(args.config, args.output)
+            run_ppo_pipeline(args.config, args.output, resume=args.resume)
         elif args.command == "generate":
             generate_scenarios(args.config, args.output)
         elif args.command == "evaluate":

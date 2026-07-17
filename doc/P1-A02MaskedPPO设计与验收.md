@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：已完成（B 独立复核通过）；P1-03 因断点续训尚缺而保持部分完成
+- 状态：已完成（B 独立复核通过）；P1-03 断点续训已由 A 提交，待 B 复核
 - 不可变实现提交：`1bab5fa7fb536ef1f752c395bbb5c832b0643133`
 - 被复核远端提交：`0794d1822b2060861b9fc3ed2ffc1f70df82cae0`
 - 前置门禁：P1-A01 / P1-02 已完成（B 独立复核通过）
@@ -213,7 +213,7 @@ B 独立复核已覆盖：
 
 B 在完全不含 test JSON 和相关 archive 的独立数据根上重新运行正式 3 seeds，得到与 A 相同的逐 seed 指标和 `ppo_summary.json` hash。远端 Windows/Ubuntu/openEuler 共 7 个 job 全绿；31 个声明 artifact 的大小/hash、180 份 checkpoint validation 复评、奖励 telescope、非零 value GAE、PPO clipping 六分支以及两项训练前故障注入均通过。隔离完整回归为 `169 passed in 5.60s`。
 
-复核结论是 P1-A02 已完成；P1-03 因断点续训尚缺而保持部分完成。完整证据、B 的 run manifest hash 与结论边界见[独立复核记录](./P1-A02独立复核记录.md)。下一轮在相同 14 维基础输入、奖励、数据 split、3 seeds 和选模规则下只替换 MLP 为 task-GNN，并优先补齐中断恢复测试。
+复核结论是 P1-A02 已完成。P1-03 epoch 边界断点续训现已由 A 提交实现与中断注入，待 B 按[断点续训设计与验收契约](./P1-03PPO断点续训设计与验收.md)独立复核。通过后下一轮在相同 14 维基础输入、奖励、数据 split、3 seeds 和选模规则下只替换 MLP 为 task-GNN。
 
 ## 9. 已知限制
 

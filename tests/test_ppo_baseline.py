@@ -7,8 +7,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import trisched.ppo as ppo_module
 from trisched.bc import BehaviorCloningError
 from trisched.benchmark import build_stg_manifest, load_frozen_split
+from trisched.cli import main
 from trisched.env import run_policy, validate_schedule
 from trisched.learning import TEACHER_FEATURE_NAMES, MaskedMLPPolicy
 from trisched.ppo import ValueNetwork, compute_gae, load_ppo_config, run_ppo_pipeline
@@ -255,3 +257,141 @@ def test_masked_ppo_pipeline_is_reproducible_multiseed_and_test_free(
         artifact = first / name
         assert artifact.stat().st_size == metadata["bytes"]
         assert _file_hash(artifact) == metadata["sha256"]
+
+
+def test_ppo_epoch_resume_matches_uninterrupted_and_rejects_bad_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path, _, _ = _prepare_config(tmp_path)
+    original_config_text = config_path.read_text(encoding="utf-8")
+    config = json.loads(original_config_text)
+    config["ppo"]["epochs"] = 2
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    original_config_text = config_path.read_text(encoding="utf-8")
+
+    uninterrupted = tmp_path / "uninterrupted"
+    resumed = tmp_path / "resumed"
+    uninterrupted_summary_path = run_ppo_pipeline(config_path, uninterrupted)
+
+    original_update = ppo_module._update_ppo
+    update_calls = 0
+
+    def interrupt_during_second_epoch(*args, **kwargs):
+        nonlocal update_calls
+        update_calls += 1
+        if update_calls == 2:
+            raise RuntimeError("simulated interruption")
+        return original_update(*args, **kwargs)
+
+    monkeypatch.setattr(
+        ppo_module,
+        "_update_ppo",
+        interrupt_during_second_epoch,
+    )
+    with pytest.raises(RuntimeError, match="simulated interruption"):
+        run_ppo_pipeline(config_path, resumed)
+    state_path = resumed / "seed_31_ppo_training_state.npz"
+    assert state_path.is_file()
+    with np.load(state_path, allow_pickle=False) as state:
+        metadata = json.loads(str(state["metadata_json"].item()))
+    assert metadata["completed_epoch"] == 1
+    assert metadata["test_accessed"] is False
+
+    monkeypatch.setattr(ppo_module, "_update_ppo", original_update)
+    resumed_summary_path = run_ppo_pipeline(config_path, resumed, resume=True)
+    uninterrupted_summary = json.loads(
+        uninterrupted_summary_path.read_text(encoding="utf-8")
+    )
+    resumed_summary = json.loads(resumed_summary_path.read_text(encoding="utf-8"))
+    assert resumed_summary == uninterrupted_summary
+    for seed in (31, 32, 33):
+        assert json.loads(
+            (resumed / f"seed_{seed}_training_curve.json").read_text(
+                encoding="utf-8"
+            )
+        ) == json.loads(
+            (uninterrupted / f"seed_{seed}_training_curve.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert (
+            resumed / f"seed_{seed}_ppo_training_state.npz"
+        ).read_bytes() == (
+            uninterrupted / f"seed_{seed}_ppo_training_state.npz"
+        ).read_bytes()
+    resumed_manifest = json.loads(
+        (resumed / "ppo_run_manifest.json").read_text(encoding="utf-8")
+    )
+    assert resumed_manifest["execution"] == {
+        "resume_requested": True,
+        "resumed_seeds": [31],
+        "resume_boundary": "completed_ppo_epoch",
+    }
+    assert len(resumed_manifest["artifacts"]) == 34
+
+    teacher_path = resumed / "train_teacher_manifest.json"
+    original_teacher_bytes = teacher_path.read_bytes()
+    changed_teacher = json.loads(original_teacher_bytes.decode("utf-8"))
+    changed_teacher["injected_change"] = True
+    teacher_path.write_text(json.dumps(changed_teacher), encoding="utf-8")
+    with pytest.raises(BehaviorCloningError) as teacher_mismatch:
+        run_ppo_pipeline(config_path, resumed, resume=True)
+    assert teacher_mismatch.value.code == "ppo_resume_artifact_mismatch"
+    teacher_path.write_bytes(original_teacher_bytes)
+
+    valid_state_bytes = state_path.read_bytes()
+    state_path.unlink()
+    with pytest.raises(BehaviorCloningError) as missing_state:
+        run_ppo_pipeline(config_path, resumed, resume=True)
+    assert missing_state.value.code == "ppo_resume_state_missing"
+    state_path.write_bytes(valid_state_bytes)
+
+    changed_config = json.loads(original_config_text)
+    changed_config["ppo"]["actor_learning_rate"] = 0.0004
+    config_path.write_text(json.dumps(changed_config), encoding="utf-8")
+    with pytest.raises(BehaviorCloningError) as mismatch:
+        run_ppo_pipeline(config_path, resumed, resume=True)
+    assert mismatch.value.code == "ppo_resume_config_mismatch"
+
+    config_path.write_text(original_config_text, encoding="utf-8")
+    with np.load(state_path, allow_pickle=False) as state:
+        altered_state = {name: np.asarray(state[name]) for name in state.files}
+    altered_metadata = json.loads(str(altered_state["metadata_json"].item()))
+    altered_metadata["completed_epoch"] = 0
+    altered_state["metadata_json"] = np.asarray(
+        json.dumps(altered_metadata, sort_keys=True, separators=(",", ":"))
+    )
+    np.savez_compressed(state_path, **altered_state)
+    with pytest.raises(BehaviorCloningError) as altered:
+        run_ppo_pipeline(config_path, resumed, resume=True)
+    assert altered.value.code == "ppo_resume_state_hash"
+
+    state_path.write_bytes(b"corrupt resume state")
+    with pytest.raises(BehaviorCloningError) as corrupt:
+        run_ppo_pipeline(config_path, resumed, resume=True)
+    assert corrupt.value.code == "ppo_resume_state_read"
+
+
+def test_ppo_cli_resume_requires_existing_output(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config_path, _, _ = _prepare_config(tmp_path)
+    missing_output = tmp_path / "missing-resume"
+    exit_code = main(
+        [
+            "train-ppo",
+            "--config",
+            str(config_path),
+            "--output",
+            str(missing_output),
+            "--resume",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert json.loads(captured.err)["error"]["code"] == (
+        "ppo_resume_output_missing"
+    )
+    assert not missing_output.exists()

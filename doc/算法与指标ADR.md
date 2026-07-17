@@ -143,7 +143,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | HEFT teacher | P1-A01 参考含 `is_heft_task/is_heft_pair`；P1-A02 主路径强制删除 | 同 seed 16/14 维 BC ratio 为 `1.0/0.852539`，teacher accuracy 为 `1.0/0.514`；B 注入任一特征均在训练前失败 | PPO/GNN 主路径保持删除 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | B 独立推导通过；正式最大恒等式误差 `1.78e-15`，`gamma=0.99` 注入被拒绝 | task-GNN 保持奖励与 `gamma=1.0` 不变 |
-| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | B 独立复核 3-seed validation 门禁；PPO 只改善 2/3 seed | 先补断点续训，再启动 task-GNN 单变量对照 |
+| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | B 独立复核 3-seed validation；A 已提交完整 epoch 边界断点续训和损坏状态注入 | B 复核断点续训后，再启动 task-GNN 单变量对照 |
 | 图表示 | PPO 主路径使用 14 维手工候选特征和 mean/max critic pooling | 无消息传递、全局结构弱 | 沿用其他契约，只将 MLP 替换为 task-GNN |
 | checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单 | 后续 checkpoint 内嵌 manifest 摘要 |
 | test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁且正式运行未访问 | B 已在物理删除 test JSON 与 archive 的 raw root 上完成 P1-A02 正式复跑，manifest 固定 `test_accessed=false` | 最终阶段另建一次性公开 test 评测命令 |
@@ -190,7 +190,7 @@ G1 通过后的唯一允许顺序：
 
 1. 去掉/保留 HEFT 二值特征做严格消融，建立 BC-only 基线。（已由 B 复核）
 2. 在相同 MLP 和相同数据上用 PPO + GAE 替换 REINFORCE。（3 seeds 已由 B 复核）
-3. 先补齐 P1-03 断点续训，再只把 MLP 替换为 task-GNN；14 维基础输入、奖励、数据 split、3 seeds 和选模规则不变。
+3. P1-03 断点续训已由 A 提交，须由 B 独立中断/恢复并复核；通过后只把 MLP 替换为 task-GNN，其他条件不变。
 4. task-GNN 有配对统计优势后，才考虑 residual、resource-GNN 或 OOD 课程中的一项。
 
 ## 7. 三个独立手算案例
@@ -311,11 +311,11 @@ ratio=4.50/4.75=18/19\approx0.94737
 
 P0-A01 的指标解释、checkpoint 加载和三个手算案例已由 B 独立复核通过。P1-A02 又在同一指标契约上完成更严格的无 test 正式复跑：远端 7 环境全绿，31 个 artifact、180 份 validation checkpoint 复评、奖励/GAE/clipping 数学与配置注入全部通过，完整证据见 [P1-A02 独立复核记录](./P1-A02独立复核记录.md)。
 
-下一主任务 P1-A03 必须遵守以下冻结项：
+P1-03 epoch 边界断点续训已由 A 提交实现：状态覆盖 actor/value 参数、两个 Adam、两套 RNG、history 与 best 选择，并绑定配置、代码、数据、teacher/reference 和 warm start；微型中断恢复与连续运行逐字段一致。B 复核要求见 [P1-03 断点续训设计与验收](./P1-03PPO断点续训设计与验收.md)。B 通过后，P1-A03 必须遵守以下冻结项：
 
 - 沿用相同 14 维基础输入及特征含义，不恢复 HEFT 决策位；
 - 沿用增量 makespan/HEFT 奖励、`gamma=1.0`、相同 split 和 test 禁用门禁；
 - 沿用 `20260717/20260718/20260719`、checkpoint selection key 和 warm-start 回退；
 - 第一轮只将 MLP 表示替换为 task-GNN，不同时加入 resource-GNN、课程、OOD 或新奖励；
-- 正式 task-GNN 训练前先补齐 P1-03 断点续训及中断/损坏状态注入测试；
+- 正式 task-GNN 训练前，P1-03 断点续训及中断/损坏状态注入必须由 B 复核通过；
 - 报告逐实例配对结果、参数量、CPU 推理 P50/P95 和失败切片，未出现固定 validation 配对优势则回退 MLP。

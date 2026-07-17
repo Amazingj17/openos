@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import platform
 import sys
 from collections.abc import Mapping, Sequence
@@ -510,6 +511,360 @@ def _clone_policy(policy: MaskedMLPPolicy) -> MaskedMLPPolicy:
     return clone
 
 
+@dataclass
+class PPOResumeState:
+    actor: MaskedMLPPolicy
+    critic: ValueNetwork
+    rng: np.random.Generator
+    best_actor: MaskedMLPPolicy
+    best_critic: ValueNetwork
+    history: list[dict[str, Any]]
+    best_key: tuple[float, float, float]
+    best_epoch: int
+    completed_epoch: int
+
+
+def _canonical_sha256(value: Any) -> str:
+    encoded = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _resume_payload_sha256(
+    metadata: Mapping[str, Any],
+    arrays: Mapping[str, np.ndarray],
+) -> str:
+    digest = hashlib.sha256()
+    digest.update(_canonical_sha256(metadata).encode("ascii"))
+    for name in sorted(arrays):
+        values = np.asarray(arrays[name], dtype="<f8", order="C")
+        digest.update(name.encode("utf-8"))
+        digest.update(
+            json.dumps(list(values.shape), separators=(",", ":")).encode("ascii")
+        )
+        digest.update(values.tobytes(order="C"))
+    return digest.hexdigest()
+
+
+def _resume_array(
+    arrays: Mapping[str, np.ndarray],
+    name: str,
+    shape: tuple[int, ...],
+) -> np.ndarray:
+    if name not in arrays:
+        _fail(
+            "ppo_resume_state_corrupt",
+            f"$.resume.{name}",
+            "training state array is missing",
+        )
+    try:
+        values = np.asarray(arrays[name], dtype=np.float64)
+    except (TypeError, ValueError) as error:
+        _fail(
+            "ppo_resume_state_corrupt",
+            f"$.resume.{name}",
+            str(error),
+        )
+    if values.shape != shape or not np.all(np.isfinite(values)):
+        _fail(
+            "ppo_resume_state_corrupt",
+            f"$.resume.{name}",
+            "training state array has an invalid shape or non-finite values",
+            details={"expected_shape": list(shape), "actual_shape": list(values.shape)},
+        )
+    return values.copy()
+
+
+def _save_ppo_resume_state(
+    path: Path,
+    *,
+    contract_sha256: str,
+    completed_epoch: int,
+    actor: MaskedMLPPolicy,
+    critic: ValueNetwork,
+    rng: np.random.Generator,
+    best_actor: MaskedMLPPolicy,
+    best_critic: ValueNetwork,
+    history: Sequence[Mapping[str, Any]],
+    best_key: tuple[float, float, float],
+    best_epoch: int,
+) -> None:
+    metadata = {
+        "format_version": 1,
+        "algorithm": "masked_ppo_epoch_boundary_resume",
+        "contract_sha256": contract_sha256,
+        "completed_epoch": completed_epoch,
+        "seed": actor.seed,
+        "feature_names": list(actor.feature_names),
+        "actor_hidden_dim": actor.hidden_dim,
+        "actor_adam_step": actor._adam_step,
+        "critic_feature_dim": critic.feature_dim,
+        "critic_hidden_dim": critic.hidden_dim,
+        "critic_seed": critic.seed,
+        "critic_adam_step": critic._adam_step,
+        "actor_rng_state": actor.rng.bit_generator.state,
+        "training_rng_state": rng.bit_generator.state,
+        "history": list(history),
+        "best_key": list(best_key),
+        "best_epoch": best_epoch,
+        "test_accessed": False,
+    }
+    arrays: dict[str, np.ndarray] = {}
+    for name, values in actor.params.items():
+        arrays[f"actor_param_{name}"] = values
+        arrays[f"actor_adam_m_{name}"] = actor._adam_m[name]
+        arrays[f"actor_adam_v_{name}"] = actor._adam_v[name]
+        arrays[f"best_actor_param_{name}"] = best_actor.params[name]
+    for name, values in critic.params.items():
+        arrays[f"critic_param_{name}"] = values
+        arrays[f"critic_adam_m_{name}"] = critic._adam_m[name]
+        arrays[f"critic_adam_v_{name}"] = critic._adam_v[name]
+        arrays[f"best_critic_param_{name}"] = best_critic.params[name]
+    metadata["payload_sha256"] = _resume_payload_sha256(metadata, arrays)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    try:
+        with temporary.open("wb") as handle:
+            np.savez_compressed(
+                handle,
+                metadata_json=np.asarray(
+                    json.dumps(
+                        metadata,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                        allow_nan=False,
+                    )
+                ),
+                **arrays,
+            )
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    except (OSError, TypeError, ValueError) as error:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+        _fail(
+            "ppo_resume_state_write",
+            "$.resume",
+            str(error),
+        )
+
+
+def _load_ppo_resume_state(
+    path: Path,
+    *,
+    contract_sha256: str,
+    warm_start: MaskedMLPPolicy,
+    config: Mapping[str, Any],
+) -> PPOResumeState:
+    try:
+        with np.load(path, allow_pickle=False) as data:
+            metadata_text = str(data["metadata_json"].item())
+            arrays = {name: np.asarray(data[name]) for name in data.files}
+    except (OSError, ValueError, KeyError, EOFError) as error:
+        _fail(
+            "ppo_resume_state_read",
+            "$.resume",
+            str(error),
+        )
+    try:
+        metadata = json.loads(metadata_text)
+    except json.JSONDecodeError as error:
+        _fail(
+            "ppo_resume_state_read",
+            "$.resume.metadata_json",
+            str(error),
+        )
+    if not isinstance(metadata, dict) or metadata.get("format_version") != 1:
+        _fail(
+            "ppo_resume_state_version",
+            "$.resume.format_version",
+            "expected resume state format version 1",
+        )
+    stored_payload_sha256 = metadata.get("payload_sha256")
+    metadata_without_hash = dict(metadata)
+    metadata_without_hash.pop("payload_sha256", None)
+    numeric_arrays = {
+        name: values for name, values in arrays.items() if name != "metadata_json"
+    }
+    if (
+        not isinstance(stored_payload_sha256, str)
+        or len(stored_payload_sha256) != 64
+        or stored_payload_sha256
+        != _resume_payload_sha256(metadata_without_hash, numeric_arrays)
+    ):
+        _fail(
+            "ppo_resume_state_hash",
+            "$.resume.payload_sha256",
+            "training state payload hash does not match its contents",
+        )
+    expected_identity = {
+        "contract_sha256": contract_sha256,
+        "seed": warm_start.seed,
+        "feature_names": list(warm_start.feature_names),
+        "actor_hidden_dim": warm_start.hidden_dim,
+        "critic_feature_dim": len(warm_start.feature_names),
+        "critic_hidden_dim": int(config["value_hidden_dim"]),
+        "critic_seed": warm_start.seed + 404,
+        "test_accessed": False,
+    }
+    mismatches = {
+        key: {"expected": value, "actual": metadata.get(key)}
+        for key, value in expected_identity.items()
+        if metadata.get(key) != value
+    }
+    if mismatches:
+        _fail(
+            "ppo_resume_state_mismatch",
+            "$.resume",
+            "resume state does not match the current code, data, config, or warm start",
+            details={"mismatches": mismatches},
+        )
+    completed_epoch = metadata.get("completed_epoch")
+    best_epoch = metadata.get("best_epoch")
+    actor_step = metadata.get("actor_adam_step")
+    critic_step = metadata.get("critic_adam_step")
+    if any(
+        isinstance(value, bool) or not isinstance(value, int) or value < 0
+        for value in (completed_epoch, best_epoch, actor_step, critic_step)
+    ):
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume",
+            "epoch and Adam counters must be non-negative integers",
+        )
+    assert isinstance(completed_epoch, int)
+    assert isinstance(best_epoch, int)
+    assert isinstance(actor_step, int)
+    assert isinstance(critic_step, int)
+    if completed_epoch > int(config["epochs"]) or best_epoch > completed_epoch:
+        _fail(
+            "ppo_resume_state_mismatch",
+            "$.resume.completed_epoch",
+            "resume epoch is outside the configured training range",
+        )
+    history = metadata.get("history")
+    if (
+        not isinstance(history, list)
+        or len(history) != completed_epoch + 1
+        or any(
+            not isinstance(record, dict) or record.get("epoch") != index
+            for index, record in enumerate(history)
+        )
+    ):
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.history",
+            "history does not match the completed epoch boundary",
+        )
+    raw_best_key = metadata.get("best_key")
+    if (
+        not isinstance(raw_best_key, list)
+        or len(raw_best_key) != 3
+        or any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            for value in raw_best_key
+        )
+    ):
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.best_key",
+            "best selection key is invalid",
+        )
+    try:
+        expected_adam_step = sum(
+            len(record["update"]["updates"])
+            * math.ceil(
+                int(record["update"]["transition_count"])
+                / int(config["minibatch_size"])
+            )
+            for record in history[1:]
+        )
+    except (KeyError, TypeError, ValueError) as error:
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.history",
+            str(error),
+        )
+    if actor_step != expected_adam_step or critic_step != expected_adam_step:
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.actor_adam_step",
+            "Adam counters do not match the completed update history",
+            details={
+                "expected": expected_adam_step,
+                "actor": actor_step,
+                "critic": critic_step,
+            },
+        )
+
+    actor = _clone_policy(warm_start)
+    critic = ValueNetwork(
+        feature_dim=len(actor.feature_names),
+        hidden_dim=int(config["value_hidden_dim"]),
+        seed=actor.seed + 404,
+    )
+    best_actor = _clone_policy(actor)
+    best_critic = critic.clone()
+    for name, values in actor.params.items():
+        shape = values.shape
+        actor.params[name] = _resume_array(arrays, f"actor_param_{name}", shape)
+        actor._adam_m[name] = _resume_array(
+            arrays, f"actor_adam_m_{name}", shape
+        )
+        actor._adam_v[name] = _resume_array(
+            arrays, f"actor_adam_v_{name}", shape
+        )
+        best_actor.params[name] = _resume_array(
+            arrays, f"best_actor_param_{name}", shape
+        )
+    for name, values in critic.params.items():
+        shape = values.shape
+        critic.params[name] = _resume_array(arrays, f"critic_param_{name}", shape)
+        critic._adam_m[name] = _resume_array(
+            arrays, f"critic_adam_m_{name}", shape
+        )
+        critic._adam_v[name] = _resume_array(
+            arrays, f"critic_adam_v_{name}", shape
+        )
+        best_critic.params[name] = _resume_array(
+            arrays, f"best_critic_param_{name}", shape
+        )
+    actor._adam_step = actor_step
+    critic._adam_step = critic_step
+    rng = np.random.default_rng()
+    try:
+        actor.rng.bit_generator.state = metadata["actor_rng_state"]
+        rng.bit_generator.state = metadata["training_rng_state"]
+    except (KeyError, TypeError, ValueError) as error:
+        _fail(
+            "ppo_resume_state_corrupt",
+            "$.resume.rng_state",
+            str(error),
+        )
+    return PPOResumeState(
+        actor=actor,
+        critic=critic,
+        rng=rng,
+        best_actor=best_actor,
+        best_critic=best_critic,
+        history=history,
+        best_key=tuple(float(value) for value in raw_best_key),
+        best_epoch=best_epoch,
+        completed_epoch=completed_epoch,
+    )
+
+
 def _manifest_records(
     manifest: Mapping[str, Any],
     scenarios: Sequence[Scenario],
@@ -755,6 +1110,9 @@ def train_masked_ppo(
     *,
     seed: int,
     validation_frozen_states: Mapping[str, FrozenTeacherStates] | None = None,
+    resume_state_path: str | Path | None = None,
+    resume_contract: Mapping[str, Any] | None = None,
+    resume: bool = False,
 ) -> tuple[
     MaskedMLPPolicy,
     MaskedMLPPolicy,
@@ -762,6 +1120,13 @@ def train_masked_ppo(
     ValueNetwork,
     dict[str, Any],
 ]:
+    if warm_start.seed != seed:
+        _fail(
+            "ppo_resume_state_mismatch",
+            "$.seed",
+            "warm-start seed does not match the PPO seed",
+            details={"warm_start_seed": warm_start.seed, "ppo_seed": seed},
+        )
     if set(warm_start.feature_names) & set(TEACHER_FEATURE_NAMES):
         _fail(
             "ppo_teacher_feature_leakage",
@@ -786,36 +1151,93 @@ def train_masked_ppo(
         split="validation",
         purpose="model_selection_reference",
     )
-    actor = _clone_policy(warm_start)
-    critic = ValueNetwork(
-        feature_dim=len(actor.feature_names),
-        hidden_dim=int(config["value_hidden_dim"]),
-        seed=seed + 404,
+    state_path = Path(resume_state_path) if resume_state_path is not None else None
+    if state_path is not None and resume_contract is None:
+        raise ValueError("resume_contract is required when saving PPO training state")
+    if resume and state_path is None:
+        _fail(
+            "ppo_resume_state_missing",
+            "$.resume",
+            "resume requires a training state path",
+        )
+    contract_sha256 = (
+        _canonical_sha256(resume_contract) if resume_contract is not None else ""
     )
-    rng = np.random.default_rng(seed + int(config["shuffle_seed_offset"]))
-    initial_validation, _ = evaluate_bc_policy(
-        actor,
-        validation_scenarios,
-        validation_reference_manifest,
-        failure_penalty_ratio=float(config["failure_penalty_ratio"]),
-        frozen_teacher_states=validation_frozen_states,
-    )
-    best_key = (
-        float(initial_validation["failure_count"]),
-        float(initial_validation["mean_ratio"]),
-        0.0,
-    )
-    best_epoch = 0
-    best_actor = _clone_policy(actor)
-    best_critic = critic.clone()
-    history: list[dict[str, Any]] = [
-        {
-            "epoch": 0,
-            "source": "behavior_cloning_warm_start",
-            "validation": initial_validation,
-        }
-    ]
-    for epoch in range(1, int(config["epochs"]) + 1):
+    if resume:
+        assert state_path is not None
+        if not state_path.is_file():
+            _fail(
+                "ppo_resume_state_missing",
+                "$.resume",
+                f"training state does not exist: {state_path}",
+            )
+        restored = _load_ppo_resume_state(
+            state_path,
+            contract_sha256=contract_sha256,
+            warm_start=warm_start,
+            config=config,
+        )
+        actor = restored.actor
+        critic = restored.critic
+        rng = restored.rng
+        best_actor = restored.best_actor
+        best_critic = restored.best_critic
+        history = restored.history
+        best_key = restored.best_key
+        best_epoch = restored.best_epoch
+        completed_epoch = restored.completed_epoch
+    else:
+        if state_path is not None and state_path.exists():
+            _fail(
+                "ppo_resume_state_exists",
+                "$.resume",
+                f"refusing to overwrite existing training state: {state_path}",
+            )
+        actor = _clone_policy(warm_start)
+        critic = ValueNetwork(
+            feature_dim=len(actor.feature_names),
+            hidden_dim=int(config["value_hidden_dim"]),
+            seed=seed + 404,
+        )
+        rng = np.random.default_rng(seed + int(config["shuffle_seed_offset"]))
+        initial_validation, _ = evaluate_bc_policy(
+            actor,
+            validation_scenarios,
+            validation_reference_manifest,
+            failure_penalty_ratio=float(config["failure_penalty_ratio"]),
+            frozen_teacher_states=validation_frozen_states,
+        )
+        best_key = (
+            float(initial_validation["failure_count"]),
+            float(initial_validation["mean_ratio"]),
+            0.0,
+        )
+        best_epoch = 0
+        best_actor = _clone_policy(actor)
+        best_critic = critic.clone()
+        history = [
+            {
+                "epoch": 0,
+                "source": "behavior_cloning_warm_start",
+                "validation": initial_validation,
+            }
+        ]
+        completed_epoch = 0
+        if state_path is not None:
+            _save_ppo_resume_state(
+                state_path,
+                contract_sha256=contract_sha256,
+                completed_epoch=completed_epoch,
+                actor=actor,
+                critic=critic,
+                rng=rng,
+                best_actor=best_actor,
+                best_critic=best_critic,
+                history=history,
+                best_key=best_key,
+                best_epoch=best_epoch,
+            )
+    for epoch in range(completed_epoch + 1, int(config["epochs"]) + 1):
         transitions: list[PPOTransition] = []
         train_ratios: list[float] = []
         reward_errors: list[float] = []
@@ -866,6 +1288,20 @@ def train_masked_ppo(
             best_epoch = epoch
             best_actor = _clone_policy(actor)
             best_critic = critic.clone()
+        if state_path is not None:
+            _save_ppo_resume_state(
+                state_path,
+                contract_sha256=contract_sha256,
+                completed_epoch=epoch,
+                actor=actor,
+                critic=critic,
+                rng=rng,
+                best_actor=best_actor,
+                best_critic=best_critic,
+                history=history,
+                best_key=best_key,
+                best_epoch=best_epoch,
+            )
     return best_actor, _clone_policy(actor), best_critic, critic.clone(), {
         "format_version": 1,
         "algorithm": "masked PPO with GAE and BC warm start",
@@ -908,6 +1344,8 @@ def _checkpoint_metadata(
 def run_ppo_pipeline(
     config_path: str | Path,
     output_override: str | Path | None = None,
+    *,
+    resume: bool = False,
 ) -> Path:
     """Run the P1-A02 no-test, multi-seed masked PPO validation pipeline."""
 
@@ -922,14 +1360,41 @@ def run_ppo_pipeline(
         if output_override is None
         else Path(output_override).resolve()
     )
-    if output_dir.exists() and any(output_dir.iterdir()):
-        _fail(
-            "output_not_empty",
-            "$.output_dir",
-            f"refusing to mix evidence in {output_dir}",
-        )
-    output_dir.mkdir(parents=True, exist_ok=True)
-    _write_json(output_dir / "resolved_config.json", config)
+    if resume:
+        if not output_dir.is_dir() or not any(output_dir.iterdir()):
+            _fail(
+                "ppo_resume_output_missing",
+                "$.output_dir",
+                f"resume output does not exist or is empty: {output_dir}",
+            )
+        resolved_path = output_dir / "resolved_config.json"
+        try:
+            previous_config = json.loads(resolved_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            _fail(
+                "ppo_resume_config_read",
+                "$.output_dir.resolved_config",
+                str(error),
+            )
+        if previous_config != config:
+            _fail(
+                "ppo_resume_config_mismatch",
+                "$.output_dir.resolved_config",
+                "current normalized config differs from the interrupted run",
+                details={
+                    "previous_sha256": _canonical_sha256(previous_config),
+                    "current_sha256": _canonical_sha256(config),
+                },
+            )
+    else:
+        if output_dir.exists() and any(output_dir.iterdir()):
+            _fail(
+                "output_not_empty",
+                "$.output_dir",
+                f"refusing to mix evidence in {output_dir}",
+            )
+        output_dir.mkdir(parents=True, exist_ok=True)
+        _write_json(output_dir / "resolved_config.json", config)
 
     print("[1/6] loading verified train and validation splits (test forbidden)")
     benchmark_manifest = load_benchmark_manifest(manifest_path)
@@ -956,6 +1421,10 @@ def run_ppo_pipeline(
     ]
     repository = Path(__file__).resolve().parents[1]
     code_metadata = _git_metadata(repository)
+    code_source_sha256 = {
+        path.relative_to(repository).as_posix(): _file_hash(path)
+        for path in sorted((repository / "trisched").glob("*.py"))
+    }
 
     print("[2/6] generating production/independent HEFT manifests")
     train_teacher = build_teacher_manifest(
@@ -978,12 +1447,50 @@ def run_ppo_pipeline(
         benchmark_id=benchmark_manifest["benchmark_id"],
         code_metadata=code_metadata,
     )
-    _write_json(output_dir / "train_teacher_manifest.json", train_teacher)
-    _write_json(
-        output_dir / "validation_reference_manifest.json",
-        validation_reference,
-    )
-    _write_jsonl(output_dir / "teacher_failures.jsonl", [])
+    teacher_artifacts = {
+        "train_teacher_manifest.json": train_teacher,
+        "validation_reference_manifest.json": validation_reference,
+    }
+    if resume:
+        for name, expected in teacher_artifacts.items():
+            path = output_dir / name
+            try:
+                actual = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError) as error:
+                _fail(
+                    "ppo_resume_artifact_read",
+                    f"$.output_dir.{name}",
+                    str(error),
+                )
+            if actual != expected:
+                _fail(
+                    "ppo_resume_artifact_mismatch",
+                    f"$.output_dir.{name}",
+                    "resume provenance artifact differs from the current run",
+                    details={
+                        "previous_sha256": _canonical_sha256(actual),
+                        "current_sha256": _canonical_sha256(expected),
+                    },
+                )
+        failure_path = output_dir / "teacher_failures.jsonl"
+        try:
+            failure_bytes = failure_path.read_bytes()
+        except OSError as error:
+            _fail(
+                "ppo_resume_artifact_read",
+                "$.output_dir.teacher_failures.jsonl",
+                str(error),
+            )
+        if failure_bytes:
+            _fail(
+                "ppo_resume_artifact_mismatch",
+                "$.output_dir.teacher_failures.jsonl",
+                "teacher failure evidence must remain empty",
+            )
+    else:
+        for name, value in teacher_artifacts.items():
+            _write_json(output_dir / name, value)
+        _write_jsonl(output_dir / "teacher_failures.jsonl", [])
 
     print("[3/6] freezing teacher states and running feature ablation reference")
     train_states = freeze_teacher_dataset(
@@ -1032,6 +1539,7 @@ def run_ppo_pipeline(
         reference_path.name,
     ]
     seed_results: list[dict[str, Any]] = []
+    resumed_seeds: list[int] = []
     first_no_teacher_metrics: dict[str, Any] | None = None
     for seed in config["seeds"]:
         prefix = f"seed_{seed}"
@@ -1059,6 +1567,70 @@ def run_ppo_pipeline(
             first_no_teacher_metrics = warm_metrics
         warm_path = output_dir / f"{prefix}_bc_warm_start.npz"
         warm_actor.save(warm_path)
+        resume_state_path = output_dir / f"{prefix}_ppo_training_state.npz"
+        state_exists = resume_state_path.is_file()
+        completed_output_names = [
+            f"{prefix}_ppo_best_policy.npz",
+            f"{prefix}_ppo_last_policy.npz",
+            f"{prefix}_ppo_best_value.npz",
+            f"{prefix}_ppo_last_value.npz",
+            f"{prefix}_training_curve.json",
+            f"{prefix}_validation_diagnostics.json",
+            f"{prefix}_validation_failures.jsonl",
+        ]
+        if resume and not state_exists and any(
+            (output_dir / name).exists() for name in completed_output_names
+        ):
+            _fail(
+                "ppo_resume_state_missing",
+                "$.resume",
+                f"seed {seed} has PPO outputs but no training state",
+            )
+        resume_contract = {
+            "format_version": 1,
+            "algorithm": "masked_ppo_epoch_boundary_resume",
+            "seed": int(seed),
+            "config_source_sha256": _file_hash(config_source),
+            "benchmark_manifest_sha256": manifest_sha256,
+            "code": {
+                "git": code_metadata,
+                "sources": code_source_sha256,
+            },
+            "features": config["features"]["selected"],
+            "ppo": {
+                **config["ppo"],
+                "failure_penalty_ratio": config["selection"][
+                    "failure_penalty_ratio"
+                ],
+            },
+            "warm_start_parameter_sha256": policy_parameter_hash(warm_actor),
+            "train": {
+                "scenario_hashes": [
+                    scenario.content_hash() for scenario in train_scenarios
+                ],
+                "teacher_trace_hashes_sha256": train_teacher[
+                    "trace_hashes_sha256"
+                ],
+                "teacher_schedule_hashes_sha256": train_teacher[
+                    "schedule_hashes_sha256"
+                ],
+            },
+            "validation": {
+                "scenario_hashes": [
+                    scenario.content_hash() for scenario in validation_scenarios
+                ],
+                "reference_trace_hashes_sha256": validation_reference[
+                    "trace_hashes_sha256"
+                ],
+                "reference_schedule_hashes_sha256": validation_reference[
+                    "schedule_hashes_sha256"
+                ],
+            },
+            "test_accessed": False,
+        }
+        resume_seed = resume and state_exists
+        if resume_seed:
+            resumed_seeds.append(int(seed))
         (
             best_actor,
             last_actor,
@@ -1079,6 +1651,9 @@ def run_ppo_pipeline(
             },
             seed=int(seed),
             validation_frozen_states=validation_states,
+            resume_state_path=resume_state_path,
+            resume_contract=resume_contract,
+            resume=resume_seed,
         )
         best_metrics, best_rows = evaluate_bc_policy(
             best_actor,
@@ -1141,6 +1716,13 @@ def run_ppo_pipeline(
             last_value_path,
             last_value,
         )
+        training_state = {
+            "name": resume_state_path.name,
+            "sha256": _file_hash(resume_state_path),
+            "format_version": 1,
+            "completed_epoch": int(config["ppo"]["epochs"]),
+            "boundary": "completed_ppo_epoch",
+        }
         seed_results.append(
             {
                 "seed": seed,
@@ -1150,6 +1732,7 @@ def run_ppo_pipeline(
                 "last_validation": last_metrics,
                 "best_checkpoint": best_checkpoint,
                 "last_checkpoint": last_checkpoint,
+                "training_state": training_state,
                 "improved_over_warm_start": best_metrics["mean_ratio"]
                 < warm_metrics["mean_ratio"] - 1e-12,
                 "selected_warm_start": ppo_curve["selection"]["best_epoch"] == 0,
@@ -1165,6 +1748,7 @@ def run_ppo_pipeline(
                 curve_path.name,
                 diagnostics_path.name,
                 failures_path.name,
+                resume_state_path.name,
             ]
         )
     assert first_no_teacher_metrics is not None
@@ -1254,6 +1838,14 @@ def run_ppo_pipeline(
             "split": "validation",
             "test_accessed": False,
         },
+        "resumability": {
+            "state_format_version": 1,
+            "boundary": "completed_ppo_epoch",
+            "state_artifacts": [
+                result["training_state"]["name"] for result in seed_results
+            ],
+            "test_accessed": False,
+        },
         "validation_gate_passed": validation_gate_passed,
         "recommendation": (
             "proceed_to_independent_review"
@@ -1288,6 +1880,11 @@ def run_ppo_pipeline(
             "platform": platform.platform(),
             "numpy": np.__version__,
         },
+        "execution": {
+            "resume_requested": resume,
+            "resumed_seeds": resumed_seeds,
+            "resume_boundary": "completed_ppo_epoch",
+        },
         "inputs": {
             "config": {
                 "name": config_source.name,
@@ -1315,6 +1912,7 @@ def run_ppo_pipeline(
             str(result["seed"]): {
                 "best": result["best_checkpoint"],
                 "last": result["last_checkpoint"],
+                "training_state": result["training_state"],
             }
             for result in seed_results
         },
