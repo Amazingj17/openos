@@ -63,7 +63,8 @@
       "definition": "Frozen stg-rnc50-hetero-v1 validation split; 50 tasks and 3 resources; model selection and development diagnostics only.",
       "source": {
         "benchmark_id": "stg-rnc50-hetero-trisched-v1",
-        "split": "validation"
+        "split": "validation",
+        "purpose": "model_selection"
       }
     },
     {
@@ -118,6 +119,7 @@
       "definition": "Deterministic stress transform of the frozen ID validation scenarios: multiply every edge data volume by 2.0 and every off-diagonal bandwidth by 0.5; topology, workloads, resources and latency remain unchanged.",
       "source": {
         "base_slice": "id_validation",
+        "scenario_id_template": "ood-ccr-{index:04d}",
         "edge_data_scale": 2.0,
         "off_diagonal_bandwidth_scale": 0.5
       }
@@ -129,6 +131,7 @@
       "definition": "Deterministic system stress transform of the frozen ID validation scenarios: resource speed multipliers by resource id are [0.65, 1.0, 1.35], off-diagonal bandwidth is multiplied by 0.75 and off-diagonal latency by 1.5; topology and task workloads remain unchanged.",
       "source": {
         "base_slice": "id_validation",
+        "scenario_id_template": "ood-system-{index:04d}",
         "resource_speed_multipliers": [0.65, 1.0, 1.35],
         "off_diagonal_bandwidth_scale": 0.75,
         "off_diagonal_latency_scale": 1.5

@@ -24,6 +24,7 @@ from .evaluation import (
     write_summary,
 )
 from .learning import MaskedMLPPolicy, train_policy
+from .ood import OODWorkflowError, materialize_p1_b02_ood
 from .ppo import run_ppo_pipeline, run_task_gnn_pipeline
 from .reporting import (
     EvaluationReportError,
@@ -595,6 +596,26 @@ def build_parser() -> argparse.ArgumentParser:
     build_report.add_argument("--evidence", required=True)
     build_report.add_argument("--output", required=True)
     build_report.add_argument("--test-receipt", default=None)
+    materialize_ood = subparsers.add_parser(
+        "materialize-ood",
+        help="materialize the frozen P1-B02 ID/OOD development slices",
+    )
+    materialize_ood.add_argument(
+        "--contract",
+        default="configs/p1_b02_evaluation_contract.json",
+    )
+    materialize_ood.add_argument(
+        "--benchmark-manifest",
+        default="data/benchmarks/stg-rnc50-hetero-v1.json",
+    )
+    materialize_ood.add_argument(
+        "--raw-root",
+        default="outputs/benchmarks/stg-rnc50-hetero-v1/raw",
+    )
+    materialize_ood.add_argument(
+        "--output",
+        default="outputs/p1-b02-development-slices",
+    )
     return parser
 
 
@@ -647,6 +668,14 @@ def main(argv: list[str] | None = None) -> int:
                 test_receipt_path=args.test_receipt,
             )
             print(report_path.resolve())
+        elif args.command == "materialize-ood":
+            manifest_path = materialize_p1_b02_ood(
+                args.contract,
+                args.raw_root,
+                args.benchmark_manifest,
+                args.output,
+            )
+            print(manifest_path.resolve())
         else:
             raise AssertionError(f"unknown command: {args.command}")
     except EvaluationReportError as error:
@@ -667,6 +696,12 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 3
+    except OODWorkflowError as error:
+        print(
+            json.dumps({"ok": False, "error": error.to_dict()}, ensure_ascii=False),
+            file=sys.stderr,
+        )
+        return 5
     return 0
 
 

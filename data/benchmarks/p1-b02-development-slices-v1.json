@@ -1,0 +1,2094 @@
+{
+  "format_version": 1,
+  "mode": "p1_b02_development_slices",
+  "materializer_version": 1,
+  "contract": {
+    "contract_id": "p1_b02_evaluation_v1",
+    "canonical_sha256": "a46986f5695d59612ad9bf2c3379393620418b3f324a1003b5b5772b110c639e"
+  },
+  "benchmark": {
+    "benchmark_id": "stg-rnc50-hetero-trisched-v1",
+    "manifest_name": "stg-rnc50-hetero-v1.json",
+    "manifest_sha256": "69f156cc6a5a03124ed0e6c68dd6a84d502a4c470ad235a9bb2d7da9ddeae5cd",
+    "split": "validation",
+    "purpose": "model_selection",
+    "scenario_hashes_sha256": "64c5e67f00b7bab5c6e9f8c21561448452bd82525c83abf5972cb3ca59cf5386"
+  },
+  "test_accessed": false,
+  "public_test_materialized": false,
+  "slices": [
+    {
+      "slice_id": "id_validation",
+      "role": "development",
+      "scenario_count": 30,
+      "source": {
+        "benchmark_id": "stg-rnc50-hetero-trisched-v1",
+        "split": "validation",
+        "purpose": "model_selection"
+      },
+      "scenario_set_sha256": "fea76e27e4c0a90e1a3067b9367f7e22372c5463e23b65abaf70aa5695010b1b",
+      "entries": [
+        {
+          "index": 0,
+          "scenario_id": "stg-rnc50-hetero-rand0100",
+          "scenario_hash": "db98e678be1789dd75894619b39527ccd405a03f63eee9f407aba1ffbde06923",
+          "file": "slices/id_validation/0000.json",
+          "file_sha256": "cf59bc2546b2ee96fd7132fae054ecf258251376aac3f25261081fab56c68d3b",
+          "seed": 29248,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 882,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0100_hetero.json",
+            "source_sha256": "243bb829083581dc342b67103c4828778d30fc64d3e9c3ebb2822c5c561bc0b9",
+            "scenario_id": "stg-rnc50-hetero-rand0100",
+            "scenario_hash": "db98e678be1789dd75894619b39527ccd405a03f63eee9f407aba1ffbde06923",
+            "split_index": 0
+          }
+        },
+        {
+          "index": 1,
+          "scenario_id": "stg-rnc50-hetero-rand0102",
+          "scenario_hash": "f00a47f9fb9d0d5dcaf8c0673c27a8ad659afca6a38bce0c815afc5731635d26",
+          "file": "slices/id_validation/0001.json",
+          "file_sha256": "c18ea498a84a45736571a32124bd0be618951e3d811eac1c581995fdc67838f9",
+          "seed": 29262,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 343,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0102_hetero.json",
+            "source_sha256": "46fddddd42e65e31fb2dceeec100fd6df3f6255998e898c2db691016069f221a",
+            "scenario_id": "stg-rnc50-hetero-rand0102",
+            "scenario_hash": "f00a47f9fb9d0d5dcaf8c0673c27a8ad659afca6a38bce0c815afc5731635d26",
+            "split_index": 1
+          }
+        },
+        {
+          "index": 2,
+          "scenario_id": "stg-rnc50-hetero-rand0153",
+          "scenario_hash": "a34b717f6c73b9e6aca473a9436561a0f1cb676c3da0f4cae5fc5ca5db0f3351",
+          "file": "slices/id_validation/0002.json",
+          "file_sha256": "3fa5df90b42182c5731100bee601004d8b6bf96c3db2ac4887eff80269f377ef",
+          "seed": 1470,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 935,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0153_hetero.json",
+            "source_sha256": "cd9bf61027c51e729f261b29f011d7b75d4d8680218c4d4f5da1dd722314af2e",
+            "scenario_id": "stg-rnc50-hetero-rand0153",
+            "scenario_hash": "a34b717f6c73b9e6aca473a9436561a0f1cb676c3da0f4cae5fc5ca5db0f3351",
+            "split_index": 2
+          }
+        },
+        {
+          "index": 3,
+          "scenario_id": "stg-rnc50-hetero-rand0021",
+          "scenario_hash": "c0a1bb6664778d01fc21c82aafe05d560adbc7d8eaaf7a8c47eb1516d7c87bd7",
+          "file": "slices/id_validation/0003.json",
+          "file_sha256": "28f4b7b9ad00728e077985ea6b8668647805ad33dc9a669b96e8b1989bcd6f94",
+          "seed": 28695,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 249,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0021_hetero.json",
+            "source_sha256": "5dc8055a493bbe687670ae2c98f5a188c92764d66e7b23a7c45fea55158bcae4",
+            "scenario_id": "stg-rnc50-hetero-rand0021",
+            "scenario_hash": "c0a1bb6664778d01fc21c82aafe05d560adbc7d8eaaf7a8c47eb1516d7c87bd7",
+            "split_index": 3
+          }
+        },
+        {
+          "index": 4,
+          "scenario_id": "stg-rnc50-hetero-rand0057",
+          "scenario_hash": "4fa4fdb9a30edf089eea1f7c7e9c629356ff911ae306a5944364bdd2aa5fffbf",
+          "file": "slices/id_validation/0004.json",
+          "file_sha256": "ab54b7eac4e02a18fa2f3b8b2625807a1c47eaafd01f9407c348fc444137516c",
+          "seed": 28947,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 115,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0057_hetero.json",
+            "source_sha256": "4785445b4b0d9911e540fbd6ed107c91cdc216583aaa244e728265619b39359b",
+            "scenario_id": "stg-rnc50-hetero-rand0057",
+            "scenario_hash": "4fa4fdb9a30edf089eea1f7c7e9c629356ff911ae306a5944364bdd2aa5fffbf",
+            "split_index": 4
+          }
+        },
+        {
+          "index": 5,
+          "scenario_id": "stg-rnc50-hetero-rand0134",
+          "scenario_hash": "b0106517af29da18e08526d60de26c8c8f30fa3394507e1e488872bdb9c03332",
+          "file": "slices/id_validation/0005.json",
+          "file_sha256": "1dc5a218d43e7295a3cde887e21ad81efdf428e8509a569773969bd57465ecf5",
+          "seed": 1337,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 138,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0134_hetero.json",
+            "source_sha256": "2fc09d089a8aa379e6fbd4be583b3d6c3809f2314559aac9a68c91d885ec8715",
+            "scenario_id": "stg-rnc50-hetero-rand0134",
+            "scenario_hash": "b0106517af29da18e08526d60de26c8c8f30fa3394507e1e488872bdb9c03332",
+            "split_index": 5
+          }
+        },
+        {
+          "index": 6,
+          "scenario_id": "stg-rnc50-hetero-rand0047",
+          "scenario_hash": "a883b6354e390ed51ea0d7bf67e07c658ceb53d71c78e8cc4a6fe182fece0171",
+          "file": "slices/id_validation/0006.json",
+          "file_sha256": "3e20b2c93b1405fae514029a92ce259f59856506ff256eeeaa72c2dad39edb01",
+          "seed": 28877,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 101,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0047_hetero.json",
+            "source_sha256": "b6d334105b20f8e4da72869468f152b68445c8e989ff3f5c5b3a3f54ebc10805",
+            "scenario_id": "stg-rnc50-hetero-rand0047",
+            "scenario_hash": "a883b6354e390ed51ea0d7bf67e07c658ceb53d71c78e8cc4a6fe182fece0171",
+            "split_index": 6
+          }
+        },
+        {
+          "index": 7,
+          "scenario_id": "stg-rnc50-hetero-rand0175",
+          "scenario_hash": "2bbb22277d8b39d7e62e829cccc324be5c4ce6d6a184842d497490a9e0fe92af",
+          "file": "slices/id_validation/0007.json",
+          "file_sha256": "75b7add0ff1261ce82084b2b5a4e0166fe5004a344c589cc60ee2896eb1579de",
+          "seed": 1624,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 542,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0175_hetero.json",
+            "source_sha256": "08d01e3f8a31aa40027952fe596d9be2c1334f9e39f343a45efc4e70a754fcb7",
+            "scenario_id": "stg-rnc50-hetero-rand0175",
+            "scenario_hash": "2bbb22277d8b39d7e62e829cccc324be5c4ce6d6a184842d497490a9e0fe92af",
+            "split_index": 7
+          }
+        },
+        {
+          "index": 8,
+          "scenario_id": "stg-rnc50-hetero-rand0170",
+          "scenario_hash": "4d7ead8bd6748dfc87688d9d786a6b62f413209a57efd39795f91738dc34c94f",
+          "file": "slices/id_validation/0008.json",
+          "file_sha256": "f2fae6db5a55aa7ab66fb517ca47f366fd2cb1df1b6eea4f3711b10539e43f85",
+          "seed": 1589,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 58,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0170_hetero.json",
+            "source_sha256": "20b9966ae0a2864b5d3d7d278fb91acf0df3ac03df148cfd274c6edec2dd50f3",
+            "scenario_id": "stg-rnc50-hetero-rand0170",
+            "scenario_hash": "4d7ead8bd6748dfc87688d9d786a6b62f413209a57efd39795f91738dc34c94f",
+            "split_index": 8
+          }
+        },
+        {
+          "index": 9,
+          "scenario_id": "stg-rnc50-hetero-rand0126",
+          "scenario_hash": "4f4fe7a314c399859d421a4f9667a10b059bf66d28a139a65e37b73f2a7d071b",
+          "file": "slices/id_validation/0009.json",
+          "file_sha256": "01390e8cd9fed224490033e0c68bddc8ce7a8f4de4efbf2093085a8d1b26da1d",
+          "seed": 1281,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 192,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0126_hetero.json",
+            "source_sha256": "6a1a485da8cf13edd5b713234fc4d1886eb118334b430aa3f8e28d94546668cb",
+            "scenario_id": "stg-rnc50-hetero-rand0126",
+            "scenario_hash": "4f4fe7a314c399859d421a4f9667a10b059bf66d28a139a65e37b73f2a7d071b",
+            "split_index": 9
+          }
+        },
+        {
+          "index": 10,
+          "scenario_id": "stg-rnc50-hetero-rand0156",
+          "scenario_hash": "0846df95823d5e5d15f53eb71196cc1234b063b377bc61019ed5ff4d0644ebdc",
+          "file": "slices/id_validation/0010.json",
+          "file_sha256": "25ab781ce5d8bc875384d8f223fcc61e756e388cc0098f9a36f80d26aea527ee",
+          "seed": 1491,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 104,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0156_hetero.json",
+            "source_sha256": "d97c763882a80872521431b4c9a8ef1e4ab1e5e2d5bf625405fe27fab54d8f7d",
+            "scenario_id": "stg-rnc50-hetero-rand0156",
+            "scenario_hash": "0846df95823d5e5d15f53eb71196cc1234b063b377bc61019ed5ff4d0644ebdc",
+            "split_index": 10
+          }
+        },
+        {
+          "index": 11,
+          "scenario_id": "stg-rnc50-hetero-rand0078",
+          "scenario_hash": "fbf9bf62d8ba5cf32410048862073e09680693e475ec3d142be1616dbb3a6651",
+          "file": "slices/id_validation/0011.json",
+          "file_sha256": "d8093c0533a65732714693e3a8e29bb890c35d26e0ac37223b396acabe2d2958",
+          "seed": 29094,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 370,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0078_hetero.json",
+            "source_sha256": "ea7846709599071fe03e4b4276ed1b4380df229d9998b29a466134b623823757",
+            "scenario_id": "stg-rnc50-hetero-rand0078",
+            "scenario_hash": "fbf9bf62d8ba5cf32410048862073e09680693e475ec3d142be1616dbb3a6651",
+            "split_index": 11
+          }
+        },
+        {
+          "index": 12,
+          "scenario_id": "stg-rnc50-hetero-rand0032",
+          "scenario_hash": "1eb0153ae596463285eff210d217203dc48e8efd447110486d94c60f51535b7d",
+          "file": "slices/id_validation/0012.json",
+          "file_sha256": "c8b5570bd5191a3f2b2bf574383e81bc18cb76724b8ecca131ac541aada2c676",
+          "seed": 28772,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 171,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0032_hetero.json",
+            "source_sha256": "a984b2ce1d1ac004d36eca12e5c8b950d79600209441f4b40c859c3a26ed60a4",
+            "scenario_id": "stg-rnc50-hetero-rand0032",
+            "scenario_hash": "1eb0153ae596463285eff210d217203dc48e8efd447110486d94c60f51535b7d",
+            "split_index": 12
+          }
+        },
+        {
+          "index": 13,
+          "scenario_id": "stg-rnc50-hetero-rand0079",
+          "scenario_hash": "0de2fc2e40604b2275bb679da1cb1f39d44eca7806fda7451cf4f84a503ad6ab",
+          "file": "slices/id_validation/0013.json",
+          "file_sha256": "e2941956661629b1f9734d0ab8982d02ab6b00bf82abbc2651b89604d9302ba6",
+          "seed": 29101,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 50,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0079_hetero.json",
+            "source_sha256": "c6070c9810752cca0d23e8cc3342490cbb394caf312bbd506c24d902fc334719",
+            "scenario_id": "stg-rnc50-hetero-rand0079",
+            "scenario_hash": "0de2fc2e40604b2275bb679da1cb1f39d44eca7806fda7451cf4f84a503ad6ab",
+            "split_index": 13
+          }
+        },
+        {
+          "index": 14,
+          "scenario_id": "stg-rnc50-hetero-rand0058",
+          "scenario_hash": "21b7b06e3f71215e32e200e5b0f51ad75126a8b9db13c0507cb8c392fcd262c3",
+          "file": "slices/id_validation/0014.json",
+          "file_sha256": "a89336c26d422d9aa30b4cbe96d62e9f21f105fcd8c510014757081463a286a4",
+          "seed": 28954,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 55,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0058_hetero.json",
+            "source_sha256": "50cc1486fe878c92253a68ea67a8fc221fb07e27785baa4de014785eb1c7deff",
+            "scenario_id": "stg-rnc50-hetero-rand0058",
+            "scenario_hash": "21b7b06e3f71215e32e200e5b0f51ad75126a8b9db13c0507cb8c392fcd262c3",
+            "split_index": 14
+          }
+        },
+        {
+          "index": 15,
+          "scenario_id": "stg-rnc50-hetero-rand0055",
+          "scenario_hash": "ff6ca84f533fdbc7378f34936d4bb7c8c5ce6dade2eedba60b4ecbe4c87e3af5",
+          "file": "slices/id_validation/0015.json",
+          "file_sha256": "8c2bf768837c1226be204aec1938d299a2fdea5b23b3416cc5947703ca6a8b71",
+          "seed": 28933,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 60,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0055_hetero.json",
+            "source_sha256": "87cb6c5386aa0bb70da9911146c8b885c1c0f5b7ea8161ad2ecc8c11ab0f1468",
+            "scenario_id": "stg-rnc50-hetero-rand0055",
+            "scenario_hash": "ff6ca84f533fdbc7378f34936d4bb7c8c5ce6dade2eedba60b4ecbe4c87e3af5",
+            "split_index": 15
+          }
+        },
+        {
+          "index": 16,
+          "scenario_id": "stg-rnc50-hetero-rand0113",
+          "scenario_hash": "c5d8453111f8c628749cfa0fbfd9a24a0047abf0a88b7dc4f05151bf2b9dec86",
+          "file": "slices/id_validation/0016.json",
+          "file_sha256": "468cdb1d39880f89267e139e5f23460e76be8210b859a49eba8ab711e7c4e0fc",
+          "seed": 29339,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 148,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0113_hetero.json",
+            "source_sha256": "f7f1bddd98531f06d23b7f6c9b33d147c35de412ceec73c6b3cb2482cd7d8237",
+            "scenario_id": "stg-rnc50-hetero-rand0113",
+            "scenario_hash": "c5d8453111f8c628749cfa0fbfd9a24a0047abf0a88b7dc4f05151bf2b9dec86",
+            "split_index": 16
+          }
+        },
+        {
+          "index": 17,
+          "scenario_id": "stg-rnc50-hetero-rand0157",
+          "scenario_hash": "309a276aff49948571fdfe31d531ebfca22354cea8e88604e577c1aaa3074fa9",
+          "file": "slices/id_validation/0017.json",
+          "file_sha256": "66350e1e48b69609812b502d339bd573c4d31fa17f73994ee0d651d2c7729a36",
+          "seed": 1498,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 816,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0157_hetero.json",
+            "source_sha256": "b175366d1f455661cb487f3cff11262be85e20e972753d658884196ee54274b3",
+            "scenario_id": "stg-rnc50-hetero-rand0157",
+            "scenario_hash": "309a276aff49948571fdfe31d531ebfca22354cea8e88604e577c1aaa3074fa9",
+            "split_index": 17
+          }
+        },
+        {
+          "index": 18,
+          "scenario_id": "stg-rnc50-hetero-rand0114",
+          "scenario_hash": "b0535099f7e8868a1e552a8840a4f9bf74c9da9f1d851cf401c0ccbcb7b800f6",
+          "file": "slices/id_validation/0018.json",
+          "file_sha256": "a23cb71be91992dd9e55babae16d284f7f19b0c6bf48ea7b5d0985855ac7216d",
+          "seed": 29346,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 814,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0114_hetero.json",
+            "source_sha256": "8918711c820c1462d62151128c367ca80c17b3737c44d25f6936c31a8e53bd93",
+            "scenario_id": "stg-rnc50-hetero-rand0114",
+            "scenario_hash": "b0535099f7e8868a1e552a8840a4f9bf74c9da9f1d851cf401c0ccbcb7b800f6",
+            "split_index": 18
+          }
+        },
+        {
+          "index": 19,
+          "scenario_id": "stg-rnc50-hetero-rand0097",
+          "scenario_hash": "ac21a67ba3b43e8bb1eb2a95f18ebd3ddb1229400e8e6022e899f57ec5c4784a",
+          "file": "slices/id_validation/0019.json",
+          "file_sha256": "9237301c035515c500851090b47bff1bfa6dc58ef78ed255de3c54479a1cc8a5",
+          "seed": 29227,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 813,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0097_hetero.json",
+            "source_sha256": "e9d29bb75b93c0152b945abc97502ec4896ce2330da66f6240d3e3e079e7678d",
+            "scenario_id": "stg-rnc50-hetero-rand0097",
+            "scenario_hash": "ac21a67ba3b43e8bb1eb2a95f18ebd3ddb1229400e8e6022e899f57ec5c4784a",
+            "split_index": 19
+          }
+        },
+        {
+          "index": 20,
+          "scenario_id": "stg-rnc50-hetero-rand0107",
+          "scenario_hash": "d2c6e35a5e74013f9e52a0a4412ece07a4771c57527a70ed9d631f6dd1772653",
+          "file": "slices/id_validation/0020.json",
+          "file_sha256": "fba1e8c89e771569aa1e9ccc4b4b7fb87bd2cf9c87444472930ba76a04f03c5b",
+          "seed": 29297,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 837,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0107_hetero.json",
+            "source_sha256": "674ba13bb0103ada31e49904553f0934035a400f426bdb3ba296fb8d49a310ff",
+            "scenario_id": "stg-rnc50-hetero-rand0107",
+            "scenario_hash": "d2c6e35a5e74013f9e52a0a4412ece07a4771c57527a70ed9d631f6dd1772653",
+            "split_index": 20
+          }
+        },
+        {
+          "index": 21,
+          "scenario_id": "stg-rnc50-hetero-rand0139",
+          "scenario_hash": "35eaa0869f7a97ceb4811402585c61d86758081963cdb4ffc93708218bdc6f70",
+          "file": "slices/id_validation/0021.json",
+          "file_sha256": "b98650d75073637cde5dd54c72bd66007f2a3f6106b1a81bde5ce44605db3b0c",
+          "seed": 1372,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 61,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0139_hetero.json",
+            "source_sha256": "4ed3e7323851e24d39f0c1a291efbc051135460669a826b1c8c18ebeb8d695de",
+            "scenario_id": "stg-rnc50-hetero-rand0139",
+            "scenario_hash": "35eaa0869f7a97ceb4811402585c61d86758081963cdb4ffc93708218bdc6f70",
+            "split_index": 21
+          }
+        },
+        {
+          "index": 22,
+          "scenario_id": "stg-rnc50-hetero-rand0085",
+          "scenario_hash": "00d26778c19fc912b6a3f2c6c80fa37d68a9ae036f588f62b9abf85e977cd1cc",
+          "file": "slices/id_validation/0022.json",
+          "file_sha256": "daca132d5af712f7cbd5f1befb5e88421bd96365ac17e8adae4ce593c2ad7eba",
+          "seed": 29143,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 321,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0085_hetero.json",
+            "source_sha256": "41be18b067bcd4a44615d0ac3b6f1f0ee8e7f21dbe5dfcc7686af1d48dd537cb",
+            "scenario_id": "stg-rnc50-hetero-rand0085",
+            "scenario_hash": "00d26778c19fc912b6a3f2c6c80fa37d68a9ae036f588f62b9abf85e977cd1cc",
+            "split_index": 22
+          }
+        },
+        {
+          "index": 23,
+          "scenario_id": "stg-rnc50-hetero-rand0169",
+          "scenario_hash": "449eecc0992ed7fc43f2f65fc37b26d33e0b71897548b50e7a4812dd0e9e28d9",
+          "file": "slices/id_validation/0023.json",
+          "file_sha256": "6ed2d47d57760426e55d32687c0a19a5ec879920ecaa8c94e42c4a98e707d353",
+          "seed": 1582,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 310,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0169_hetero.json",
+            "source_sha256": "9062cfc13be2eb2a8b44c6e459ce77cb39bd11194a2d5f06c7f837bb88f150f0",
+            "scenario_id": "stg-rnc50-hetero-rand0169",
+            "scenario_hash": "449eecc0992ed7fc43f2f65fc37b26d33e0b71897548b50e7a4812dd0e9e28d9",
+            "split_index": 23
+          }
+        },
+        {
+          "index": 24,
+          "scenario_id": "stg-rnc50-hetero-rand0132",
+          "scenario_hash": "f986ca4e19802a2eb3898f7d65422f5f865a2f4be41dcf7c7ebe8c5f15ee9f6d",
+          "file": "slices/id_validation/0024.json",
+          "file_sha256": "a5f8e2ccfa3d2ffa7e3e3ff2fbd63cd2d785325b8146e7ff7d49ee2433c02ac5",
+          "seed": 1323,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 76,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0132_hetero.json",
+            "source_sha256": "c90fd77298d5fc427dbc5c87dcbe6e8ed6c658a9e6cd4ceb71e337c7c734cf58",
+            "scenario_id": "stg-rnc50-hetero-rand0132",
+            "scenario_hash": "f986ca4e19802a2eb3898f7d65422f5f865a2f4be41dcf7c7ebe8c5f15ee9f6d",
+            "split_index": 24
+          }
+        },
+        {
+          "index": 25,
+          "scenario_id": "stg-rnc50-hetero-rand0008",
+          "scenario_hash": "7d3e6b36e440d324c97e64e0db57d8d76735f09abf86ab6af20408cc41c771b9",
+          "file": "slices/id_validation/0025.json",
+          "file_sha256": "c046d51d965dd3c25fb57177677412a13c76f3cb5f065cc957e1210eb2a33fce",
+          "seed": 28604,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 206,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0008_hetero.json",
+            "source_sha256": "0686ce1684b952664bf538cd1d48c711b1a033a09d1055775f35a65104d2fbbd",
+            "scenario_id": "stg-rnc50-hetero-rand0008",
+            "scenario_hash": "7d3e6b36e440d324c97e64e0db57d8d76735f09abf86ab6af20408cc41c771b9",
+            "split_index": 25
+          }
+        },
+        {
+          "index": 26,
+          "scenario_id": "stg-rnc50-hetero-rand0172",
+          "scenario_hash": "1e1d2560ee2321b76017c97e2fd9854f93900d119b9aa0c92addf62c061633a0",
+          "file": "slices/id_validation/0026.json",
+          "file_sha256": "15dd3d1b3d47d9131d016b50964698860624d7b040026c337cfa62c12b718459",
+          "seed": 1603,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 459,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0172_hetero.json",
+            "source_sha256": "e2e7c085fd0058e36fb16fbd98e85da59b2b78d7cffa7b85ef11b8c93f20dff9",
+            "scenario_id": "stg-rnc50-hetero-rand0172",
+            "scenario_hash": "1e1d2560ee2321b76017c97e2fd9854f93900d119b9aa0c92addf62c061633a0",
+            "split_index": 26
+          }
+        },
+        {
+          "index": 27,
+          "scenario_id": "stg-rnc50-hetero-rand0096",
+          "scenario_hash": "5edc7e2268a9978e239d0dc0434489c6e2260e88667775fd0edb8d036eb73f84",
+          "file": "slices/id_validation/0027.json",
+          "file_sha256": "fc3573a83ea12b407d217a81e063aea2a799aab41a31313e8ea76415aa2c164d",
+          "seed": 29220,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 105,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0096_hetero.json",
+            "source_sha256": "a8c9ff3c5d2265cbc738364c2e2fb6b2bc9cc5aaad364c9c22fc01f7fd6997f2",
+            "scenario_id": "stg-rnc50-hetero-rand0096",
+            "scenario_hash": "5edc7e2268a9978e239d0dc0434489c6e2260e88667775fd0edb8d036eb73f84",
+            "split_index": 27
+          }
+        },
+        {
+          "index": 28,
+          "scenario_id": "stg-rnc50-hetero-rand0105",
+          "scenario_hash": "343c7c86307738c6fb6faa728827708898d59068f6729ca029db868b6e67e753",
+          "file": "slices/id_validation/0028.json",
+          "file_sha256": "1205a1de54b1fe953774490fb1f94e53adc6eda63d3eabef83bb2d216aed3ec5",
+          "seed": 29283,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 468,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0105_hetero.json",
+            "source_sha256": "09b2163f1755f311b6d77fd732fb54d0d029353b8c99c77848ee2e4826d3bca5",
+            "scenario_id": "stg-rnc50-hetero-rand0105",
+            "scenario_hash": "343c7c86307738c6fb6faa728827708898d59068f6729ca029db868b6e67e753",
+            "split_index": 28
+          }
+        },
+        {
+          "index": 29,
+          "scenario_id": "stg-rnc50-hetero-rand0012",
+          "scenario_hash": "2549d98280315761349dbbcde00c0c6b711042b5cdb1c20f1bbf745121630aaa",
+          "file": "slices/id_validation/0029.json",
+          "file_sha256": "f4b98f2e5debad4d9166955bc1c7708a6c9923cdcbd5d6e756fffc92db9783e8",
+          "seed": 28632,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 166,
+          "provenance": {
+            "kind": "benchmark_validation",
+            "source": "rnc50_hetero/rand0012_hetero.json",
+            "source_sha256": "ed9bebc5520645d28bce10efc537945dfe2e86c1d11b9bc395c8642b49167eaa",
+            "scenario_id": "stg-rnc50-hetero-rand0012",
+            "scenario_hash": "2549d98280315761349dbbcde00c0c6b711042b5cdb1c20f1bbf745121630aaa",
+            "split_index": 29
+          }
+        }
+      ]
+    },
+    {
+      "slice_id": "ood_size",
+      "role": "development_ood",
+      "scenario_count": 30,
+      "source": {
+        "generator": "trisched.scenario.generate_scenario",
+        "scenario_id_template": "ood-size-{index:04d}",
+        "generator_seeds": [
+          20260801,
+          20260802,
+          20260803,
+          20260804,
+          20260805,
+          20260806,
+          20260807,
+          20260808,
+          20260809,
+          20260810,
+          20260811,
+          20260812,
+          20260813,
+          20260814,
+          20260815,
+          20260816,
+          20260817,
+          20260818,
+          20260819,
+          20260820,
+          20260821,
+          20260822,
+          20260823,
+          20260824,
+          20260825,
+          20260826,
+          20260827,
+          20260828,
+          20260829,
+          20260830
+        ],
+        "task_count": 100,
+        "resource_count": 3,
+        "edge_probability": 0.12
+      },
+      "scenario_set_sha256": "6f525035c5bc07b0a9b6dfd9fc456ac3d2343d234d409c5259ae944967f0da1a",
+      "entries": [
+        {
+          "index": 0,
+          "scenario_id": "ood-size-0000",
+          "scenario_hash": "6e67c03084b8444568b65b1a86e5908065c7519c765a2c68fb0b6888e753a426",
+          "file": "slices/ood_size/0000.json",
+          "file_sha256": "3704dc7e70b0d99862cf84c21d89c5b88804dd6ec1c7e1172c6e8ce09a79f208",
+          "seed": 20260801,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 666,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260801
+          }
+        },
+        {
+          "index": 1,
+          "scenario_id": "ood-size-0001",
+          "scenario_hash": "33efb579f38be45e4c115ae5d1b4ff2aaf1e7eededec2b6f79dc7393f9c28313",
+          "file": "slices/ood_size/0001.json",
+          "file_sha256": "e2d073f8053eeb0a4fe99b38d9c6d1bf586e6265f9dd212551b852bd0fd6ae6d",
+          "seed": 20260802,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 678,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260802
+          }
+        },
+        {
+          "index": 2,
+          "scenario_id": "ood-size-0002",
+          "scenario_hash": "028ee77132ca8fe444847d104ab851af823d67503e31a4b148eafbf94cce6215",
+          "file": "slices/ood_size/0002.json",
+          "file_sha256": "fa7c644bb32f9ca4c532e1a6e02f240c1428ab04258bcbfd6f03fa7e0643ece1",
+          "seed": 20260803,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 680,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260803
+          }
+        },
+        {
+          "index": 3,
+          "scenario_id": "ood-size-0003",
+          "scenario_hash": "066957bf0fae5f11a29a05e6dc7a7ac55cbc6e56641c091d6e3c9bcc8cc6f33a",
+          "file": "slices/ood_size/0003.json",
+          "file_sha256": "3d7c9ce4df7bd34149b46d70f51de17ec57fac73eb8ca5af9390a68575c25fcc",
+          "seed": 20260804,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 679,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260804
+          }
+        },
+        {
+          "index": 4,
+          "scenario_id": "ood-size-0004",
+          "scenario_hash": "e1dbb0dc15f7db922457fbdcd6352bd57beb20664e149341bfdda6896a823133",
+          "file": "slices/ood_size/0004.json",
+          "file_sha256": "a830986aed30b8b26bf660228a44c8e80115b9985cc17ad4da9550f99405a7c5",
+          "seed": 20260805,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 730,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260805
+          }
+        },
+        {
+          "index": 5,
+          "scenario_id": "ood-size-0005",
+          "scenario_hash": "a12d5c2215d4a2c46579d14f9c561285568df6ec6502a3cf0b406c7c5945b851",
+          "file": "slices/ood_size/0005.json",
+          "file_sha256": "58a3d9bae4d968d42c3fac4d4babd5214189db3201e90fbdc4dc2bcbaf15a46e",
+          "seed": 20260806,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 711,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260806
+          }
+        },
+        {
+          "index": 6,
+          "scenario_id": "ood-size-0006",
+          "scenario_hash": "16634b4ebf3469ebb9aa6102cec965826fae93068ccc5a84f83e8218af70a848",
+          "file": "slices/ood_size/0006.json",
+          "file_sha256": "0131aa563a593f53d15669aab6bbb68f1c8ab176e3ecee445e2b50c49cd55fb1",
+          "seed": 20260807,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 635,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260807
+          }
+        },
+        {
+          "index": 7,
+          "scenario_id": "ood-size-0007",
+          "scenario_hash": "e5e21f7bbe4fbcd6e8fb42674d7cb931f511aae1efa0b251878b18e13d10695b",
+          "file": "slices/ood_size/0007.json",
+          "file_sha256": "e3f7d480101693d676fe0f6b1f4e5c3c761ff18cfa806e88112dc682e7e0f354",
+          "seed": 20260808,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 687,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260808
+          }
+        },
+        {
+          "index": 8,
+          "scenario_id": "ood-size-0008",
+          "scenario_hash": "ff5402e9240ca555496a52b10783cfc3b1fbc3b7c538c9e9f365021265c3d0ae",
+          "file": "slices/ood_size/0008.json",
+          "file_sha256": "62315cda8af8e083fc57234f5895ee71f7aa2be976a1d816083c17bfe17946af",
+          "seed": 20260809,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 660,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260809
+          }
+        },
+        {
+          "index": 9,
+          "scenario_id": "ood-size-0009",
+          "scenario_hash": "88c31abd75cee907de08e15e52cb5a70a428a69352d8af5e0274f0418d0ea262",
+          "file": "slices/ood_size/0009.json",
+          "file_sha256": "46f8eebfbe93a1ea5e30371ad0e85c01f8c824f25423f4a9166c296861cf66ae",
+          "seed": 20260810,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 663,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260810
+          }
+        },
+        {
+          "index": 10,
+          "scenario_id": "ood-size-0010",
+          "scenario_hash": "8f801f39427e97553967c516a8d9edd56230e064293701db98b847b84dbc0cb1",
+          "file": "slices/ood_size/0010.json",
+          "file_sha256": "37a05b63d600214f07195aea96caa4463dd24f055ddac7f40539b52649264d9e",
+          "seed": 20260811,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 683,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260811
+          }
+        },
+        {
+          "index": 11,
+          "scenario_id": "ood-size-0011",
+          "scenario_hash": "5fac2c4078012b286877b5013a25b3c527a0c5333eb746a052ddaa07991387bc",
+          "file": "slices/ood_size/0011.json",
+          "file_sha256": "bd24bcbbcb0d48cbc67a6947cde66d32d0df3e259cd4ecaf4ca386f8af4d6d1b",
+          "seed": 20260812,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 637,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260812
+          }
+        },
+        {
+          "index": 12,
+          "scenario_id": "ood-size-0012",
+          "scenario_hash": "6204b4d0eefa9c23d02b827528d1043f8743ce6495215ff8f18f3aac50a181b8",
+          "file": "slices/ood_size/0012.json",
+          "file_sha256": "4e85b4a1bd7623b6e646d2b988c5205fb446c7800d62fe455394b809c5918fab",
+          "seed": 20260813,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 689,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260813
+          }
+        },
+        {
+          "index": 13,
+          "scenario_id": "ood-size-0013",
+          "scenario_hash": "7e600d627b063f424d4f2979dbe226387b796cc0dfd740efcc9e1d2420e1e349",
+          "file": "slices/ood_size/0013.json",
+          "file_sha256": "e5c8664454986ddeaebda7b82a5095b918c30bf98ce9ce18932a4d4d0ff995a5",
+          "seed": 20260814,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 650,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260814
+          }
+        },
+        {
+          "index": 14,
+          "scenario_id": "ood-size-0014",
+          "scenario_hash": "94d47ada63db37f2e961077aad0c57a6006a1460df38cd33f96f8dc71cb9837c",
+          "file": "slices/ood_size/0014.json",
+          "file_sha256": "70ee6cd62929f7cf21de850e18349cfc27933cc0a0bb73bbb2c4a1eaaa50151e",
+          "seed": 20260815,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 674,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260815
+          }
+        },
+        {
+          "index": 15,
+          "scenario_id": "ood-size-0015",
+          "scenario_hash": "ea15586133f60da5c1ed2c11643d38bdacb7d5b4a2072982712241309331bffb",
+          "file": "slices/ood_size/0015.json",
+          "file_sha256": "7836042e625b0d8afeb91d865e82d79c1e65c21af8c4c0686e3618d23213e894",
+          "seed": 20260816,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 658,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260816
+          }
+        },
+        {
+          "index": 16,
+          "scenario_id": "ood-size-0016",
+          "scenario_hash": "d42901820e3110c467a2d5ff39715b166f56e90f77397873223588077f9ad909",
+          "file": "slices/ood_size/0016.json",
+          "file_sha256": "b5b287260b0f0aa1292f8f80764ad90524b5f46664a9aff643dbe40a84ba308b",
+          "seed": 20260817,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 701,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260817
+          }
+        },
+        {
+          "index": 17,
+          "scenario_id": "ood-size-0017",
+          "scenario_hash": "f7968fa70b0834d21c2fc55707d7031bc335160a76cc9d7162dc20abfd2ef44b",
+          "file": "slices/ood_size/0017.json",
+          "file_sha256": "1ffeaecd88f9f5bfa60ddc55a98dc81327f70fd14a391eb2cfc08d4147601ed0",
+          "seed": 20260818,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 717,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260818
+          }
+        },
+        {
+          "index": 18,
+          "scenario_id": "ood-size-0018",
+          "scenario_hash": "0d778b067495ad841734d38cd685bc8c10d32ab4e0eeb56c37678b586a8b21ab",
+          "file": "slices/ood_size/0018.json",
+          "file_sha256": "ac606066fe35ad123ffc79ae18f5d36113719fc57d8b685d670e6fe5544e7ace",
+          "seed": 20260819,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 679,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260819
+          }
+        },
+        {
+          "index": 19,
+          "scenario_id": "ood-size-0019",
+          "scenario_hash": "a0b12ab1e3a0223637ac5f3adb46f4afcde06a83a5955ffc84810e022f6a7aa0",
+          "file": "slices/ood_size/0019.json",
+          "file_sha256": "52308988acb23a342453d2ae80c9f6e92d7589adbc23ef521f5909921324a093",
+          "seed": 20260820,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 676,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260820
+          }
+        },
+        {
+          "index": 20,
+          "scenario_id": "ood-size-0020",
+          "scenario_hash": "18045d702c96d24096affea5f42034c195f45f5353f57e5c8b238329dec5fceb",
+          "file": "slices/ood_size/0020.json",
+          "file_sha256": "7aeb890d7466adbab92b20fcd699c773dbf5eaae36fcb4531f874d9423b304b4",
+          "seed": 20260821,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 668,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260821
+          }
+        },
+        {
+          "index": 21,
+          "scenario_id": "ood-size-0021",
+          "scenario_hash": "b23d278b77563e2c6ea7a1db1f5c99c8e7ab1fd2cb6f7f52a6bc935f842cb9a5",
+          "file": "slices/ood_size/0021.json",
+          "file_sha256": "14a85a9a378172616ab9547be06e1dd80bbf5a49551944968eb4f46fa58c6fe8",
+          "seed": 20260822,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 756,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260822
+          }
+        },
+        {
+          "index": 22,
+          "scenario_id": "ood-size-0022",
+          "scenario_hash": "4bac77a443498058c2f9f502ff72eb3a574e33ea70828d4c30594e6ea58cd692",
+          "file": "slices/ood_size/0022.json",
+          "file_sha256": "ef3f4d63c88f4781e2515c95c7686f3a415fba82ca2e0eb05fbdedfdb54c11e5",
+          "seed": 20260823,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 688,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260823
+          }
+        },
+        {
+          "index": 23,
+          "scenario_id": "ood-size-0023",
+          "scenario_hash": "0fc1ca9c2b10186ccfe74fe5b12dc50739aaa0c5d1251f1ed79fbcacb839168e",
+          "file": "slices/ood_size/0023.json",
+          "file_sha256": "3a23ab082b7837fc1bbf69b6570b12b56ea1580a521db947b7c9514888340f7a",
+          "seed": 20260824,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 684,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260824
+          }
+        },
+        {
+          "index": 24,
+          "scenario_id": "ood-size-0024",
+          "scenario_hash": "2f0f2f1a57790d67e8717f2e97156be909ef74fa33f615c017f39e7103cc14e6",
+          "file": "slices/ood_size/0024.json",
+          "file_sha256": "2efe5e5890a5b8f75d075f999a7574415b57a92aa8d1be11e3d6becc69d4d31b",
+          "seed": 20260825,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 712,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260825
+          }
+        },
+        {
+          "index": 25,
+          "scenario_id": "ood-size-0025",
+          "scenario_hash": "2a397b483ed14ef2d6ab146ec01c4b299380416451baaa0a5ba58247d475ec89",
+          "file": "slices/ood_size/0025.json",
+          "file_sha256": "f9645c6c4818189b3782fefbfabcacbd77509a774b0fce8e789a2a46f9141771",
+          "seed": 20260826,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 711,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260826
+          }
+        },
+        {
+          "index": 26,
+          "scenario_id": "ood-size-0026",
+          "scenario_hash": "8a9c1465733d7a08ad1395b68a1c95bd7ba364edbc81cf73a1a224179330468e",
+          "file": "slices/ood_size/0026.json",
+          "file_sha256": "4a7a34917593df1b4c96a5fb7fdd1d624121174490c5f1c4b303b1abf235c333",
+          "seed": 20260827,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 694,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260827
+          }
+        },
+        {
+          "index": 27,
+          "scenario_id": "ood-size-0027",
+          "scenario_hash": "60140231f764acfc94a215857b96c9f2f1a28f3d973b56f76e6dbc1818522c79",
+          "file": "slices/ood_size/0027.json",
+          "file_sha256": "38b222b34978cfa114bb07f3ea5eb0c606ac21094bcb1f86cb5ea26bdadc574d",
+          "seed": 20260828,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 694,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260828
+          }
+        },
+        {
+          "index": 28,
+          "scenario_id": "ood-size-0028",
+          "scenario_hash": "034ce861d9e79dc603c5b2a990eaca87be8c1072dbb7f8b19fbe749c0e7f4a7f",
+          "file": "slices/ood_size/0028.json",
+          "file_sha256": "a32745edadfc0242c9b1218bd2b7631684a2dfcd027c4e6b384b5e65fb7c44f2",
+          "seed": 20260829,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 681,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260829
+          }
+        },
+        {
+          "index": 29,
+          "scenario_id": "ood-size-0029",
+          "scenario_hash": "33249500b7c9065139d1782b2b2f86359ae5118f84f94f2f7b24665369ef663c",
+          "file": "slices/ood_size/0029.json",
+          "file_sha256": "670ff91475abcbfc6afe5f17daf90ae0d410060c9f03bcaf26bbd503e1445178",
+          "seed": 20260830,
+          "task_count": 100,
+          "resource_count": 3,
+          "edge_count": 683,
+          "provenance": {
+            "kind": "generated",
+            "generator_seed": 20260830
+          }
+        }
+      ]
+    },
+    {
+      "slice_id": "ood_ccr",
+      "role": "development_ood",
+      "scenario_count": 30,
+      "source": {
+        "base_slice": "id_validation",
+        "scenario_id_template": "ood-ccr-{index:04d}",
+        "edge_data_scale": 2.0,
+        "off_diagonal_bandwidth_scale": 0.5
+      },
+      "scenario_set_sha256": "fef5aa2ce9526a9a91e1479c52f5bfbe30e34d9ce45e11311d231e2f1c6f53c8",
+      "entries": [
+        {
+          "index": 0,
+          "scenario_id": "ood-ccr-0000",
+          "scenario_hash": "d2d6d27fb173e66cb0b3391066be7f66a200560882e22d9a133b01fb342bc4fd",
+          "file": "slices/ood_ccr/0000.json",
+          "file_sha256": "77e27b0b74ad5a6d3f75d60b0ab4bfab6ba053042ceedadbefb02dd807020718",
+          "seed": 29248,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 882,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0100",
+            "base_scenario_hash": "db98e678be1789dd75894619b39527ccd405a03f63eee9f407aba1ffbde06923"
+          }
+        },
+        {
+          "index": 1,
+          "scenario_id": "ood-ccr-0001",
+          "scenario_hash": "4c7890a50abc8ade2c606e2c2f6f2f01f3dd22d9a67ae5a813b6a398873dce72",
+          "file": "slices/ood_ccr/0001.json",
+          "file_sha256": "8f4b0acc47a757c8c967de8936551bd3f94cec35f7f796710757e57a56cb84d3",
+          "seed": 29262,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 343,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0102",
+            "base_scenario_hash": "f00a47f9fb9d0d5dcaf8c0673c27a8ad659afca6a38bce0c815afc5731635d26"
+          }
+        },
+        {
+          "index": 2,
+          "scenario_id": "ood-ccr-0002",
+          "scenario_hash": "77938eefa2c782e2bdd4a27e3b6843efaa3a961226309281bf3aad3688c87d2a",
+          "file": "slices/ood_ccr/0002.json",
+          "file_sha256": "52c5671eb90e173bdb550a6fb1e3c7ab61e64e047962bdfa1d88f388d30c0498",
+          "seed": 1470,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 935,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0153",
+            "base_scenario_hash": "a34b717f6c73b9e6aca473a9436561a0f1cb676c3da0f4cae5fc5ca5db0f3351"
+          }
+        },
+        {
+          "index": 3,
+          "scenario_id": "ood-ccr-0003",
+          "scenario_hash": "07f0e6118a55ed6221985f3c9b67ac83d5a0bbe5fdcbf0aa58bfba9af9492fdc",
+          "file": "slices/ood_ccr/0003.json",
+          "file_sha256": "7acd643edf8fd25c24a3de4df693be373911e4e707299fd97d36d34b78769648",
+          "seed": 28695,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 249,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0021",
+            "base_scenario_hash": "c0a1bb6664778d01fc21c82aafe05d560adbc7d8eaaf7a8c47eb1516d7c87bd7"
+          }
+        },
+        {
+          "index": 4,
+          "scenario_id": "ood-ccr-0004",
+          "scenario_hash": "01a58626a78e4cd2b849dd094a308364488ca26b3ba895b4d2815ebcd301dfc1",
+          "file": "slices/ood_ccr/0004.json",
+          "file_sha256": "d9c4768fa34456a26efea3f710948f4139186c6ba2ac6adebe341779e3f6966c",
+          "seed": 28947,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 115,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0057",
+            "base_scenario_hash": "4fa4fdb9a30edf089eea1f7c7e9c629356ff911ae306a5944364bdd2aa5fffbf"
+          }
+        },
+        {
+          "index": 5,
+          "scenario_id": "ood-ccr-0005",
+          "scenario_hash": "ed77f828e51ad6008f422ca6f65458432f7552460d5fe6373ef0001f7bb6f07d",
+          "file": "slices/ood_ccr/0005.json",
+          "file_sha256": "346ea735bf12d5676f61b718cf89d7644314e91efb9dbb5ba47a090757713473",
+          "seed": 1337,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 138,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0134",
+            "base_scenario_hash": "b0106517af29da18e08526d60de26c8c8f30fa3394507e1e488872bdb9c03332"
+          }
+        },
+        {
+          "index": 6,
+          "scenario_id": "ood-ccr-0006",
+          "scenario_hash": "667cc1fd6cdcd2960340c1626b5ac22f9c1a3c29972980fc4c885382f401a548",
+          "file": "slices/ood_ccr/0006.json",
+          "file_sha256": "a206b22657ae56fbbca34296496567a13ce26bd2aec8ea27ce0a30f966788310",
+          "seed": 28877,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 101,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0047",
+            "base_scenario_hash": "a883b6354e390ed51ea0d7bf67e07c658ceb53d71c78e8cc4a6fe182fece0171"
+          }
+        },
+        {
+          "index": 7,
+          "scenario_id": "ood-ccr-0007",
+          "scenario_hash": "e2572c6b4be9be6b4ec6da4ce1c8ba012f7b70560207df56c8fe5c5645777965",
+          "file": "slices/ood_ccr/0007.json",
+          "file_sha256": "a57f6b573d6b3ae006b94353ca11356f182d0ac00eca4cc1d05a5789c29de3db",
+          "seed": 1624,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 542,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0175",
+            "base_scenario_hash": "2bbb22277d8b39d7e62e829cccc324be5c4ce6d6a184842d497490a9e0fe92af"
+          }
+        },
+        {
+          "index": 8,
+          "scenario_id": "ood-ccr-0008",
+          "scenario_hash": "87b83c0c528fcb27fe243df099ed10fb592893c1358095c2748d0c8adb0126e3",
+          "file": "slices/ood_ccr/0008.json",
+          "file_sha256": "b2991d98ace6f9c6a34a88652a934793fd68ef77dd64aad61c7da1af18b387fe",
+          "seed": 1589,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 58,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0170",
+            "base_scenario_hash": "4d7ead8bd6748dfc87688d9d786a6b62f413209a57efd39795f91738dc34c94f"
+          }
+        },
+        {
+          "index": 9,
+          "scenario_id": "ood-ccr-0009",
+          "scenario_hash": "fce483e43cdcc137de7c75b60d67dbcb2e750e355bcd2a56729a6c4a6994f958",
+          "file": "slices/ood_ccr/0009.json",
+          "file_sha256": "005df6a32ef00f41c9ee179a8a84bd6176bed03abf1480f9735db1f00ef713d6",
+          "seed": 1281,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 192,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0126",
+            "base_scenario_hash": "4f4fe7a314c399859d421a4f9667a10b059bf66d28a139a65e37b73f2a7d071b"
+          }
+        },
+        {
+          "index": 10,
+          "scenario_id": "ood-ccr-0010",
+          "scenario_hash": "b97d91815e6c6858e18da1e3441f187b7bd153356b0f5f72532cd74d5487476c",
+          "file": "slices/ood_ccr/0010.json",
+          "file_sha256": "30075a01aad21b6470f2b884f9f050b797888b93406db41126b329654f1d2e11",
+          "seed": 1491,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 104,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0156",
+            "base_scenario_hash": "0846df95823d5e5d15f53eb71196cc1234b063b377bc61019ed5ff4d0644ebdc"
+          }
+        },
+        {
+          "index": 11,
+          "scenario_id": "ood-ccr-0011",
+          "scenario_hash": "4b1a1a91df04025e32acfb3896e6ecd2c2c97d123c0d7a5ff90dbe923fd38141",
+          "file": "slices/ood_ccr/0011.json",
+          "file_sha256": "a558399ec55282dc444bd76b3ec1961086d31f6accca79c2b40d217f0a411948",
+          "seed": 29094,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 370,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0078",
+            "base_scenario_hash": "fbf9bf62d8ba5cf32410048862073e09680693e475ec3d142be1616dbb3a6651"
+          }
+        },
+        {
+          "index": 12,
+          "scenario_id": "ood-ccr-0012",
+          "scenario_hash": "d5d4d25e381343958abe069c1bc832d3f9d0c97f9c1c2bbf09e1f3fce1d2f053",
+          "file": "slices/ood_ccr/0012.json",
+          "file_sha256": "55f8f1ba365861ea246cf97a702625af122b22509a3cd7db7753a85a1426dc4d",
+          "seed": 28772,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 171,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0032",
+            "base_scenario_hash": "1eb0153ae596463285eff210d217203dc48e8efd447110486d94c60f51535b7d"
+          }
+        },
+        {
+          "index": 13,
+          "scenario_id": "ood-ccr-0013",
+          "scenario_hash": "e037fb6ddf40b5f43563a19bbc98372c9aab16cfa83a111f3384c9d62b60353d",
+          "file": "slices/ood_ccr/0013.json",
+          "file_sha256": "9c4c891dafcf87afa4f86120ccf33ecda32de4e409031f271dfe8d2270db1a5b",
+          "seed": 29101,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 50,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0079",
+            "base_scenario_hash": "0de2fc2e40604b2275bb679da1cb1f39d44eca7806fda7451cf4f84a503ad6ab"
+          }
+        },
+        {
+          "index": 14,
+          "scenario_id": "ood-ccr-0014",
+          "scenario_hash": "7d5077498551c9febafe30fa306241946bdd64d245b94aab6649418fbeab0d5b",
+          "file": "slices/ood_ccr/0014.json",
+          "file_sha256": "abb1c547209c5ebf6c0fdb3d982520352630ae55b260a32f1c2b4cd557c73843",
+          "seed": 28954,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 55,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0058",
+            "base_scenario_hash": "21b7b06e3f71215e32e200e5b0f51ad75126a8b9db13c0507cb8c392fcd262c3"
+          }
+        },
+        {
+          "index": 15,
+          "scenario_id": "ood-ccr-0015",
+          "scenario_hash": "561b6fa9824983a96605344139a4075267b3f47687cffe44ec64b95b13899cfd",
+          "file": "slices/ood_ccr/0015.json",
+          "file_sha256": "cbf71dc9c55df6cf1b917d63fccb08848aba346b4901bbf68ec73e0988c719d6",
+          "seed": 28933,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 60,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0055",
+            "base_scenario_hash": "ff6ca84f533fdbc7378f34936d4bb7c8c5ce6dade2eedba60b4ecbe4c87e3af5"
+          }
+        },
+        {
+          "index": 16,
+          "scenario_id": "ood-ccr-0016",
+          "scenario_hash": "19b0a0765a10f19db81002770c1fc450db6ed8bcb729b0495c2cf27bd1def80a",
+          "file": "slices/ood_ccr/0016.json",
+          "file_sha256": "5011812542bf3e339b429e6221d28dd59374dd3c13616f083aef78af4d5ae4b1",
+          "seed": 29339,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 148,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0113",
+            "base_scenario_hash": "c5d8453111f8c628749cfa0fbfd9a24a0047abf0a88b7dc4f05151bf2b9dec86"
+          }
+        },
+        {
+          "index": 17,
+          "scenario_id": "ood-ccr-0017",
+          "scenario_hash": "b143c2e0d38226e89e6fae70eca6f9fb89dccb346fe957073cb082d8d5f7d51c",
+          "file": "slices/ood_ccr/0017.json",
+          "file_sha256": "f75e23e75dc8aef928e0308eab3951db3c22f3cf5e51116bd74a7dea2cf695cd",
+          "seed": 1498,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 816,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0157",
+            "base_scenario_hash": "309a276aff49948571fdfe31d531ebfca22354cea8e88604e577c1aaa3074fa9"
+          }
+        },
+        {
+          "index": 18,
+          "scenario_id": "ood-ccr-0018",
+          "scenario_hash": "ceea50dba84d42081b8179c3c1086ba7690e52476c6ac6d1a7ce265b963b66da",
+          "file": "slices/ood_ccr/0018.json",
+          "file_sha256": "aa51fe6450d53d1d8bafaa923bd86b7cbfc6aad5fed29357f7548fe4dacdf863",
+          "seed": 29346,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 814,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0114",
+            "base_scenario_hash": "b0535099f7e8868a1e552a8840a4f9bf74c9da9f1d851cf401c0ccbcb7b800f6"
+          }
+        },
+        {
+          "index": 19,
+          "scenario_id": "ood-ccr-0019",
+          "scenario_hash": "56ff4d115415f2e03ba83132f9a874d74b19b3accb1cf12f48586665f507b72b",
+          "file": "slices/ood_ccr/0019.json",
+          "file_sha256": "750d1958bf601338f364d2eabfa70178fd51cb1ad92b2020fa90dec70c740edf",
+          "seed": 29227,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 813,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0097",
+            "base_scenario_hash": "ac21a67ba3b43e8bb1eb2a95f18ebd3ddb1229400e8e6022e899f57ec5c4784a"
+          }
+        },
+        {
+          "index": 20,
+          "scenario_id": "ood-ccr-0020",
+          "scenario_hash": "06888c3a749e5318d660bb839f9d85fb9051525ee1cf0422ab8130f72fe4da6a",
+          "file": "slices/ood_ccr/0020.json",
+          "file_sha256": "31a12d6c8765a3568f8a11dcd4811030d252b688a77db8a0e89b895c39bf78ba",
+          "seed": 29297,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 837,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0107",
+            "base_scenario_hash": "d2c6e35a5e74013f9e52a0a4412ece07a4771c57527a70ed9d631f6dd1772653"
+          }
+        },
+        {
+          "index": 21,
+          "scenario_id": "ood-ccr-0021",
+          "scenario_hash": "fe1f0680c695a997b31ddb67dc6601bd6847807e131dadefbb179c891143589c",
+          "file": "slices/ood_ccr/0021.json",
+          "file_sha256": "9a501336428f1ed0660494867601ba019ffd298a39ba73cfdc90b1b510aab001",
+          "seed": 1372,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 61,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0139",
+            "base_scenario_hash": "35eaa0869f7a97ceb4811402585c61d86758081963cdb4ffc93708218bdc6f70"
+          }
+        },
+        {
+          "index": 22,
+          "scenario_id": "ood-ccr-0022",
+          "scenario_hash": "fdb9aaba244f724540d90c4c99987a98e1a97b0aacd3750f3a4b0d7af6179d93",
+          "file": "slices/ood_ccr/0022.json",
+          "file_sha256": "b4bb365949522d4a7da14c429233cfad233cf2c6de90ebebbb5301d89330abc9",
+          "seed": 29143,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 321,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0085",
+            "base_scenario_hash": "00d26778c19fc912b6a3f2c6c80fa37d68a9ae036f588f62b9abf85e977cd1cc"
+          }
+        },
+        {
+          "index": 23,
+          "scenario_id": "ood-ccr-0023",
+          "scenario_hash": "6461f3f48d9f554db057c796d4c18efe39b9200293e75232d5d967ebfa22abf8",
+          "file": "slices/ood_ccr/0023.json",
+          "file_sha256": "ad9f050972e16dfc4dc010f8261472533cfc9582ab11707df8aa9dfcdab76c69",
+          "seed": 1582,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 310,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0169",
+            "base_scenario_hash": "449eecc0992ed7fc43f2f65fc37b26d33e0b71897548b50e7a4812dd0e9e28d9"
+          }
+        },
+        {
+          "index": 24,
+          "scenario_id": "ood-ccr-0024",
+          "scenario_hash": "e0c920c1fbe38e16d90408a824326f670f61add73742ee85275585b4eb91d0d8",
+          "file": "slices/ood_ccr/0024.json",
+          "file_sha256": "cfba15517012eeebcdcbf5f1be1e4987e2e9bbcf20d652f1dff7ed01af485dfe",
+          "seed": 1323,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 76,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0132",
+            "base_scenario_hash": "f986ca4e19802a2eb3898f7d65422f5f865a2f4be41dcf7c7ebe8c5f15ee9f6d"
+          }
+        },
+        {
+          "index": 25,
+          "scenario_id": "ood-ccr-0025",
+          "scenario_hash": "cecd00f087dde7964a3c1cd7e063590f4984e01579f7f6cd0c6401375745dcb3",
+          "file": "slices/ood_ccr/0025.json",
+          "file_sha256": "86138376497890980118dac380d4cde4ed797a316a87947b1e022c0781dceaab",
+          "seed": 28604,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 206,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0008",
+            "base_scenario_hash": "7d3e6b36e440d324c97e64e0db57d8d76735f09abf86ab6af20408cc41c771b9"
+          }
+        },
+        {
+          "index": 26,
+          "scenario_id": "ood-ccr-0026",
+          "scenario_hash": "2be2aba56148eb6f65219aad4f87b73dd6566028fee6a54e7bcb342acb7fdb34",
+          "file": "slices/ood_ccr/0026.json",
+          "file_sha256": "7e029442af88b3c4e02b4f00ce3556bf26a6bde06863326f0d5106891c37349f",
+          "seed": 1603,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 459,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0172",
+            "base_scenario_hash": "1e1d2560ee2321b76017c97e2fd9854f93900d119b9aa0c92addf62c061633a0"
+          }
+        },
+        {
+          "index": 27,
+          "scenario_id": "ood-ccr-0027",
+          "scenario_hash": "ef44616187a0b2aab99a537b38f0f8c5aa0e5119c56e3ce47f7a923f0b7a904f",
+          "file": "slices/ood_ccr/0027.json",
+          "file_sha256": "ce7a5c91d4e090eff7e3ce2e5beb8671e00ffd655d11e14a73c5b2ec85583ad7",
+          "seed": 29220,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 105,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0096",
+            "base_scenario_hash": "5edc7e2268a9978e239d0dc0434489c6e2260e88667775fd0edb8d036eb73f84"
+          }
+        },
+        {
+          "index": 28,
+          "scenario_id": "ood-ccr-0028",
+          "scenario_hash": "0078ffb3db7d5f717133a61358cf0d8a606a7e0d6a85ff1ec9c219ecfcb543b0",
+          "file": "slices/ood_ccr/0028.json",
+          "file_sha256": "5fc0dce6bd5af80117f716933703a0b5a3d74c9a319d9a60796ffb9a7716a016",
+          "seed": 29283,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 468,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0105",
+            "base_scenario_hash": "343c7c86307738c6fb6faa728827708898d59068f6729ca029db868b6e67e753"
+          }
+        },
+        {
+          "index": 29,
+          "scenario_id": "ood-ccr-0029",
+          "scenario_hash": "85cdbf120020ff9db5b0047e7e5477df18067c9c6d3cdbf73be683e231f5b0c6",
+          "file": "slices/ood_ccr/0029.json",
+          "file_sha256": "29c1d3f9c072a66c1dc4ac9650d0994b26dd0fc4d4af55660e4dc2797b10fee5",
+          "seed": 28632,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 166,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0012",
+            "base_scenario_hash": "2549d98280315761349dbbcde00c0c6b711042b5cdb1c20f1bbf745121630aaa"
+          }
+        }
+      ]
+    },
+    {
+      "slice_id": "ood_system",
+      "role": "development_ood",
+      "scenario_count": 30,
+      "source": {
+        "base_slice": "id_validation",
+        "scenario_id_template": "ood-system-{index:04d}",
+        "resource_speed_multipliers": [
+          0.65,
+          1.0,
+          1.35
+        ],
+        "off_diagonal_bandwidth_scale": 0.75,
+        "off_diagonal_latency_scale": 1.5
+      },
+      "scenario_set_sha256": "618942a58ccd2f20a1b97966f492fe00030225a7a02ba28c7f2a8fc54bc26431",
+      "entries": [
+        {
+          "index": 0,
+          "scenario_id": "ood-system-0000",
+          "scenario_hash": "f7ee95d4774f704dac05e7e1b465c20eeb2d5330eec045c53a72d24e9ce976b2",
+          "file": "slices/ood_system/0000.json",
+          "file_sha256": "9f30af2cae90a4969a9697c7aa12b467608896d3b2c529846cd53dd10109d387",
+          "seed": 29248,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 882,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0100",
+            "base_scenario_hash": "db98e678be1789dd75894619b39527ccd405a03f63eee9f407aba1ffbde06923"
+          }
+        },
+        {
+          "index": 1,
+          "scenario_id": "ood-system-0001",
+          "scenario_hash": "2010100217d8e518b9fd9e7bac30885e18188b350c73a6823cc4c4532c756fe6",
+          "file": "slices/ood_system/0001.json",
+          "file_sha256": "c0eb17b31a85aaa8eb74f37f4cefe8ca5be1dee9eb83ce278c6d92391622c779",
+          "seed": 29262,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 343,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0102",
+            "base_scenario_hash": "f00a47f9fb9d0d5dcaf8c0673c27a8ad659afca6a38bce0c815afc5731635d26"
+          }
+        },
+        {
+          "index": 2,
+          "scenario_id": "ood-system-0002",
+          "scenario_hash": "55ad8e0f795264ce949ba81ed9d7580275570175afc87377164d2b6f2fbafcb7",
+          "file": "slices/ood_system/0002.json",
+          "file_sha256": "9e641110a2c383600b74c34235b8ab6202c906f6beb4290bba8bd62f8d44182e",
+          "seed": 1470,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 935,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0153",
+            "base_scenario_hash": "a34b717f6c73b9e6aca473a9436561a0f1cb676c3da0f4cae5fc5ca5db0f3351"
+          }
+        },
+        {
+          "index": 3,
+          "scenario_id": "ood-system-0003",
+          "scenario_hash": "b842bd659461ce20ce36d776bcb4a4e4d5af40e32e67065fb647c40a797cb06e",
+          "file": "slices/ood_system/0003.json",
+          "file_sha256": "47d0aa426509cbaa63f3414698cae6b53ba8190b40699d7f96cb35e94fa86398",
+          "seed": 28695,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 249,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0021",
+            "base_scenario_hash": "c0a1bb6664778d01fc21c82aafe05d560adbc7d8eaaf7a8c47eb1516d7c87bd7"
+          }
+        },
+        {
+          "index": 4,
+          "scenario_id": "ood-system-0004",
+          "scenario_hash": "0f7a32c8750e8fb63a34924c629088e70b4d5f06529fe8281c5c12cd8b89f0e0",
+          "file": "slices/ood_system/0004.json",
+          "file_sha256": "84d6cb50a5f58ae4230549ecd56dd4446ec59cbda1f8cbd0246ed620f9eaec6d",
+          "seed": 28947,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 115,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0057",
+            "base_scenario_hash": "4fa4fdb9a30edf089eea1f7c7e9c629356ff911ae306a5944364bdd2aa5fffbf"
+          }
+        },
+        {
+          "index": 5,
+          "scenario_id": "ood-system-0005",
+          "scenario_hash": "6c40e5cde6720460fc77a0ec56e8094621bd4b8b7c7ebf2d27591a21b5c88ac6",
+          "file": "slices/ood_system/0005.json",
+          "file_sha256": "a44d13c70336a99ec6d7ecf1c78067e92a2b965918a232b54234bd2a35dfdc69",
+          "seed": 1337,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 138,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0134",
+            "base_scenario_hash": "b0106517af29da18e08526d60de26c8c8f30fa3394507e1e488872bdb9c03332"
+          }
+        },
+        {
+          "index": 6,
+          "scenario_id": "ood-system-0006",
+          "scenario_hash": "1568033a58ada645065ca2e1d4aa2fd918b61e3ff7bcc647b6ff58c49dbd7fb5",
+          "file": "slices/ood_system/0006.json",
+          "file_sha256": "2da45d5401f607448067e90645ba8264f062884c63287ebe52d282eeab2363b9",
+          "seed": 28877,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 101,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0047",
+            "base_scenario_hash": "a883b6354e390ed51ea0d7bf67e07c658ceb53d71c78e8cc4a6fe182fece0171"
+          }
+        },
+        {
+          "index": 7,
+          "scenario_id": "ood-system-0007",
+          "scenario_hash": "470c971faae2f6eed8a84ded796830d14c8e8a35e6f8409ae9e0d869cc6d3c71",
+          "file": "slices/ood_system/0007.json",
+          "file_sha256": "d880ba81817c55f277d20c9ec4ca4f7ed9f63d4db4d78256255863b9b30f07fe",
+          "seed": 1624,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 542,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0175",
+            "base_scenario_hash": "2bbb22277d8b39d7e62e829cccc324be5c4ce6d6a184842d497490a9e0fe92af"
+          }
+        },
+        {
+          "index": 8,
+          "scenario_id": "ood-system-0008",
+          "scenario_hash": "fd34df1e5eb4d426ad0ac98fa3b6e22d25c2797de5e4c36bfb8bb9edea95bce2",
+          "file": "slices/ood_system/0008.json",
+          "file_sha256": "6afa55da386d9d18484a4e8c678a65830f4aade30756919873aac1a6fa748292",
+          "seed": 1589,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 58,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0170",
+            "base_scenario_hash": "4d7ead8bd6748dfc87688d9d786a6b62f413209a57efd39795f91738dc34c94f"
+          }
+        },
+        {
+          "index": 9,
+          "scenario_id": "ood-system-0009",
+          "scenario_hash": "76d7a6a885b5bc1b280aab52d3dfad584fed3fe77e11f722bfb9293cc55c9a0e",
+          "file": "slices/ood_system/0009.json",
+          "file_sha256": "70f27005470fec555a5200a0ab08d3ca72416f715b06e81adeada5630ea62fab",
+          "seed": 1281,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 192,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0126",
+            "base_scenario_hash": "4f4fe7a314c399859d421a4f9667a10b059bf66d28a139a65e37b73f2a7d071b"
+          }
+        },
+        {
+          "index": 10,
+          "scenario_id": "ood-system-0010",
+          "scenario_hash": "bcbf780cb2b61e278f1a7cf8f197f5f5ae7082fbc5e6d7087e1d933e462f6de6",
+          "file": "slices/ood_system/0010.json",
+          "file_sha256": "d03278c8a886468863b8cfab6cc58b7889c8a0a34a1e2cbb795bb4c2d3c93455",
+          "seed": 1491,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 104,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0156",
+            "base_scenario_hash": "0846df95823d5e5d15f53eb71196cc1234b063b377bc61019ed5ff4d0644ebdc"
+          }
+        },
+        {
+          "index": 11,
+          "scenario_id": "ood-system-0011",
+          "scenario_hash": "633a54ba2336c5dab1730543d1586c24e1ef67bbfc717d53bbe76646dfe7ec34",
+          "file": "slices/ood_system/0011.json",
+          "file_sha256": "a6680966341c38e601436e208c8ffb05663a3b0fb0cbced61bb11ab987209794",
+          "seed": 29094,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 370,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0078",
+            "base_scenario_hash": "fbf9bf62d8ba5cf32410048862073e09680693e475ec3d142be1616dbb3a6651"
+          }
+        },
+        {
+          "index": 12,
+          "scenario_id": "ood-system-0012",
+          "scenario_hash": "9678c7559f842c6992dae8b0513e9f64f51ea4909fba5ed5507fd3ee878326cc",
+          "file": "slices/ood_system/0012.json",
+          "file_sha256": "8b299287ca0f2ef6e4c89f16ee3c82da98bd24bfad3b45ac9a43d7b6e27e5773",
+          "seed": 28772,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 171,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0032",
+            "base_scenario_hash": "1eb0153ae596463285eff210d217203dc48e8efd447110486d94c60f51535b7d"
+          }
+        },
+        {
+          "index": 13,
+          "scenario_id": "ood-system-0013",
+          "scenario_hash": "30ea06747a4770108a3f1207e12a98324bc8cca59a5c1177f434ab1408cebf91",
+          "file": "slices/ood_system/0013.json",
+          "file_sha256": "2eed813e6c438043eb9944b99b3b143fc1b433b7f31f51b5b18b21e314571448",
+          "seed": 29101,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 50,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0079",
+            "base_scenario_hash": "0de2fc2e40604b2275bb679da1cb1f39d44eca7806fda7451cf4f84a503ad6ab"
+          }
+        },
+        {
+          "index": 14,
+          "scenario_id": "ood-system-0014",
+          "scenario_hash": "ef48f471cdb6fa620ee35e06d7286c80be8e3b3d361d62b01763dce775bf5cb3",
+          "file": "slices/ood_system/0014.json",
+          "file_sha256": "c09e49e4e5f2cc6ea5479c18a28145ccbc3b9c83e13aa4148596e134c288c404",
+          "seed": 28954,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 55,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0058",
+            "base_scenario_hash": "21b7b06e3f71215e32e200e5b0f51ad75126a8b9db13c0507cb8c392fcd262c3"
+          }
+        },
+        {
+          "index": 15,
+          "scenario_id": "ood-system-0015",
+          "scenario_hash": "cc50ec31117e7752d73ff01bdb979056af62e24d0d30589ffdeef976ef09e955",
+          "file": "slices/ood_system/0015.json",
+          "file_sha256": "5057b9ee7d2063b1a94298a157f5dd88e462dc504814fa7ac4ec3cf9c35337bf",
+          "seed": 28933,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 60,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0055",
+            "base_scenario_hash": "ff6ca84f533fdbc7378f34936d4bb7c8c5ce6dade2eedba60b4ecbe4c87e3af5"
+          }
+        },
+        {
+          "index": 16,
+          "scenario_id": "ood-system-0016",
+          "scenario_hash": "7f218cb7988f6af3db1f1f1aab59f4cc63cac248fdfe04cbcce76a8e84ed65db",
+          "file": "slices/ood_system/0016.json",
+          "file_sha256": "730c38cc5dad782e6b55c6fa53e64563b23b9be91d8617c4d904b6a8c18eb325",
+          "seed": 29339,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 148,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0113",
+            "base_scenario_hash": "c5d8453111f8c628749cfa0fbfd9a24a0047abf0a88b7dc4f05151bf2b9dec86"
+          }
+        },
+        {
+          "index": 17,
+          "scenario_id": "ood-system-0017",
+          "scenario_hash": "b46455098680a94090ff972ef5a9260dbf37dcf276ca8dcbe0a4981d6a9c716b",
+          "file": "slices/ood_system/0017.json",
+          "file_sha256": "edd87d6cfcc53bc51ec5d0eda8c9542b42b8559e0321cdb2b33e5bf7fb15744b",
+          "seed": 1498,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 816,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0157",
+            "base_scenario_hash": "309a276aff49948571fdfe31d531ebfca22354cea8e88604e577c1aaa3074fa9"
+          }
+        },
+        {
+          "index": 18,
+          "scenario_id": "ood-system-0018",
+          "scenario_hash": "1eb652d71bba0e2d55b330b5c54ff9f0ff13c1e89aa81eb36e0530aa1a260d4d",
+          "file": "slices/ood_system/0018.json",
+          "file_sha256": "339b4344d43945ed93fc179e3082fbfb9402b62ee6ada6fee6f58f4ac30763e4",
+          "seed": 29346,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 814,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0114",
+            "base_scenario_hash": "b0535099f7e8868a1e552a8840a4f9bf74c9da9f1d851cf401c0ccbcb7b800f6"
+          }
+        },
+        {
+          "index": 19,
+          "scenario_id": "ood-system-0019",
+          "scenario_hash": "645698f2821139e3ae65547907e5752f086d31565cf791beb0f3e2518ca22d22",
+          "file": "slices/ood_system/0019.json",
+          "file_sha256": "e60718382eba48cdfae741b984e123782ff232c09f1ba2ae5f6661f010658284",
+          "seed": 29227,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 813,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0097",
+            "base_scenario_hash": "ac21a67ba3b43e8bb1eb2a95f18ebd3ddb1229400e8e6022e899f57ec5c4784a"
+          }
+        },
+        {
+          "index": 20,
+          "scenario_id": "ood-system-0020",
+          "scenario_hash": "a89e274a298fc380505f73ce8408f290517e0eac460b14f5e92335b6a2c15803",
+          "file": "slices/ood_system/0020.json",
+          "file_sha256": "bc95592eaa65099b4c3fe88698bf8783ba6c161d2b37a86c9523c9d348eec0a1",
+          "seed": 29297,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 837,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0107",
+            "base_scenario_hash": "d2c6e35a5e74013f9e52a0a4412ece07a4771c57527a70ed9d631f6dd1772653"
+          }
+        },
+        {
+          "index": 21,
+          "scenario_id": "ood-system-0021",
+          "scenario_hash": "39f3866fcde4fb147516e13dd28aee80e502eb68ca17844c10f00af220498352",
+          "file": "slices/ood_system/0021.json",
+          "file_sha256": "59c45451237750867537ac2e198e4c83e705a410b01d9844b5d00140c23c37b1",
+          "seed": 1372,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 61,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0139",
+            "base_scenario_hash": "35eaa0869f7a97ceb4811402585c61d86758081963cdb4ffc93708218bdc6f70"
+          }
+        },
+        {
+          "index": 22,
+          "scenario_id": "ood-system-0022",
+          "scenario_hash": "c1d6ad45fb4cc7e2627782738936adaa5aa100617e709b7ee3c985634e6114a6",
+          "file": "slices/ood_system/0022.json",
+          "file_sha256": "d86c4d2f05bc7c39d92f47d22488efc11e4458b897e0f0911b23b2e505c12e91",
+          "seed": 29143,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 321,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0085",
+            "base_scenario_hash": "00d26778c19fc912b6a3f2c6c80fa37d68a9ae036f588f62b9abf85e977cd1cc"
+          }
+        },
+        {
+          "index": 23,
+          "scenario_id": "ood-system-0023",
+          "scenario_hash": "43ca44a4f056ec28589b91ed132671c2d2c0a3f5fc175c803eb6ad0cadc37642",
+          "file": "slices/ood_system/0023.json",
+          "file_sha256": "e4106a69b041dd6aeffb680bbb175247076226fdf65967cad404fa1c1a55ed83",
+          "seed": 1582,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 310,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0169",
+            "base_scenario_hash": "449eecc0992ed7fc43f2f65fc37b26d33e0b71897548b50e7a4812dd0e9e28d9"
+          }
+        },
+        {
+          "index": 24,
+          "scenario_id": "ood-system-0024",
+          "scenario_hash": "e8775f6b87794ff881b9a2f8b61865d02cfb79a870efc7e25a946471c9f225ca",
+          "file": "slices/ood_system/0024.json",
+          "file_sha256": "a4add91f5c63e02896390b8b8542c68998ecef83c8eef7576188dda30190fd8e",
+          "seed": 1323,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 76,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0132",
+            "base_scenario_hash": "f986ca4e19802a2eb3898f7d65422f5f865a2f4be41dcf7c7ebe8c5f15ee9f6d"
+          }
+        },
+        {
+          "index": 25,
+          "scenario_id": "ood-system-0025",
+          "scenario_hash": "84a8af990643016b6f9e821ec8a864c2b33ac85e4f536fe366d5e1addb25511d",
+          "file": "slices/ood_system/0025.json",
+          "file_sha256": "2184e6e144ccf8c420c64c5bbf4a92e5ffe2b081d710e903c04d8f4b21b21a51",
+          "seed": 28604,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 206,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0008",
+            "base_scenario_hash": "7d3e6b36e440d324c97e64e0db57d8d76735f09abf86ab6af20408cc41c771b9"
+          }
+        },
+        {
+          "index": 26,
+          "scenario_id": "ood-system-0026",
+          "scenario_hash": "ace40f7c385cd23becd47bfdf6d156f7b68656a920bc1188488d4553b6a1257e",
+          "file": "slices/ood_system/0026.json",
+          "file_sha256": "676a4c2dce9363955d5dc0b51bcc97b94e3eda1b36ccfe862afa2dea064bcf5c",
+          "seed": 1603,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 459,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0172",
+            "base_scenario_hash": "1e1d2560ee2321b76017c97e2fd9854f93900d119b9aa0c92addf62c061633a0"
+          }
+        },
+        {
+          "index": 27,
+          "scenario_id": "ood-system-0027",
+          "scenario_hash": "57f793a13368548ae51c73fcf4bb0d26a5ef44ca8085c91841969bb26ff39c61",
+          "file": "slices/ood_system/0027.json",
+          "file_sha256": "78727b9817649f7360906ea6c8498e8b252e6931f86290fae11a66be4605bd97",
+          "seed": 29220,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 105,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0096",
+            "base_scenario_hash": "5edc7e2268a9978e239d0dc0434489c6e2260e88667775fd0edb8d036eb73f84"
+          }
+        },
+        {
+          "index": 28,
+          "scenario_id": "ood-system-0028",
+          "scenario_hash": "780c0c42de72c9cf17f61c509551689a0fc2db0b5f750b058b8a5f18cb86f284",
+          "file": "slices/ood_system/0028.json",
+          "file_sha256": "550d0d08b7246b0302ed7c72992065bc12e968d5f5f2e444189105caf5c9ea3f",
+          "seed": 29283,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 468,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0105",
+            "base_scenario_hash": "343c7c86307738c6fb6faa728827708898d59068f6729ca029db868b6e67e753"
+          }
+        },
+        {
+          "index": 29,
+          "scenario_id": "ood-system-0029",
+          "scenario_hash": "893cd718d53bc9f2a1f5c2e96a022f00d27807335dd205534f4a2ed0c83e64ee",
+          "file": "slices/ood_system/0029.json",
+          "file_sha256": "db2be925336283bf8fad00a0df215434eee450ab5dc9807ea8eb5654a670d4d2",
+          "seed": 28632,
+          "task_count": 50,
+          "resource_count": 3,
+          "edge_count": 166,
+          "provenance": {
+            "kind": "deterministic_transform",
+            "base_scenario_id": "stg-rnc50-hetero-rand0012",
+            "base_scenario_hash": "2549d98280315761349dbbcde00c0c6b711042b5cdb1c20f1bbf745121630aaa"
+          }
+        }
+      ]
+    }
+  ]
+}
