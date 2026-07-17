@@ -7,15 +7,17 @@ import platform
 import statistics
 import sys
 import time
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from .env import ScheduleResult, run_policy
+from .env import ScheduleResult, validate_schedule
 from .learning import MaskedMLPPolicy
-from .policies import CpopPolicy, GreedyEarliestFinishPolicy, HeftPolicy, RandomPolicy
+from .oracle import validate_schedule_independent
 from .scenario import Scenario
+from .schedulers import SchedulerRunner, build_scheduler_runners
 
 
 def _percentile(values: list[float], percentile: float) -> float:
@@ -57,30 +59,41 @@ def _policy_metrics(
     }
 
 
-def evaluate_split(
+def evaluate_schedulers(
     scenarios: list[Scenario],
-    learned_policy: MaskedMLPPolicy,
+    schedulers: Sequence[SchedulerRunner],
     split_name: str,
     output_dir: Path,
-    random_seed: int,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Evaluate in-process and external schedulers through one validated path."""
+
+    if not scenarios:
+        raise ValueError("cannot evaluate an empty scenario split")
+    names = [scheduler.name for scheduler in schedulers]
+    if not names:
+        raise ValueError("cannot evaluate an empty scheduler set")
+    if len(names) != len(set(names)):
+        raise ValueError("scheduler names must be unique")
+    if "heft" not in names:
+        raise ValueError("the unified evaluator requires HEFT as its baseline")
+    output_dir.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, Any]] = []
     example_results: dict[str, ScheduleResult] = {}
     for index, scenario in enumerate(scenarios):
-        policies = [
-            HeftPolicy(),
-            CpopPolicy(),
-            GreedyEarliestFinishPolicy(),
-            RandomPolicy(seed=random_seed),
-            learned_policy,
-        ]
         results: dict[str, ScheduleResult] = {}
         runtimes: dict[str, float] = {}
-        for policy in policies:
+        for scheduler in schedulers:
             start = time.perf_counter()
-            result = run_policy(scenario, policy)
-            runtimes[policy.name] = (time.perf_counter() - start) * 1000.0
-            results[policy.name] = result
+            result = scheduler.schedule(scenario)
+            runtimes[scheduler.name] = (time.perf_counter() - start) * 1000.0
+            if result.policy_name != scheduler.name:
+                raise ValueError(
+                    f"scheduler {scheduler.name} returned policy_name "
+                    f"{result.policy_name!r}"
+                )
+            validate_schedule(scenario, result)
+            validate_schedule_independent(scenario, result)
+            results[scheduler.name] = result
         heft_makespan = results["heft"].makespan
         row: dict[str, Any] = {
             "split": split_name,
@@ -114,11 +127,26 @@ def evaluate_split(
             ),
             encoding="utf-8",
         )
-    metrics = {
-        name: _policy_metrics(rows, name)
-        for name in ("heft", "cpop", "greedy_eft", "random", "masked_mlp")
-    }
+    metrics = {name: _policy_metrics(rows, name) for name in names}
     return metrics, rows
+
+
+def evaluate_split(
+    scenarios: list[Scenario],
+    learned_policy: MaskedMLPPolicy,
+    split_name: str,
+    output_dir: Path,
+    random_seed: int,
+    scheduler_specs: Sequence[str | Mapping[str, Any]] | None = None,
+    config_dir: str | Path | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    schedulers = build_scheduler_runners(
+        learned_policy=learned_policy,
+        random_seed=random_seed,
+        scheduler_specs=scheduler_specs,
+        config_dir=config_dir,
+    )
+    return evaluate_schedulers(scenarios, schedulers, split_name, output_dir)
 
 
 def dataset_manifest(scenarios: list[Scenario], split_name: str) -> dict[str, Any]:

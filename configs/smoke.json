@@ -19,6 +19,7 @@
     "gradient_clip": 5.0
   },
   "evaluation": {
-    "random_seed": 991
+    "random_seed": 991,
+    "schedulers": ["heft", "cpop", "greedy_eft", "random", "masked_mlp"]
   }
 }

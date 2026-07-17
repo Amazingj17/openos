@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Any
 from .evaluation import dataset_manifest, evaluate_split, write_summary
 from .learning import MaskedMLPPolicy, train_policy
 from .scenario import Scenario, ScenarioValidationError, generate_dataset
+from .schedulers import SchedulerAdapterError
 
 
 def _file_sha256(path: Path) -> str:
@@ -73,7 +75,8 @@ def build_splits(config: dict[str, Any]) -> dict[str, list[Scenario]]:
 
 
 def run_pipeline(config_path: str | Path, output_override: str | None = None) -> Path:
-    config = load_config(config_path)
+    config_source = Path(config_path).resolve()
+    config = load_config(config_source)
     if output_override:
         config["output_dir"] = output_override
     output_dir = Path(config["output_dir"])
@@ -103,7 +106,7 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
         json.dumps(training_history, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-    print("[3/4] evaluating HEFT, CPOP, Greedy-EFT, Random and Masked-MLP")
+    print("[3/4] evaluating configured schedulers through one validated path")
     random_seed = int(config["evaluation"].get("random_seed", 991))
     validation_metrics, _ = evaluate_split(
         splits["validation"],
@@ -111,9 +114,17 @@ def run_pipeline(config_path: str | Path, output_override: str | None = None) ->
         "validation",
         output_dir,
         random_seed,
+        config["evaluation"].get("schedulers"),
+        config_source.parent,
     )
     test_metrics, _ = evaluate_split(
-        splits["test"], policy, "test", output_dir, random_seed
+        splits["test"],
+        policy,
+        "test",
+        output_dir,
+        random_seed,
+        config["evaluation"].get("schedulers"),
+        config_source.parent,
     )
 
     training_history["wall_clock_seconds"] = time.perf_counter() - started
@@ -141,7 +152,8 @@ def evaluate_checkpoint(
     """Load a frozen checkpoint and evaluate it without retraining."""
     if split_name not in {"validation", "test"}:
         raise ValueError("split_name must be validation or test")
-    config = load_config(config_path)
+    config_source = Path(config_path).resolve()
+    config = load_config(config_source)
     splits = build_splits(config)
     checkpoint = Path(checkpoint_path)
     policy = MaskedMLPPolicy.load(checkpoint)
@@ -149,7 +161,13 @@ def evaluate_checkpoint(
     destination.mkdir(parents=True, exist_ok=True)
     random_seed = int(config["evaluation"].get("random_seed", 991))
     metrics, _ = evaluate_split(
-        splits[split_name], policy, split_name, destination, random_seed
+        splits[split_name],
+        policy,
+        split_name,
+        destination,
+        random_seed,
+        config["evaluation"].get("schedulers"),
+        config_source.parent,
     )
     payload = {
         "format_version": 1,
@@ -250,17 +268,28 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if args.command == "pipeline":
-        run_pipeline(args.config, args.output)
-    elif args.command == "generate":
-        generate_scenarios(args.config, args.output)
-    elif args.command == "evaluate":
-        evaluate_checkpoint(args.config, args.checkpoint, args.split, args.output)
-    elif args.command == "validate-scenario":
-        if not validate_scenario_file(args.input):
-            return 2
-    else:
-        raise AssertionError(f"unknown command: {args.command}")
+    try:
+        if args.command == "pipeline":
+            run_pipeline(args.config, args.output)
+        elif args.command == "generate":
+            generate_scenarios(args.config, args.output)
+        elif args.command == "evaluate":
+            evaluate_checkpoint(
+                args.config, args.checkpoint, args.split, args.output
+            )
+        elif args.command == "validate-scenario":
+            if not validate_scenario_file(args.input):
+                return 2
+        else:
+            raise AssertionError(f"unknown command: {args.command}")
+    except SchedulerAdapterError as error:
+        print(
+            json.dumps(
+                {"ok": False, "error": error.to_dict()}, ensure_ascii=False
+            ),
+            file=sys.stderr,
+        )
+        return 3
     return 0
 
 
