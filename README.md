@@ -13,11 +13,12 @@
 - 对所有“就绪任务 × 资源”候选执行严格合法动作掩码；
 - 使用不复用环境时间计算的第二套 HEFT oracle 和 validator 交叉检查调度；
 - 用小图精确分支定界 solver 冻结 optimum/bound，量化启发式最优性 gap；
-- 用 HEFT 行为克隆预训练两层 NumPy MLP，并将 HEFT 当前决策作为教师先验特征，再以 episodic REINFORCE 学习残差；
+- 保留 HEFT 行为克隆 + episodic REINFORCE 作为 legacy smoke，并在公开 STG 路径实现 clipped PPO + GAE；
 - 在公开 STG 冻结 split 上生成生产/独立 HEFT 双签 teacher，并只用 validation 选择 BC best checkpoint；
+- 在 PPO 主路径删除直接暴露 HEFT 决策的两项二值特征，使用 3 个 seed 和 BC warm-start 回退做 validation 选模；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。下一阶段应先在保持接口不变的前提下用 PPO 替换 REINFORCE，PPO 稳定后再单独比较任务图 GNN 与当前候选特征 MLP。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 已完成 masked PPO 的 3-seed validation 正式运行，但仍待成员 B 独立复核；复核通过后才能单独比较任务图 GNN 与当前候选特征 MLP。
 
 ## 快速运行
 
@@ -96,6 +97,17 @@ python -m trisched train-bc --config configs/stg_bc.json
 
 命令生成 teacher/reference manifest、训练曲线、best/last checkpoint、逐实例 validation 诊断、空失败 JSONL 和可核验 run manifest。训练入口只加载 train/validation；test 被用途门禁禁止用于 teacher、梯度或 checkpoint 选择，本任务不会输出 test 指标。当前 BC 的 validation ratio 为 1.0，表示成功复制 HEFT，不代表性能领先。契约、结果和 hash 见 [P1-A01 HEFT teacher 与公开 STG 行为克隆基线](doc/P1-A01HEFT教师与BC基线.md)；B 已在完全不含 test 原始字节的隔离数据根上双次重跑，并[独立复核通过](doc/P1-A01独立复核记录.md)。
 
+## 训练公开 STG masked PPO
+
+P1-A02 主策略删除 `is_heft_task` 和 `is_heft_pair`，从 14 维 BC warm start 开始，用增量 makespan shaping、GAE 和 clipped PPO 训练 3 个 seed：
+
+```powershell
+python scripts/fetch_stg_benchmark.py --offline
+python -m trisched train-ppo --config configs/stg_ppo.json
+```
+
+正式 validation 的 3 个 best seed ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 个 seed，另 1 个按冻结规则回退 BC warm start。seed-level mean 为 `0.723193`，但 population std 为 `0.075948`，每个 seed 仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。数学、配置、逐 seed 结果、hash 和 B 的待复核清单见 [P1-A02 Masked PPO 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)。
+
 ## openEuler CPU smoke
 
 在已启动 Docker Linux engine 的 Windows 或 Linux 主机上，使用固定 digest 的 openEuler 24.03 LTS-SP4 镜像执行一次性 CPU smoke：
@@ -150,6 +162,7 @@ python -m trisched evaluate `
 ```text
 configs/smoke.json       最小训练与评测配置
 configs/stg_bc.json      公开 STG teacher/BC 冻结配置
+configs/stg_ppo.json     公开 STG 3-seed masked PPO 配置
 schemas/                 Scenario JSON Schema
 trisched/scenario.py     场景 schema、校验、生成和 hash
 trisched/env.py          调度环境、插入式时间线和生产合法性检查
@@ -157,10 +170,11 @@ trisched/oracle.py       独立 HEFT、upward rank 和合法性验证
 trisched/exact.py        小图精确分支定界 solver 与解析下界
 trisched/policies.py     统一策略接口与 HEFT/CPOP/Greedy/Random
 trisched/schedulers.py   scheduler registry、外部进程 adapter 和稳定诊断
-trisched/learning.py     Masked MLP、HEFT 模仿和 REINFORCE
+trisched/learning.py     可变特征 Masked MLP、HEFT 模仿和 legacy REINFORCE
 trisched/bc.py           冻结 teacher、BC best/last 和防 test 泄漏流程
+trisched/ppo.py          增量 ratio 奖励、GAE、clipped PPO 和多 seed 清单
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
-trisched/cli.py          pipeline/train-bc/generate/evaluate 命令
+trisched/cli.py          pipeline/train-bc/train-ppo/generate/evaluate 命令
 trisched/benchmark.py    公开 STG loader、冻结 split 与来源校验
 data/benchmarks/         第三方来源/许可证元数据和冻结 manifest
 examples/                外部 scheduler 协议参考程序
@@ -173,8 +187,8 @@ tests/                   单元与集成测试
 - 目标函数仅为 makespan；
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - 学习策略使用手工候选特征，还未使用 GNN；
-- REINFORCE 是最小训练闭环，尚未加入 PPO、课程学习、OOD 数据与多随机种子报告；
-- 已在公开 STG topology projection 上建立单 seed 纯 BC train/validation 基线，但主 `pipeline` 仍使用合成 smoke；PPO、GNN、多 seed、OOD、公开 test 最终评测与竞赛方隐藏测试尚未完成。
+- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO 路径，但尚未加入课程学习、OOD 数据和 task-GNN；
+- 已在公开 STG topology projection 上完成 3-seed PPO validation 开发结果，但仍待 B 独立复核；公开 test 最终评测、5-seed 主结果、分层 bootstrap 与竞赛方隐藏测试尚未完成。
 
 ## 开源许可证
 
