@@ -134,8 +134,8 @@ mean ± 1.96 × population_std / sqrt(N)
 | 项目 | 当前实现 | 审计结论 | 后续动作 |
 | --- | --- | --- | --- |
 | 逐实例 ratio | 每个策略 makespan 除以同实例 HEFT makespan | 正确 | 保持 |
-| train/validation/test | smoke 使用派生 seed；P1-B01 公开 STG 120/30/30 manifest 已由 A 独立复核 | 数据层已固定并通过互审 | P1-A01 只用 train 生成 teacher、validation 诊断/选模，test 禁止进入训练与调参 |
-| checkpoint 选择 | 只保存训练结束模型，没有 best-by-validation | 不满足正式实验 | 增加 validation 早停与 best/last 双 checkpoint |
+| train/validation/test | smoke 使用派生 seed；公开 STG 只用 train 生成 teacher、validation 选模，`train-bc` 不加载 test | P1-A01 已提交用途硬门禁，待 B 复核 | B 用完全不含 test JSON 的 raw root 重跑 |
+| checkpoint 选择 | legacy smoke 只存 last；公开 BC 保存 best/last，并只按 validation ratio/accuracy/earlier epoch 选择 | P1-A01 已形成公平基线 | PPO 必须复用相同 best/last 与 test 禁用规则 |
 | CI | 正态近似、总体标准差 | 仅适合 smoke | 改为分层 bootstrap |
 | 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现并由 A 独立复核 | 保持零失败发布门禁 |
 | HEFT teacher | 输入含 `is_heft_task`、`is_heft_pair` | 易直接复制 HEFT | 主消融必须比较移除 teacher 二值特征 |
@@ -144,7 +144,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | 训练算法 | episodic REINFORCE + batch mean baseline | 方差高、无 trust region | G1 后替换为 PPO + GAE |
 | 图表示 | 16 维手工候选特征 | 无消息传递、全局结构弱 | PPO 稳定后单独加入 task-GNN |
 | checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单 | 后续 checkpoint 内嵌 manifest 摘要 |
-| test 使用 | 每次 pipeline 都生成并评测 test | 容易反复观察 test | 增加 validation-only 开发命令，最终阶段才解锁 test |
+| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc` 对 test 设用途门禁且正式运行未访问 | 公开 BC 开发路径满足隔离要求，待 B 复核 | 最终阶段另建一次性公开 test 评测命令 |
 
 ## 5. 当前结果的正确解释
 
@@ -163,6 +163,8 @@ mean ± 1.96 × population_std / sqrt(N)
 
 > TriSched MVP 已打通受约束策略训练、checkpoint 保存/加载和统一评测闭环；在当前 20 个合成测试实例上，masked MLP 复现 HEFT 调度，尚未获得性能提升。
 
+P1-A01 另在公开 STG topology projection 上冻结了 120 个 train teacher 和 30 个 validation reference。单 seed 纯 BC 在 epoch 1 达到 validation teacher action accuracy 1.0、mean ratio 1.0、failure/illegal action rate 0；test 未访问。该结果同样只允许表述为“公开数据上复现 HEFT”，详见 [P1-A01 记录](./P1-A01HEFT教师与BC基线.md)。
+
 ## 6. 当前 MLP/REINFORCE 的局限
 
 1. **teacher 泄漏过强**：`is_heft_task` 和 `is_heft_pair` 直接告诉模型 HEFT 当前决策，BC 很容易饱和为复制器。
@@ -172,8 +174,8 @@ mean ± 1.96 × population_std / sqrt(N)
 5. **终局奖励稀疏**：所有动作共享一个 episode ratio，难以定位哪个早期选择造成最终退化。
 6. **REINFORCE 方差高**：只有 batch mean baseline，没有 value network、GAE、clipping 或 KL 约束。
 7. **训练与部署策略不一致**：训练以温度 2.0 随机采样，测试使用确定性 argmax；训练均值略优不保证部署策略改善。
-8. **没有 validation 选模**：当前保存最后模型，不保存 best-by-validation，无法证明 checkpoint 选择公平。
-9. **公开数据尚未进入训练**：P1-B01 已冻结 STG topology projection，但主模型仍只在单 seed、小规模合成 DAG、固定 3 资源上训练，尚无公开 STG 主结果、CCR 或 OOD 证据。
+8. **两条训练路径尚未统一**：公开 BC 已有 validation best/last，legacy smoke 仍只保存最后模型；PPO 必须统一到公开 BC 的选模契约。
+9. **公开数据只有复制基线**：P1-A01 已使用公开 STG train/validation，但 teacher 二值特征使模型直接复制 HEFT；尚无公开 test、CCR、OOD 或优于 HEFT 的证据。
 10. **统计证据不足**：只有一次训练、20 个 test 实例，当前 CI 还是正态近似。
 11. **失败惩罚仍需 benchmark 冻结**：P0-08 已实现真实失败记录和可配置惩罚，但默认 10.0 只是工程值，正式实验必须只在 validation 上冻结。
 12. **checkpoint 未内嵌完整元数据**：外部 run manifest 已记录配置、数据、commit、依赖和 checkpoint hash；模型文件本身仍只保存维度、seed、特征名和权重。

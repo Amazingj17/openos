@@ -28,6 +28,13 @@ python scripts/fetch_stg_benchmark.py
 python scripts/fetch_stg_benchmark.py --offline
 ```
 
+Generate the frozen train HEFT teachers and validation-only behavior-cloning
+baseline without loading test scenarios:
+
+```powershell
+python -m trisched train-bc --config configs/stg_bc.json
+```
+
 The loader uses an explicit capability-relaxed projection. It preserves DAG
 topology, task duration and predecessor output data, but it does not preserve
 the upstream CPU/GPU, core-count or memory constraints because the current
@@ -40,3 +47,5 @@ scenario hash, and [`doc/P1-B01公开基准与许可证.md`](../../doc/P1-B01公
 for the license audit, split protocol and known limitations. The immutable-CI,
 ten-instance projection and fault-injection review is recorded in
 [`doc/P1-B01独立复核记录.md`](../../doc/P1-B01独立复核记录.md).
+The teacher, checkpoint-selection and anti-test-leakage contract is recorded in
+[`doc/P1-A01HEFT教师与BC基线.md`](../../doc/P1-A01HEFT教师与BC基线.md).

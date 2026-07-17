@@ -14,9 +14,10 @@
 - 使用不复用环境时间计算的第二套 HEFT oracle 和 validator 交叉检查调度；
 - 用小图精确分支定界 solver 冻结 optimum/bound，量化启发式最优性 gap；
 - 用 HEFT 行为克隆预训练两层 NumPy MLP，并将 HEFT 当前决策作为教师先验特征，再以 episodic REINFORCE 学习残差；
+- 在公开 STG 冻结 split 上生成生产/独立 HEFT 双签 teacher，并只用 validation 选择 BC best checkpoint；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。下一阶段应在保持接口不变的前提下，将候选特征 MLP 替换为任务图/资源图 GNN，并升级为 PPO。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。下一阶段应先在保持接口不变的前提下用 PPO 替换 REINFORCE，PPO 稳定后再单独比较任务图 GNN 与当前候选特征 MLP。
 
 ## 快速运行
 
@@ -84,6 +85,17 @@ python scripts/fetch_stg_benchmark.py --offline
 
 脚本先校验 125,500 字节 archive 的 SHA-256，再安全解包并逐个重算 source/Scenario hash；任何源文件、projection 或 split 变动都会失败。当前投影只保留 STG topology、duration 和 predecessor output data，不保留上游 GPU/core/memory capability，不能表述为完整 GrapheonRL 系统复现。许可证决策与固定 hash 见 [P1-B01 公开基准、许可证与冻结划分](doc/P1-B01公开基准与许可证.md)，远端 CI、10 实例抽查和故障注入见 [A 的独立复核记录](doc/P1-B01独立复核记录.md)。
 
+## 训练公开 STG 行为克隆基线
+
+获取数据后，使用固定的 120 个 train teacher 和 30 个 validation reference 训练纯 BC 基线：
+
+```powershell
+python scripts/fetch_stg_benchmark.py --offline
+python -m trisched train-bc --config configs/stg_bc.json
+```
+
+命令生成 teacher/reference manifest、训练曲线、best/last checkpoint、逐实例 validation 诊断、空失败 JSONL 和可核验 run manifest。训练入口只加载 train/validation；test 被用途门禁禁止用于 teacher、梯度或 checkpoint 选择，本任务不会输出 test 指标。当前 BC 的 validation ratio 为 1.0，表示成功复制 HEFT，不代表性能领先。契约、结果、hash 和 B 的独立复核清单见 [P1-A01 HEFT teacher 与公开 STG 行为克隆基线](doc/P1-A01HEFT教师与BC基线.md)。
+
 ## openEuler CPU smoke
 
 在已启动 Docker Linux engine 的 Windows 或 Linux 主机上，使用固定 digest 的 openEuler 24.03 LTS-SP4 镜像执行一次性 CPU smoke：
@@ -137,6 +149,7 @@ python -m trisched evaluate `
 
 ```text
 configs/smoke.json       最小训练与评测配置
+configs/stg_bc.json      公开 STG teacher/BC 冻结配置
 schemas/                 Scenario JSON Schema
 trisched/scenario.py     场景 schema、校验、生成和 hash
 trisched/env.py          调度环境、插入式时间线和生产合法性检查
@@ -145,8 +158,9 @@ trisched/exact.py        小图精确分支定界 solver 与解析下界
 trisched/policies.py     统一策略接口与 HEFT/CPOP/Greedy/Random
 trisched/schedulers.py   scheduler registry、外部进程 adapter 和稳定诊断
 trisched/learning.py     Masked MLP、HEFT 模仿和 REINFORCE
+trisched/bc.py           冻结 teacher、BC best/last 和防 test 泄漏流程
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
-trisched/cli.py          pipeline/generate 命令
+trisched/cli.py          pipeline/train-bc/generate/evaluate 命令
 trisched/benchmark.py    公开 STG loader、冻结 split 与来源校验
 data/benchmarks/         第三方来源/许可证元数据和冻结 manifest
 examples/                外部 scheduler 协议参考程序
@@ -160,7 +174,7 @@ tests/                   单元与集成测试
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - 学习策略使用手工候选特征，还未使用 GNN；
 - REINFORCE 是最小训练闭环，尚未加入 PPO、课程学习、OOD 数据与多随机种子报告；
-- 已接入公开 STG topology projection 和固定 test 清单，但主 pipeline 仍使用合成 smoke；正式训练、OOD 与竞赛方隐藏测试尚未完成。
+- 已在公开 STG topology projection 上建立单 seed 纯 BC train/validation 基线，但主 `pipeline` 仍使用合成 smoke；PPO、GNN、多 seed、OOD、公开 test 最终评测与竞赛方隐藏测试尚未完成。
 
 ## 开源许可证
 
