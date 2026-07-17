@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：已完成（B 独立复核通过）；后续 P1-03 已提交事务修复，待 B 重验
+- 状态：已完成（B 独立复核通过）；后续 P1-03 也已由 B 第二轮复核通过
 - 不可变实现提交：`1bab5fa7fb536ef1f752c395bbb5c832b0643133`
 - 被复核远端提交：`0794d1822b2060861b9fc3ed2ffc1f70df82cae0`
 - 前置门禁：P1-A01 / P1-02 已完成（B 独立复核通过）
@@ -213,7 +213,7 @@ B 独立复核已覆盖：
 
 B 在完全不含 test JSON 和相关 archive 的独立数据根上重新运行正式 3 seeds，得到与 A 相同的逐 seed 指标和 `ppo_summary.json` hash。远端 Windows/Ubuntu/openEuler 共 7 个 job 全绿；31 个声明 artifact 的大小/hash、180 份 checkpoint validation 复评、奖励 telescope、非零 value GAE、PPO clipping 六分支以及两项训练前故障注入均通过。隔离完整回归为 `169 passed in 5.60s`。
 
-复核结论是 P1-A02 已完成。后续 P1-03 epoch 边界断点续训的正常一致性已由 B 验证，但首轮[独立复核](./P1-03独立复核记录.md)因后置 seed 失败破坏旧 manifest 而未通过。A 现已提交 staging 目录交换修复及两类目录不变性回归；B 从新远端提交重验通过后，下一轮才可在相同 14 维基础输入、奖励、数据 split、3 seeds 和选模规则下只替换 MLP 为 task-GNN。
+复核结论是 P1-A02 已完成。后续 P1-03 epoch 边界断点续训首轮[独立复核](./P1-03独立复核记录.md)发现后置 seed 失败破坏旧 manifest，A 以 staging 目录交换修复；B 已从新远端提交完成[第二轮独立复核](./P1-03第二轮独立复核记录.md)并通过。下一轮可在相同 14 维基础输入、奖励、数据 split、3 seeds 和选模规则下只替换 MLP 为 task-GNN。
 
 ## 9. 已知限制
 
