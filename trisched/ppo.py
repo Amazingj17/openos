@@ -5,7 +5,9 @@ import json
 import math
 import os
 import platform
+import shutil
 import sys
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -1341,13 +1343,13 @@ def _checkpoint_metadata(
     }
 
 
-def run_ppo_pipeline(
+def _run_ppo_pipeline_in_directory(
     config_path: str | Path,
     output_override: str | Path | None = None,
     *,
     resume: bool = False,
 ) -> Path:
-    """Run the P1-A02 no-test, multi-seed masked PPO validation pipeline."""
+    """Run the PPO pipeline against its final or transaction staging directory."""
 
     config_source = Path(config_path).resolve()
     config = load_ppo_config(config_source)
@@ -1884,6 +1886,9 @@ def run_ppo_pipeline(
             "resume_requested": resume,
             "resumed_seeds": resumed_seeds,
             "resume_boundary": "completed_ppo_epoch",
+            "publication_mode": (
+                "staging_directory_swap" if resume else "direct_new_directory"
+            ),
         },
         "inputs": {
             "config": {
@@ -1926,3 +1931,122 @@ def run_ppo_pipeline(
     )
     print(f"summary: {summary_path.resolve()}")
     return summary_path
+
+
+def _resume_transaction_path(output_dir: Path, role: str) -> Path:
+    return output_dir.with_name(
+        f".{output_dir.name}.ppo-resume-{role}-{uuid.uuid4().hex}"
+    )
+
+
+def _remove_resume_tree(path: Path) -> None:
+    if path.exists():
+        shutil.rmtree(path)
+
+
+def _publish_resume_staging(staging_dir: Path, output_dir: Path) -> None:
+    backup_dir = _resume_transaction_path(output_dir, "backup")
+    try:
+        os.replace(output_dir, backup_dir)
+    except OSError as error:
+        try:
+            _remove_resume_tree(staging_dir)
+        except OSError:
+            pass
+        _fail(
+            "ppo_resume_publish",
+            "$.output_dir",
+            f"could not move the previous evidence directory aside: {error}",
+        )
+    try:
+        os.replace(staging_dir, output_dir)
+    except OSError as error:
+        rollback_error: OSError | None = None
+        try:
+            os.replace(backup_dir, output_dir)
+        except OSError as captured:
+            rollback_error = captured
+        try:
+            _remove_resume_tree(staging_dir)
+        except OSError:
+            pass
+        _fail(
+            "ppo_resume_publish",
+            "$.output_dir",
+            f"could not publish the completed resume transaction: {error}",
+            details={
+                "rollback_error": str(rollback_error)
+                if rollback_error is not None
+                else None,
+                "backup_dir": str(backup_dir) if rollback_error is not None else None,
+            },
+        )
+    try:
+        _remove_resume_tree(backup_dir)
+    except OSError as error:
+        _fail(
+            "ppo_resume_publish",
+            "$.output_dir",
+            f"published resume output but could not remove its backup: {error}",
+            details={"backup_dir": str(backup_dir)},
+        )
+
+
+def run_ppo_pipeline(
+    config_path: str | Path,
+    output_override: str | Path | None = None,
+    *,
+    resume: bool = False,
+) -> Path:
+    """Run the no-test multi-seed PPO pipeline with transactional resume."""
+
+    if not resume:
+        return _run_ppo_pipeline_in_directory(
+            config_path,
+            output_override,
+            resume=False,
+        )
+
+    config_source = Path(config_path).resolve()
+    config = load_ppo_config(config_source)
+    output_dir = (
+        _resolve_config_path(config_source, config["output_dir"])
+        if output_override is None
+        else Path(output_override).resolve()
+    )
+    if not output_dir.is_dir() or not any(output_dir.iterdir()):
+        _fail(
+            "ppo_resume_output_missing",
+            "$.output_dir",
+            f"resume output does not exist or is empty: {output_dir}",
+        )
+
+    staging_dir = _resume_transaction_path(output_dir, "staging")
+    try:
+        shutil.copytree(output_dir, staging_dir)
+    except (OSError, shutil.Error) as error:
+        try:
+            _remove_resume_tree(staging_dir)
+        except OSError:
+            pass
+        _fail(
+            "ppo_resume_stage_write",
+            "$.output_dir",
+            f"could not create resume transaction staging: {error}",
+        )
+
+    try:
+        staged_summary = _run_ppo_pipeline_in_directory(
+            config_source,
+            staging_dir,
+            resume=True,
+        )
+    except BaseException:
+        try:
+            _remove_resume_tree(staging_dir)
+        except OSError:
+            pass
+        raise
+
+    _publish_resume_staging(staging_dir, output_dir)
+    return output_dir / staged_summary.name

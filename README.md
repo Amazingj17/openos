@@ -18,7 +18,7 @@
 - 在 PPO 主路径删除直接暴露 HEFT 决策的两项二值特征，使用 3 个 seed 和 BC warm-start 回退做 validation 选模；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 epoch 边界断点续训的正常恢复一致性已通过 B 的独立检查，但故障注入发现后置 seed 校验失败会改写先前 seed 的 artifact 并破坏旧 manifest，因此本门禁已退回 A 修复，task-GNN 暂不开始。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮独立复核发现失败恢复会破坏旧 manifest，A 已改为 staging 目录完成整次恢复并在成功后统一发布，当前等待 B 从新远端提交重新复核，task-GNN 暂不开始。
 
 ## 快速运行
 
@@ -112,7 +112,7 @@ python -m trisched train-ppo --config configs/stg_ppo.json
 python -m trisched train-ppo --config configs/stg_ppo.json --resume
 ```
 
-如果首次运行指定了 `--output <dir>`，恢复时也必须指定同一目录。配置、代码、数据、teacher/reference、warm start 或状态 hash 任一变化都会以结构化错误拒绝恢复；普通 best/last 推理 checkpoint 不能冒充训练状态。当前实现尚有一项已确认缺陷：多 seed 恢复会在验证完全部 seed 前写出先前 seed 的 artifact，后续 seed 失败可能使旧 manifest 失效。修复并经 B 重新复核前，不应把 `--resume` 用于唯一一份正式证据目录；证据和验收要求见 [P1-03 独立复核记录](doc/P1-03独立复核记录.md)。
+如果首次运行指定了 `--output <dir>`，恢复时也必须指定同一目录。配置、代码、数据、teacher/reference、warm start 或状态 hash 任一变化都会以结构化错误拒绝恢复；普通 best/last 推理 checkpoint 不能冒充训练状态。恢复现在先复制到同盘隐藏 staging 目录，所有 seed、summary 和 manifest 成功后才替换正式输出；任一校验或训练异常都会清理 staging 并保持正式目录逐字节不变。run manifest 记录 `publication_mode=staging_directory_swap`。该修复仍待 B 从新远端提交独立重验，证据和验收要求见 [P1-03 独立复核记录](doc/P1-03独立复核记录.md)。
 
 正式 validation 的 3 个 best seed ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 个 seed，另 1 个按冻结规则回退 BC warm start。seed-level mean 为 `0.723193`，但 population std 为 `0.075948`，每个 seed 仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。B 已在物理删除 test JSON 和 archive 的数据根上复跑正式配置，并完成 checkpoint、manifest、数学分支与配置注入复核。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。详见 [P1-A02 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)、其[独立复核记录](doc/P1-A02独立复核记录.md)和 [P1-03 断点续训契约](doc/P1-03PPO断点续训设计与验收.md)。
 

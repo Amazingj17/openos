@@ -105,6 +105,18 @@ def _file_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _directory_snapshot(root: Path) -> dict[str, bytes]:
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def _resume_transaction_residue(root: Path, output_name: str) -> list[Path]:
+    return sorted(root.glob(f".{output_name}.ppo-resume-*"))
+
+
 def test_gae_terminal_bootstrap_and_reward_identity() -> None:
     advantages, returns = compute_gae(
         [0.0, -0.25, -0.75],
@@ -251,6 +263,9 @@ def test_masked_ppo_pipeline_is_reproducible_multiseed_and_test_free(
     run_manifest = json.loads(
         (first / "ppo_run_manifest.json").read_text(encoding="utf-8")
     )
+    assert run_manifest["execution"]["publication_mode"] == (
+        "direct_new_directory"
+    )
     assert run_manifest["inputs"]["test_accessed"] is False
     assert set(run_manifest["inputs"]["splits"]) == {"train", "validation"}
     for name, metadata in run_manifest["artifacts"].items():
@@ -327,8 +342,40 @@ def test_ppo_epoch_resume_matches_uninterrupted_and_rejects_bad_state(
         "resume_requested": True,
         "resumed_seeds": [31],
         "resume_boundary": "completed_ppo_epoch",
+        "publication_mode": "staging_directory_swap",
     }
     assert len(resumed_manifest["artifacts"]) == 34
+
+    seed_31_state = resumed / "seed_31_ppo_training_state.npz"
+    seed_32_state = resumed / "seed_32_ppo_training_state.npz"
+    valid_seed_32_bytes = seed_32_state.read_bytes()
+    seed_32_state.write_bytes(seed_31_state.read_bytes())
+    before_mismatch = _directory_snapshot(resumed)
+    with pytest.raises(BehaviorCloningError) as wrong_seed:
+        run_ppo_pipeline(config_path, resumed, resume=True)
+    assert wrong_seed.value.code == "ppo_resume_state_mismatch"
+    assert _directory_snapshot(resumed) == before_mismatch
+    assert _resume_transaction_residue(tmp_path, resumed.name) == []
+    seed_32_state.write_bytes(valid_seed_32_bytes)
+    for name, metadata in resumed_manifest["artifacts"].items():
+        artifact = resumed / name
+        assert artifact.stat().st_size == metadata["bytes"]
+        assert _file_hash(artifact) == metadata["sha256"]
+
+    before_runtime_failure = _directory_snapshot(resumed)
+    original_write_json = ppo_module._write_json
+
+    def fail_after_seed_31_writes(path, value):
+        if Path(path).name == "seed_32_training_curve.json":
+            raise RuntimeError("simulated failure after seed 31 writes")
+        return original_write_json(path, value)
+
+    monkeypatch.setattr(ppo_module, "_write_json", fail_after_seed_31_writes)
+    with pytest.raises(RuntimeError, match="simulated failure after seed 31 writes"):
+        run_ppo_pipeline(config_path, resumed, resume=True)
+    assert _directory_snapshot(resumed) == before_runtime_failure
+    assert _resume_transaction_residue(tmp_path, resumed.name) == []
+    monkeypatch.setattr(ppo_module, "_write_json", original_write_json)
 
     teacher_path = resumed / "train_teacher_manifest.json"
     original_teacher_bytes = teacher_path.read_bytes()
@@ -395,3 +442,45 @@ def test_ppo_cli_resume_requires_existing_output(
         "ppo_resume_output_missing"
     )
     assert not missing_output.exists()
+
+
+def test_ppo_resume_transaction_reports_stage_failure_and_rolls_back_publish(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path, _, _ = _prepare_config(tmp_path)
+    output = tmp_path / "resume-output"
+    output.mkdir()
+    (output / "existing.txt").write_text("original", encoding="utf-8")
+
+    def fail_copytree(*args, **kwargs):
+        raise OSError("simulated staging copy failure")
+
+    monkeypatch.setattr(ppo_module.shutil, "copytree", fail_copytree)
+    with pytest.raises(BehaviorCloningError) as stage_failure:
+        run_ppo_pipeline(config_path, output, resume=True)
+    assert stage_failure.value.code == "ppo_resume_stage_write"
+    assert (output / "existing.txt").read_text(encoding="utf-8") == "original"
+    assert _resume_transaction_residue(tmp_path, output.name) == []
+
+    monkeypatch.undo()
+    staging = tmp_path / ".resume-output.ppo-resume-staging-test"
+    staging.mkdir()
+    (staging / "replacement.txt").write_text("replacement", encoding="utf-8")
+    original_replace = ppo_module.os.replace
+    replace_calls = 0
+
+    def fail_publish_after_backup(source, destination):
+        nonlocal replace_calls
+        replace_calls += 1
+        if replace_calls == 2:
+            raise OSError("simulated staging publish failure")
+        return original_replace(source, destination)
+
+    monkeypatch.setattr(ppo_module.os, "replace", fail_publish_after_backup)
+    with pytest.raises(BehaviorCloningError) as publish_failure:
+        ppo_module._publish_resume_staging(staging, output)
+    assert publish_failure.value.code == "ppo_resume_publish"
+    assert (output / "existing.txt").read_text(encoding="utf-8") == "original"
+    assert not staging.exists()
+    assert _resume_transaction_residue(tmp_path, output.name) == []

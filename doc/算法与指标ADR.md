@@ -26,7 +26,7 @@
 7. 在 G1 正确性门禁通过前不开始 GNN/PPO；正确性通过后，先建立 PPO，再单独验证 task-GNN，禁止同时改变模型、奖励和数据分布。
 8. P1-A01 已由 B 在远端不可变提交 `180a713...` 上独立复核通过：完全不含 test 原始字节的 raw root 可连续两次重生成相同核心构件，best/last 复评均为 validation ratio 1.0、零失败、零非法动作。该结论允许开始 P1-A02，但不构成优于 HEFT 的证据。
 9. P1-A02 已由 B 在远端不可变提交 `0794d18...` 上独立复核通过：物理删除 test JSON 和相关 archive 后可重生成相同 3-seed validation 指标，checkpoint、31 个 artifact、奖励/GAE/clipping 数学和配置注入均通过。三个 best ratio 均低于 1 且零失败/非法，但 1/3 seed 回退 BC warm start、各 seed P95 均高于 1；最终 test 前仍只能写“validation 门禁通过”。
-10. P1-03 在远端不可变提交 `cddca3b...` 上未通过 B 复核：正常连续/恢复轨迹一致，但后置 seed 状态失败会先改写前序 seed artifact，使旧 manifest 失效。断点续训必须补齐全 seed 只读 preflight 或 staging 发布，修复复核通过前不得开始 task-GNN。
+10. P1-03 在远端不可变提交 `cddca3b...` 上未通过 B 首轮复核：正常连续/恢复轨迹一致，但后置 seed 状态失败会先改写前序 seed artifact，使旧 manifest 失效。A 已提交 staging 目录交换修复及状态/运行时两类目录不变性回归；B 从新远端提交重验通过前不得开始 task-GNN。
 
 ## 2. 本次审计范围与证据
 
@@ -144,7 +144,7 @@ mean ± 1.96 × population_std / sqrt(N)
 | HEFT teacher | P1-A01 参考含 `is_heft_task/is_heft_pair`；P1-A02 主路径强制删除 | 同 seed 16/14 维 BC ratio 为 `1.0/0.852539`，teacher accuracy 为 `1.0/0.514`；B 注入任一特征均在训练前失败 | PPO/GNN 主路径保持删除 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | B 独立推导通过；正式最大恒等式误差 `1.78e-15`，`gamma=0.99` 注入被拒绝 | task-GNN 保持奖励与 `gamma=1.0` 不变 |
-| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | B 独立复核 3-seed validation；断点续训正常恢复一致，但失败恢复会破坏旧 manifest | A 修复 run 级事务边界并由 B 重验后，再启动 task-GNN 单变量对照 |
+| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | B 独立复核 3-seed validation；A 已用 staging 修复断点续训 run 级事务边界 | B 从新远端提交重验后，再启动 task-GNN 单变量对照 |
 | 图表示 | PPO 主路径使用 14 维手工候选特征和 mean/max critic pooling | 无消息传递、全局结构弱 | 沿用其他契约，只将 MLP 替换为 task-GNN |
 | checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单 | 后续 checkpoint 内嵌 manifest 摘要 |
 | test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁且正式运行未访问 | B 已在物理删除 test JSON 与 archive 的 raw root 上完成 P1-A02 正式复跑，manifest 固定 `test_accessed=false` | 最终阶段另建一次性公开 test 评测命令 |
@@ -191,7 +191,7 @@ G1 通过后的唯一允许顺序：
 
 1. 去掉/保留 HEFT 二值特征做严格消融，建立 BC-only 基线。（已由 B 复核）
 2. 在相同 MLP 和相同数据上用 PPO + GAE 替换 REINFORCE。（3 seeds 已由 B 复核）
-3. P1-03 断点续训已被 B 退回；A 须先实现全 seed preflight 或 staging 发布并通过独立重验，之后才只把 MLP 替换为 task-GNN，其他条件不变。
+3. P1-03 断点续训首轮被 B 退回，A 已实现 staging 发布；须先通过 B 的独立重验，之后才只把 MLP 替换为 task-GNN，其他条件不变。
 4. task-GNN 有配对统计优势后，才考虑 residual、resource-GNN 或 OOD 课程中的一项。
 
 ## 7. 三个独立手算案例
@@ -312,7 +312,7 @@ ratio=4.50/4.75=18/19\approx0.94737
 
 P0-A01 的指标解释、checkpoint 加载和三个手算案例已由 B 独立复核通过。P1-A02 又在同一指标契约上完成更严格的无 test 正式复跑：远端 7 环境全绿，31 个 artifact、180 份 validation checkpoint 复评、奖励/GAE/clipping 数学与配置注入全部通过，完整证据见 [P1-A02 独立复核记录](./P1-A02独立复核记录.md)。
 
-P1-03 epoch 边界状态覆盖 actor/value 参数、两个 Adam、两套 RNG、history 与 best 选择，并绑定配置、代码、数据、teacher/reference 和 warm start；B 已确认微型正常恢复与连续运行一致。但 B 进一步证明 seed 32 状态失败前 seed 31 artifact 已被重写，原 manifest 因而失效，本轮复核未通过，详见 [P1-03 独立复核记录](./P1-03独立复核记录.md)。A 修复并由 B 重验后，P1-A03 才可按以下冻结项开始：
+P1-03 epoch 边界状态覆盖 actor/value 参数、两个 Adam、两套 RNG、history 与 best 选择，并绑定配置、代码、数据、teacher/reference 和 warm start；B 已确认微型正常恢复与连续运行一致，并在首轮复核中发现 seed 32 状态失败前 seed 31 artifact 被重写。A 现已改为 staging 内完成全部恢复、成功后目录交换，自动测试覆盖状态不匹配和后置运行时失败；完整过程见 [P1-03 独立复核记录](./P1-03独立复核记录.md)及[设计与验收](./P1-03PPO断点续训设计与验收.md)。B 重验后，P1-A03 才可按以下冻结项开始：
 
 - 沿用相同 14 维基础输入及特征含义，不恢复 HEFT 决策位；
 - 沿用增量 makespan/HEFT 奖励、`gamma=1.0`、相同 split 和 test 禁用门禁；
