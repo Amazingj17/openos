@@ -4,8 +4,9 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-17
-- 状态：部分完成（A 已提交实现与中断注入，待 B 独立复核）
+- 状态：阻塞（B 独立复核未通过；失败恢复会改写先前 seed artifact 并破坏旧 manifest）
 - 前置证据：[P1-A02 Masked PPO 独立复核记录](./P1-A02独立复核记录.md)
+- 本轮复核：[P1-03 PPO 断点续训独立复核记录](./P1-03独立复核记录.md)
 
 ## 1. 目标与非目标
 
@@ -73,7 +74,8 @@ python -m trisched train-ppo --config configs/stg_ppo.json --resume
 2. 当前未完整 epoch 的内存更新不进入恢复点；
 3. `--resume` 重新执行该 epoch；
 4. 已完成 seed 可直接从最终状态重建输出，未开始 seed 从 epoch 0 正常启动；
-5. 最终 run manifest 明确记录 `resume_requested`、`resumed_seeds` 和边界类型。
+5. 最终 run manifest 明确记录 `resume_requested`、`resumed_seeds` 和边界类型；
+6. 任一 seed 在恢复预检或训练中失败时，不得让正式输出目录处于“旧 manifest + 新 artifact”的混合状态。
 
 训练成功后状态文件保留为可审计 artifact。P1-A02 原实现提交的正式 run 仍是 31 个声明 artifact；加入断点续训后，每个 seed 新增 1 个状态文件，当前 3-seed 新运行应声明 34 个 artifact。
 
@@ -135,12 +137,12 @@ B 应从用户推送后的不可变提交完成：
 5. 注入配置变化、teacher/reference 变化、状态 hash 变化、NPZ 损坏和缺失状态；
 6. 确认 run manifest 如实记录恢复使用情况，且 test 始终未加载。
 
-B 复核通过前，P1-03 保持部分完成，P1-A03 task-GNN 不进入实现。
+B 已完成本轮复核：正常中断/恢复、状态完整性、34-artifact、错误码和无 test 边界均满足，但多 seed 后置失败暴露 run 级事务性缺陷，因此结论为未通过。A 须在任何正式写入前完成全部 seed 只读 preflight，或使用 staging 目录在全部成功后统一发布；重新复核前 P1-03 保持阻塞，P1-A03 task-GNN 不进入实现。
 
 ## 9. 已知限制
 
 - 恢复粒度是完整 PPO epoch，不是 episode、minibatch 或单次 Adam update；
 - 恢复时会重新生成/核对 teacher、冻结状态、特征消融和 BC warm start，节省的是已完成 PPO epoch，不是全部预处理时间；
 - 状态只支持相同配置、代码、数据和 warm start，不提供跨版本迁移；
-- 当前确定性证据来自微型公开格式配置，尚待 B 从不可变提交独立注入；
+- B 已从不可变提交复现微型正常确定性，但故障恢复尚不能保证正式证据目录不变；
 - P1-A02 的历史 31-artifact 正式结果不会被改写，新格式只影响本提交之后的运行。
