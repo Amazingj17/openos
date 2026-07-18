@@ -23,6 +23,7 @@ from .oracle import validate_schedule_independent
 from .reporting import (
     canonical_json_sha256,
     load_evaluation_contract,
+    scenario_set_sha256,
 )
 from .scenario import (
     Edge,
@@ -1198,7 +1199,7 @@ def produce_development_evidence(
         contract = load_evaluation_contract(contract_source)
     except Exception as error:
         _fail("ood_contract", "$contract", str(error))
-    scenarios, materialization = load_materialized_development_slices(
+    scenarios, _ = load_materialized_development_slices(
         contract_source,
         materialization_root,
         manifest_path,
@@ -1290,12 +1291,22 @@ def produce_development_evidence(
                             "runtime_ms": runtime_ms,
                         }
                     )
+    # Evidence uses the report contract's order-independent set hash. The original
+    # order-sensitive materialization manifest remains bound below by file SHA-256.
     slice_manifests = {
-        item["slice_id"]: {
-            "scenario_count": item["scenario_count"],
-            "scenario_set_sha256": item["scenario_set_sha256"],
+        slice_id: {
+            "scenario_count": len(items),
+            "scenario_set_sha256": scenario_set_sha256(
+                [
+                    {
+                        "scenario_id": scenario.id,
+                        "scenario_hash": scenario.content_hash(),
+                    }
+                    for scenario in items
+                ]
+            ),
         }
-        for item in materialization["slices"]
+        for slice_id, items in scenarios.items()
     }
     evidence = {
         "format_version": 1,

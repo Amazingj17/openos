@@ -20,8 +20,12 @@ from trisched.ood import (
     transform_ood_system,
 )
 from trisched.policies import HeftPolicy
-from trisched.reporting import build_evaluation_report, canonical_json_sha256
-from trisched.reporting import load_evaluation_contract
+from trisched.reporting import (
+    build_evaluation_report,
+    canonical_json_sha256,
+    load_evaluation_contract,
+    scenario_set_sha256,
+)
 from trisched.scenario import Scenario, generate_scenario
 from trisched.schedulers import PolicySchedulerRunner, SchedulerAdapterError
 
@@ -183,7 +187,7 @@ def validation_scenarios() -> list[Scenario]:
             edge_probability=0.3,
             scenario_id=f"validation-{index:04d}",
         )
-        for index in range(2)
+        for index in (1, 0)
     ]
 
 
@@ -580,7 +584,7 @@ class WrongTypeRunner:
 def test_read_only_evidence_uses_scheduler_only_timer_and_builds_report(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    contract_path, manifest_path, _ = materialized_fixture(tmp_path)
+    contract_path, manifest_path, scenarios = materialized_fixture(tmp_path)
     root = manifest_path.parent
     before = tree_bytes(root)
     clock = FakeClock()
@@ -604,9 +608,37 @@ def test_read_only_evidence_uses_scheduler_only_timer_and_builds_report(
     )
     assert tree_bytes(root) == before
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    materialization = json.loads(manifest_path.read_text(encoding="utf-8"))
+    id_scenarios = [
+        {
+            "scenario_id": scenario.id,
+            "scenario_hash": scenario.content_hash(),
+        }
+        for scenario in scenarios
+    ]
+    assert [item["scenario_id"] for item in id_scenarios] != sorted(
+        item["scenario_id"] for item in id_scenarios
+    )
+    materialized_id = next(
+        item
+        for item in materialization["slices"]
+        if item["slice_id"] == "id_validation"
+    )
+    assert materialized_id["scenario_set_sha256"] == canonical_json_sha256(id_scenarios)
+    assert evidence["slice_manifests"]["id_validation"] == {
+        "scenario_count": 2,
+        "scenario_set_sha256": scenario_set_sha256(id_scenarios),
+    }
+    assert (
+        evidence["slice_manifests"]["id_validation"]["scenario_set_sha256"]
+        != materialized_id["scenario_set_sha256"]
+    )
     assert evidence["test_accessed"] is False
     assert evidence["producer"]["training_started"] is False
     assert evidence["producer"]["public_test_loaded"] is False
+    assert evidence["producer"]["materialization_manifest_sha256"] == file_sha256(
+        manifest_path
+    )
     assert evidence["producer"]["runtime_scope"] == (
         "wall_clock_runner_schedule_call_only"
     )

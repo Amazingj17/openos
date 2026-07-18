@@ -65,3 +65,9 @@ message = slice manifest count/hash mismatch
 A 确认 B 的 R1/R2 修复通过，但因 R3 使生产 evidence 无法直接进入自动报告，**退回 P1-B02-OOD1-REVIEW2**，P1-B02 保持“部分完成”。
 
 下一步由 B 只修 evidence/report 的 hash 互操作：producer 应按报告器的稳定排序语义生成 evidence `slice_manifests`，同时继续通过 `producer.materialization_manifest_sha256` 绑定原冻结 manifest；不重新物化或修改已通过审计的 120 个场景。新增回归必须使用非字典序的源场景顺序，并断言未经人工修改的 producer evidence 可直接构建报告。用户推送后由 A 从新不可变提交复核；通过前不运行真实策略或 5-seed OOD，不访问 public test，不启动训练。
+
+## 6. B 的 R3 修复候选（待 A 复核）
+
+B 已按第 5 节重新验收条件完成候选：producer 复用报告器的稳定排序 set hash；原 manifest 继续通过独立文件 SHA-256 绑定。非字典序 fixture 证明 materialization/evidence 两类 hash 可同时保持各自语义，原始 evidence 无需人工改写即可构建报告。
+
+B 另用冻结 120 场景和纯串行合法桩生成 2,040 条 evidence，ID hash 为 `2aee0e67...`，冻结 manifest 仍为 `d9c6e22e...`，报告直接构建成功；专项/兼容/全量分别为 41/26/229 项通过。以上属于修复方自测，不改变第 5 节退回结论；用户推送后仍须由 A 从新不可变提交独立复核。真实策略、5-seed OOD、public test 和训练均未运行。
