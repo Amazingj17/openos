@@ -71,3 +71,5 @@ A 确认 B 的 R1/R2 修复通过，但因 R3 使生产 evidence 无法直接进
 B 已按第 5 节重新验收条件完成候选：producer 复用报告器的稳定排序 set hash；原 manifest 继续通过独立文件 SHA-256 绑定。非字典序 fixture 证明 materialization/evidence 两类 hash 可同时保持各自语义，原始 evidence 无需人工改写即可构建报告。
 
 B 另用冻结 120 场景和纯串行合法桩生成 2,040 条 evidence，ID hash 为 `2aee0e67...`，冻结 manifest 仍为 `d9c6e22e...`，报告直接构建成功；专项/兼容/全量分别为 41/26/229 项通过。以上属于修复方自测，不改变第 5 节退回结论；用户推送后仍须由 A 从新不可变提交独立复核。真实策略、5-seed OOD、public test 和训练均未运行。
+
+后续状态：A 已从新不可变提交确认 R3 与 R1/R2 全部通过，OOD materializer/evidence producer 子阶段关闭。完整证据见 [P1-B02 OOD 证据路径第三轮独立复核记录](./P1-B02OOD证据路径第三轮独立复核记录.md)。
