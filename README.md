@@ -19,7 +19,7 @@
 - 用机器可读契约冻结 ID/OOD、5-seed、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核。masked MLP 五 seed包也已由 B 在物理无 test 根正式预算复跑通过；mean/std 为 `0.709190/0.064109`，零失败、零非法动作。尚未运行正式 OOD，公开 test 未加载。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，masked MLP 五 seed 包也已由 B 在物理无 test 根正式预算复跑通过。B 已生成正式 development ID/OOD 候选：2040 条记录全部成功、零非法动作，但 masked MLP 的 size-OOD ratio 为 `1.568302`，自动门禁 `release_publishable=false`。候选正等待 A 从不可变提交独立复核；public test 仍未加载。
 
 ## 快速运行
 
@@ -140,7 +140,7 @@ python -m trisched train-task-gnn --config configs/stg_task_gnn.json --resume
 
 正式 task-GNN 3-seed validation ratio 为 `0.754139 / 0.633578 / 0.683664`，mean `0.690460`，低于 MLP 的 `0.723193`；90 对逐实例为 `50/19/21`，场景跨 seed 均值为 `20/2/8`，全部合法且零非法动作。但分层配对 bootstrap 的 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，且三个 seed 的 P95 均大于 1。按预先停止规则，主模型继续保留 MLP，task-GNN 只记为方向性改善、未证实，不追加新变量补救。B 已重算 artifact、状态、配对 CI，并用六个 best checkpoint 复评 180 次 validation 调度，makespan 最大误差为 0。公开 test 仍未访问；完整证据见[正式对照报告](doc/P1-A03正式对照报告.md)和[正式结果独立复核](doc/P1-A03正式结果独立复核记录.md)。
 
-## P1-B02 评测契约与自动报告（R1–R3 二次复核通过）
+## P1-B02 评测契约与自动报告（正式 development 候选待 A 复核）
 
 机器可读契约 [`configs/p1_b02_evaluation_contract.json`](configs/p1_b02_evaluation_contract.json) 已冻结 masked MLP 的 5 seeds、HEFT 参考、全部 baseline/ablation seed 数、ID + 三类 OOD 切片、失败惩罚 `10.0`、scheduler-only wall-clock 时延、10,000 次 seed→scenario bootstrap 和一次性公开 test gate。报告器严格检查 `seed × scenario` 笛卡尔积、场景 ID/hash、HEFT=1、失败计分、evidence hash 和 gate receipt，并输出 JSON、策略切片 CSV、逐 seed CSV、主策略配对 CSV 和 artifact manifest。JSON 的 `seed_mean_ratios` 按 seed 稳定排序；manifest 对四份声明产物记录字节数与 SHA-256。
 
@@ -163,7 +163,15 @@ python -m trisched materialize-ood `
 
 命令只以 `validation/model_selection` capability 加载官方 split，并原子发布 `id_validation`、`ood_size`、`ood_ccr` 和 `ood_system`。冻结清单为 [`data/benchmarks/p1-b02-development-slices-v1.json`](data/benchmarks/p1-b02-development-slices-v1.json)，绑定契约 canonical hash、benchmark manifest SHA-256、每个源文件/Scenario hash、变换 provenance、每个场景文件 hash 和四个切片 aggregate hash；目标目录已存在时拒绝覆盖。只读 evidence producer 重新验证全部字节、来源和确定性变换，只计时 `runner.schedule(...)` 调用，并在停止计时后执行生产与独立 validator；HEFT 失败会阻断报告，其他策略失败保留惩罚行。
 
-B 针对[首轮独立复核记录](doc/P1-B02独立复核记录.md)中的 R1–R3 输出全部逐 seed mean 和 `evaluation_per_seed.csv`，在 claim/final 两处执行冻结 receipt basename，并将授权时间冻结为严格的 `YYYY-MM-DDTHH:MM:SSZ`。A 已从提交 `071b861...` 独立构造不同 seed mean、重算四份 artifact、注入错误 basename/receipt 字段/六类非法 UTC 并[二次复核通过](doc/P1-B02第二轮独立复核记录.md)。OOD 路径的 120 个场景、8 类篡改、外层计时、失败语义和 producer/report hash 互操作也已通过 A 的[第三轮独立复核](doc/P1-B02OOD证据路径第三轮独立复核记录.md)。OOD evidence path 与 5-seed 包均已双签；下一步运行正式 development/OOD 并交 A 复核。
+B 针对[首轮独立复核记录](doc/P1-B02独立复核记录.md)中的 R1–R3 输出全部逐 seed mean 和 `evaluation_per_seed.csv`，在 claim/final 两处执行冻结 receipt basename，并将授权时间冻结为严格的 `YYYY-MM-DDTHH:MM:SSZ`。A 已从提交 `071b861...` 独立构造不同 seed mean、重算四份 artifact、注入错误 basename/receipt 字段/六类非法 UTC 并[二次复核通过](doc/P1-B02第二轮独立复核记录.md)。OOD 路径的 120 个场景、8 类篡改、外层计时、失败语义和 producer/report hash 互操作也已通过 A 的[第三轮独立复核](doc/P1-B02OOD证据路径第三轮独立复核记录.md)。
+
+B 已从干净提交 `d9c5c10...` 用正式入口运行 development 评测：
+
+```powershell
+python scripts/run_p1_b02_development.py
+```
+
+正式 evidence 含 2040 条完整记录，全部成功且 failure/illegal 为 0。masked MLP 的 ID/size/CCR/system mean ratio 分别为 `0.709190/1.568302/0.406325/0.965250`；size-OOD 明显劣于 HEFT，system-OOD 配对 CI 跨 0，因此报告正确给出 `release_publishable=false`。记录笛卡尔积、9/9 checkpoint hash 和 4/4 报告 artifact hash 已由 B 自审可重算；完整命令、数字和边界见[正式 Development 结果记录](doc/P1-B02正式Development结果记录.md)。P1-B02 仍部分完成，下一步由 A 从用户推送后的不可变提交独立复核；public test 继续禁止。
 
 ## openEuler CPU smoke
 
@@ -250,9 +258,9 @@ tests/                   单元与集成测试
 - 目标函数仅为 makespan；
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - task-GNN 已使用一层任务 DAG 消息传递，但资源关系仍只由手工候选特征表达；
-- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程或 OOD 性能结果；
-- P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；materializer/evidence producer 与 5-seed 包均已双签，仍无正式 OOD 报告，public test 继续禁止；
-- 已在公开 STG topology projection 上完成并独立复核 5-seed MLP validation 结果；正式 OOD、公开 test 最终评测和竞赛方隐藏测试尚未完成；
+- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程学习；
+- P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；B 已生成正式 development 候选，但尚待 A 独立复核，public test 继续禁止；
+- 正式 development 显示 MLP 在 ID/CCR-OOD 上有明确优势，在 system-OOD 上不确定，在 size-OOD 上退化到 `1.568302`；自动门禁不允许发布；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移，原始文本 hash 还会受 LF/CRLF 检出策略影响，release 前须补规范化 hash 和跨 clone 测试。
 
 ## 开源许可证
