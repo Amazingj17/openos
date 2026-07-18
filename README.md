@@ -19,7 +19,7 @@
 - 用机器可读契约冻结 ID/OOD、5-seed、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核；A 用非字典序自建集和冻结 120 场景确认原始 evidence 可直接构建报告，详见[第三轮独立复核](doc/P1-B02OOD证据路径第三轮独立复核记录.md)。尚未运行任何真实策略或产生 OOD 性能结果；公开 test 未加载，下一任务为补齐 masked MLP 的两个缺失 seed，P1-B02 继续保持部分完成。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核。A 已只训练两个缺失 seed，将 masked MLP 扩展为五 seed validation 候选包；mean/std 为 `0.709190/0.064109`，零失败、零非法动作。该包仍待 B 独立复核；尚未运行正式 OOD，公开 test 未加载。
 
 ## 快速运行
 
@@ -117,6 +117,14 @@ python -m trisched train-ppo --config configs/stg_ppo.json --resume
 
 正式 validation 的 3 个 best seed ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 个 seed，另 1 个按冻结规则回退 BC warm start。seed-level mean 为 `0.723193`，但 population std 为 `0.075948`，每个 seed 仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。B 已在物理删除 test JSON 和 archive 的数据根上复跑正式配置，并完成 checkpoint、manifest、数学分支与配置注入复核。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。详见 [P1-A02 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)、其[独立复核记录](doc/P1-A02独立复核记录.md)和 [P1-03 断点续训契约](doc/P1-03PPO断点续训设计与验收.md)。
 
+P1-A04 使用显式 `seed_extension` 绑定上述三 seed 来源 manifest，只训练 `20260720/20260721`：
+
+```powershell
+python -m trisched train-ppo --config configs/stg_ppo_5seed.json
+```
+
+五个 best validation ratio 为 `0.807240 / 0.623254 / 0.739086 / 0.658398 / 0.717970`，mean/std 为 `0.709190/0.064109`，150 个调度零失败、零非法动作。旧三 seed 的 24 个必需 artifact 与来源逐字节一致；50 个目标 artifact 全部可按 manifest 重算；两个新 checkpoint 复评与记录值一致。正式 run 绑定干净提交 `a38c530...`。完整合同、hash 与限制见 [P1-A04 五种子扩展设计与正式结果](doc/P1-A04五种子扩展设计与正式结果.md)。该包尚待 B 独立复核，不能据此宣称 OOD 或 public test 领先。
+
 ## P1-A03 task-GNN（已关闭）
 
 当前已实现 task-GNN 的前向、完整解析梯度、裁剪 Adam、合法动作接口、只读 frozen graph state 和无 pickle checkpoint。它继续使用相同 14 维 teacher-free 候选特征，仅从其中复用 workload、upward-rank、入度和出度构造任务节点，沿 DAG 分别做一次前驱/后继均值消息传递，再与原候选表示融合打分。该接口已有同 seed 确定性、图结构敏感性、动作 mask、中心有限差分、冻结重放、参数量和 checkpoint 往返测试。
@@ -155,7 +163,7 @@ python -m trisched materialize-ood `
 
 命令只以 `validation/model_selection` capability 加载官方 split，并原子发布 `id_validation`、`ood_size`、`ood_ccr` 和 `ood_system`。冻结清单为 [`data/benchmarks/p1-b02-development-slices-v1.json`](data/benchmarks/p1-b02-development-slices-v1.json)，绑定契约 canonical hash、benchmark manifest SHA-256、每个源文件/Scenario hash、变换 provenance、每个场景文件 hash 和四个切片 aggregate hash；目标目录已存在时拒绝覆盖。只读 evidence producer 重新验证全部字节、来源和确定性变换，只计时 `runner.schedule(...)` 调用，并在停止计时后执行生产与独立 validator；HEFT 失败会阻断报告，其他策略失败保留惩罚行。
 
-B 针对[首轮独立复核记录](doc/P1-B02独立复核记录.md)中的 R1–R3 输出全部逐 seed mean 和 `evaluation_per_seed.csv`，在 claim/final 两处执行冻结 receipt basename，并将授权时间冻结为严格的 `YYYY-MM-DDTHH:MM:SSZ`。A 已从提交 `071b861...` 独立构造不同 seed mean、重算四份 artifact、注入错误 basename/receipt 字段/六类非法 UTC 并[二次复核通过](doc/P1-B02第二轮独立复核记录.md)。OOD 路径的 120 个场景、8 类篡改、外层计时、失败语义和 producer/report hash 互操作也已通过 A 的[第三轮独立复核](doc/P1-B02OOD证据路径第三轮独立复核记录.md)。OOD evidence-path 子阶段关闭；下一步只补 masked MLP 的两个缺失 seed，B 复核 artifact 后才运行正式 development/OOD。
+B 针对[首轮独立复核记录](doc/P1-B02独立复核记录.md)中的 R1–R3 输出全部逐 seed mean 和 `evaluation_per_seed.csv`，在 claim/final 两处执行冻结 receipt basename，并将授权时间冻结为严格的 `YYYY-MM-DDTHH:MM:SSZ`。A 已从提交 `071b861...` 独立构造不同 seed mean、重算四份 artifact、注入错误 basename/receipt 字段/六类非法 UTC 并[二次复核通过](doc/P1-B02第二轮独立复核记录.md)。OOD 路径的 120 个场景、8 类篡改、外层计时、失败语义和 producer/report hash 互操作也已通过 A 的[第三轮独立复核](doc/P1-B02OOD证据路径第三轮独立复核记录.md)。OOD evidence-path 子阶段关闭；5-seed 候选包已生成，下一步由 B 独立复核，签字后才运行正式 development/OOD。
 
 ## openEuler CPU smoke
 
@@ -212,6 +220,7 @@ python -m trisched evaluate `
 configs/smoke.json       最小训练与评测配置
 configs/stg_bc.json      公开 STG teacher/BC 冻结配置
 configs/stg_ppo.json     公开 STG 3-seed masked PPO 配置
+configs/stg_ppo_5seed.json 绑定旧证据、只补两 seed 的 5-seed 配置
 configs/stg_task_gnn.json 公开 STG 3-seed task-GNN 单变量配置
 configs/p1_b02_evaluation_contract.json ID/OOD、5-seed 与 test gate 契约
 schemas/                 Scenario JSON Schema
@@ -242,8 +251,8 @@ tests/                   单元与集成测试
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - task-GNN 已使用一层任务 DAG 消息传递，但资源关系仍只由手工候选特征表达；
 - legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程或 OOD 性能结果；
-- P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；materializer/evidence producer 已通过三轮独立复核，仍缺两个主策略 seed 与真实性能报告，public test 继续禁止；
-- 已在公开 STG topology projection 上完成并独立复核 3-seed PPO/task-GNN validation 开发结果及分层配对 bootstrap；公开 test 最终评测、5-seed 主结果和竞赛方隐藏测试尚未完成；
+- P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；materializer/evidence producer 已通过三轮独立复核，5-seed 候选包待 B 复核，仍无正式 OOD 报告，public test 继续禁止；
+- 已在公开 STG topology projection 上生成 5-seed MLP validation 候选结果；旧三 seed 已复核，新两 seed 与整包尚待 B 独立签字，公开 test 最终评测和竞赛方隐藏测试尚未完成；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移，原始文本 hash 还会受 LF/CRLF 检出策略影响，release 前须补规范化 hash 和跨 clone 测试。
 
 ## 开源许可证
