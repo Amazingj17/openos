@@ -32,6 +32,8 @@
 13. P1-B02 正式 development 候选包含 17 个策略/seed 组合和 120 个冻结场景。A 已从 `origin/main=fab540c...` 的隔离 detached worktree 唯一正式复跑；A/B 去除 wall-clock 后的 2040 条调度记录逐字段一致，非时延报告完全一致，9/9 checkpoint 与 4/4 报告 artifact hash 均可重算。P1-B02 development/OOD 证据复核通过并关闭评测子阶段。
 14. 证据通过不等于性能通过。MLP 的 ID/size/CCR/system mean ratio 为 `0.709190/1.568302/0.406325/0.965250`；size-OOD 五个 seed `1.601640/1.462686/1.610442/1.556301/1.610442` 均劣于 HEFT，system-OOD 配对 CI 跨 0。因此原样保留 `release_publishable=false`，不更换 seed、不临时调参、不访问 public test，G3 继续阻塞；A 下一步只预注册 `P1-A05-SIZE-ROBUSTNESS-DESIGN`。
 15. A 复核发现同一 Git blob 在 B 主工作区为 LF、A detached worktree 为 CRLF，runner 原始 SHA-256 分别为 `21043791...` 与 `860da9e3...`；规范化为 LF 后两者与 Git blob `21043791...` 一致。两份 evidence 均正确绑定实际执行字节，因此不否定本次结果；B 必须以 `P1-B03-PORTABLE-HASH` 固定 `.gitattributes`、规范化 hash 与跨 worktree 测试，且不得改写历史 evidence。
+16. P1-A05 只读诊断确认：MLP 150/150 和 task-GNN 90/90 条 size 记录全部劣于 HEFT；seed `20260718` 按 ID 规则直接选择 epoch 0 warm start，size mean 仍为 `1.462686`。训练固定 50 tasks，而 size 为 100 tasks，且同时改变 generator、根节点结构、关键路径、workload、bandwidth 和 latency。因此拒绝“只修 PPO 漂移”“重开 task-GNN”与“纯 size 因果”表述。
+17. P1-A05 唯一候选冻结为等 transition 的 rollout-source 干预：每 PPO epoch 用 60×50-task STG + 30×100-task synthetic，恰为 `3000+3000=6000` transitions；五 seed×两 epoch 总预算仍为 60,000。14-D MLP、P1-A04 warm start、奖励、优化器、超参数和 ID checkpoint selection 全部不变；当前只提交设计，B 签字前不训练。
 
 ## 2. 本次审计范围与证据
 
@@ -151,7 +153,7 @@ P1-B02 将上述方法固化为机器契约：主策略和 Random 使用 5 seeds
 | HEFT teacher | P1-A01 参考含 `is_heft_task/is_heft_pair`；P1-A02 主路径强制删除 | 同 seed 16/14 维 BC ratio 为 `1.0/0.852539`，teacher accuracy 为 `1.0/0.514`；B 注入任一特征均在训练前失败 | PPO/GNN 主路径保持删除 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | B 独立推导通过；正式最大恒等式误差 `1.78e-15`，`gamma=0.99` 注入被拒绝 | task-GNN 保持奖励与 `gamma=1.0` 不变 |
-| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | 5-seed MLP、staging 断点续训、task-GNN 与正式 development 证据均已复核；size-OOD 门禁失败 | 保持候选不变；A 以 P1-A05 预注册一个 size 泛化改进，B 复核前不训练 |
+| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | P1-A05 已把唯一干预冻结为等 transition 的 50/100-task rollout mixture；未创建新 checkpoint | B 先独立复核设计；通过后另开实现任务，当前不训练 |
 | 图表示 | PPO 主模型为 14 维 MLP；P1-A03 对照为一层双向 task-GNN | GNN mean 点估计改善 `-0.032733`，但配对 CI 跨 0；参数约 `1.969×`、CPU P50 约 `1.046×` | 保留 MLP；GNN 作为未证实消融，不追加新图变量 |
 | checkpoint/源码元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | A 确认 9/9 参数 hash 可重算；同一 Git blob 的 LF/CRLF 工作树原始源码 hash 不同，规范化 LF 后一致 | B 执行 P1-B03：固定 `.gitattributes`、规范化文本 hash 和跨 worktree 测试；旧 evidence 不改写 |
 | test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁；P1-B02 development materializer 固定只加载 `validation/model_selection` | A/B evidence 均记录 `test_accessed=false`、`training_started=false`、`public_test_loaded=false`；未运行 `claim-test-gate` | size 门禁未过前不得加载 public test，最终将 claim 固定在 loader 前 |
@@ -205,7 +207,7 @@ G1 通过后的唯一允许顺序：
 3. P1-03 断点续训首轮被 B 退回，A 实现 staging 发布后已通过 B 的第二轮独立复核。（已完成）
 4. 只把 MLP 替换为 task-GNN 的正式对照和 B 独立复核均已完成；点估计改善但 CI 跨 0，按止损保留 MLP，不以追加 resource-GNN、课程或新奖励补救。（已关闭）
 5. P1-B02 development/OOD 已完成双人独立复跑；证据可信但 size 性能门禁失败，冻结原始负结果。（已关闭评测子阶段）
-6. A 只对 size-OOD 做根因分析并预注册一个改进候选；B 复核设计前不训练，候选通过 development 全切片门禁前不访问 public test。（下一任务）
+6. A 已完成 size-OOD 根因分析并预注册等 transition 的 50/100-task rollout 候选；B 复核设计前不训练，候选通过 development 全切片门禁前不访问 public test。（待 B 复核）
 
 ## 7. 三个独立手算案例
 
