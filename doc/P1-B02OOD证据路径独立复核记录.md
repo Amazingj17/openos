@@ -140,3 +140,5 @@ OOD 场景生成、冻结 hash、无 public-test 字节路径、篡改拒绝和 
 B 已在基线 `70472775ac2e6e0d1f1cf37bf151575691e215d1` 上完成两项定点修复：类型化进程内非法动作并统一映射为 `scheduler_invalid_schedule`，evidence 对该错误固定计入一次 illegal；在访问返回字段前验证 `ScheduleResult`，错误类型转为 `scheduler_invalid_response` penalty，HEFT 保持 fail-fast。新增测试覆盖 adapter、真实进程内 runner、自动报告聚合、非参考错误对象与 HEFT 错误对象。
 
 B 的候选验证为 OOD 专项 `13 passed`、报告器合并 `41 passed`、兼容回归 `26 passed`、全量 `229 passed`，Black check 与 `compileall` 通过。以上是修复方自测，不改变本记录第 5 节的独立退回结论；用户推送后仍须由 A 从新不可变提交复现 R1/R2 并签字。materializer/manifest 未变化，真实策略、5-seed OOD、public test 和训练仍未运行。
+
+后续状态：A 已确认 R1/R2 定点修复通过，但生产 evidence 与报告器的 ID hash 顺序语义不兼容，因此整体再次退回。完整证据见 [P1-B02 OOD 证据路径第二轮独立复核记录](./P1-B02OOD证据路径第二轮独立复核记录.md)。
