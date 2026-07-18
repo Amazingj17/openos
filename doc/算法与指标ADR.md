@@ -37,6 +37,7 @@
 18. B 已从远端不可变提交 `5857931...` 完成 `P1-A05-DESIGN-REVIEW`：A 报告 hash 可重建，60/60 场景内容 hash、性能与复合偏移重算一致，冻结 seed 重叠、91 episodes、6001 transitions、gamma、模型、public test 和训练调用共 7/7 注入被拒绝。设计通过只授权 `P1-A05-IMPLEMENT`；60 场景实际物化去重、90/6000 dry-run、生产配置拒绝器和物理无 public-test 训练根仍须实现并由 B 复核，完成前不训练。
 19. P1-B03 采用双 hash 而非覆盖语义：原始 SHA-256 绑定实际执行字节，严格 UTF-8 normalized-LF SHA-256 只用于跨 worktree 文本身份；canonical JSON hash 绑定解析值。`.gitattributes` 固定源码/配置/文档为 LF，二进制显式排除；旧 evidence 不改写。A 已从远端 detached worktree 复核 Git blob、LF/CRLF、历史 evidence 和确定性 source bundle，P1-B03 双签关闭。
 20. P1-A05 生产实现只允许预注册的逐 epoch 场景 ID 列表。实际隔离根为 120 train + 30 validation + 60 synthetic + 5 warm-start，四类 ID/hash 交集和 public-test/archive 均为 0；两轮 dry-run 均为 90/6000 且未加载 checkpoint/优化器。正式入口必须在输出创建前校验 B receipt，并要求干净工作树的受控训练源码与 receipt 的 `approved_source_commit` 零差异；后续只增加 receipt/复核文档不影响该比较。B 已从远端提交复核并生成绑定 `2ab2c66...`、配置、prepared manifest 和 dry-run 的 receipt；receipt 推送确认前仍未训练。
+21. P1-A05 标准 development 报告会用新 candidate 替换 `masked_mlp`，不能在同一契约里同时表示旧 P1-A04。为执行预注册的 `new−P1-A04` 条件，新增只读比较器：先分别完整校验旧/新 evidence，再按相同五个 training seed 和相同 30 个 scenario 做精确配对，两层 bootstrap 共享 seed/scenario 重采样索引。比较器同时绑定正式训练 manifest/checkpoint 和标准报告，接受并固化负结果。development 的 `release_publishable=false` 是未获 final-test receipt 的预期边界，不得用它倒逼提前访问 public test。
 
 ## 2. 本次审计范围与证据
 

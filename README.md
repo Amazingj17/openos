@@ -189,6 +189,8 @@ python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
 
 第三条命令只允许在 receipt 所在提交已推送、远端 commit 可复核且工作树干净后执行一次。B 已从远端不可变实现提交完成[独立复核](doc/P1-A05Size-OOD实现独立复核记录.md)，机器 receipt 绑定批准源码 commit、配置、prepared manifest 和 dry-run hash；本次提交推送前仍不得训练。完整设计、实现和停止规则见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)、[训练前门禁实现记录](doc/P1-A05Size-OOD实现与训练前门禁.md)和生产配置 [`configs/p1_a05_size_robustness.json`](configs/p1_a05_size_robustness.json)。
 
+训练后的唯一四切片 evidence 继续复用冻结 P1-B02 producer；`scripts/compare_p1_a05_development.py` 会绑定正式训练 manifest/checkpoint、旧 P1-A04 evidence 和新标准报告，对每个切片执行同 seed×同场景配对 bootstrap，并自动给出通过或停止决定。精确命令、事务恢复和 `release_publishable` 的 development/final 边界见[P1-A05 正式运行与 G3 收口规程](doc/P1-A05正式运行与G3收口规程.md)。
+
 ## P1-B03 portable source hash（已双签关闭）
 
 文本证据现在同时保存执行字节的 raw SHA-256 和仅把 CRLF/CR 转成 LF 的 normalized-LF SHA-256；`.gitattributes` 固定常见源码/配置/文档为 LF，并显式标记 checkpoint、archive 和文档容器为 binary。P1-B02 历史 evidence 不改写；新的 development producer 在兼容字段之外增加 `script.portable_text`。A 已从独立 worktree 核对 Git blob、LF/CRLF 注入、历史 evidence 和确定性 source bundle。详见[P1-B03 Portable Hash 合同](doc/P1-B03Portable-Hash合同.md)及其[独立复核记录](doc/P1-B03Portable-Hash独立复核记录.md)。

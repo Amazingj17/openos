@@ -115,6 +115,8 @@ git diff --check
 
 完整结果见[P1-A05 实现独立复核记录](./P1-A05Size-OOD实现独立复核记录.md)。receipt 已写入 `configs/p1_a05_implementation_review.json`，仍须提交并由用户推送。只有 receipt 所在远端提交可复核、且其批准的实现 commit 不变后，才允许启动唯一正式训练。
 
+正式训练、事务恢复、唯一四切片 evidence、new−P1-A04 配对 bootstrap、G3 判定和 public-test 边界已冻结在[P1-A05 正式运行与 G3 收口规程](./P1-A05正式运行与G3收口规程.md)。比较器只读正式产物，不属于训练源码，也不改变 receipt 批准的候选。
+
 ## 已知限制与停止规则
 
 - synthetic-100 与 development size-OOD 同为 100 tasks，但生成器和结构仍不同；结果只能检验预注册干预，不能宣称纯 size 因果。
