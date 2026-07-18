@@ -1090,6 +1090,7 @@ def _schedule_only(
     clock: Clock,
 ) -> tuple[ScheduleResult | None, float, dict[str, Any] | None, int]:
     before = canonical_json_sha256(scenario.to_dict())
+    illegal_action_count = 0
     start = clock()
     try:
         result = runner.schedule(scenario)
@@ -1097,6 +1098,11 @@ def _schedule_only(
         runtime_ms = (clock() - start) * 1000.0
         result = None
         payload = _error_payload(error, policy, scenario)
+        if (
+            isinstance(error, SchedulerAdapterError)
+            and error.code == "scheduler_invalid_schedule"
+        ):
+            illegal_action_count = 1
     else:
         runtime_ms = (clock() - start) * 1000.0
         payload = None
@@ -1109,9 +1115,21 @@ def _schedule_only(
             "scheduler mutated a materialized scenario",
             details={"policy": policy, "scenario_id": scenario.id},
         )
-    illegal_action_count = 0
     if result is not None:
-        if result.policy_name != policy:
+        if not isinstance(result, ScheduleResult):
+            payload = SchedulerAdapterError(
+                "scheduler_invalid_response",
+                "scheduler did not return a ScheduleResult",
+                scheduler=policy,
+                scenario_id=scenario.id,
+                details={
+                    "actual_type": (
+                        f"{type(result).__module__}.{type(result).__qualname__}"
+                    )
+                },
+            ).to_dict()
+            result = None
+        elif result.policy_name != policy:
             payload = SchedulerAdapterError(
                 "scheduler_invalid_response",
                 "scheduler returned a mismatched policy name",

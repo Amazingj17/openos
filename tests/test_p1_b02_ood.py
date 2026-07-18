@@ -23,7 +23,7 @@ from trisched.policies import HeftPolicy
 from trisched.reporting import build_evaluation_report, canonical_json_sha256
 from trisched.reporting import load_evaluation_contract
 from trisched.scenario import Scenario, generate_scenario
-from trisched.schedulers import SchedulerAdapterError
+from trisched.schedulers import PolicySchedulerRunner, SchedulerAdapterError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -561,6 +561,22 @@ class FailingRunner:
         )
 
 
+class IllegalActionPolicy:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def select_action(self, env: Any) -> tuple[int, int]:
+        return (-1, -1)
+
+
+class WrongTypeRunner:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def schedule(self, scenario: Scenario) -> Any:
+        return {"scenario_id": scenario.id, "not": "a ScheduleResult"}
+
+
 def test_read_only_evidence_uses_scheduler_only_timer_and_builds_report(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -648,6 +664,98 @@ def test_evidence_retains_scheduler_failure_and_rejects_reference_failure(
             code={"commit": "c" * 40, "working_tree_dirty": False},
         )
     assert captured.value.code == "ood_reference_failed"
+    assert not output.exists()
+
+
+def test_evidence_counts_adapter_and_in_process_illegal_schedules(
+    tmp_path: Path,
+) -> None:
+    contract_path, manifest_path, _ = materialized_fixture(tmp_path)
+    root = manifest_path.parent
+
+    def provider(policy: str, seed: int) -> Any:
+        if policy == "random":
+            return FailingRunner(policy, "scheduler_invalid_schedule")
+        if policy == "masked_mlp":
+            return PolicySchedulerRunner(
+                policy,
+                lambda: IllegalActionPolicy(policy),
+            )
+        return RenamedHeftRunner(policy)
+
+    evidence_path = produce_development_evidence(
+        contract_path,
+        root,
+        provider,
+        tmp_path / "illegal-evidence.json",
+        code={"commit": "e" * 40, "working_tree_dirty": False},
+    )
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    for policy in ("random", "masked_mlp"):
+        rows = [row for row in evidence["records"] if row["policy"] == policy]
+        assert len(rows) == 16
+        assert all(row["status"] == "failure" for row in rows)
+        assert all(row["error_code"] == "scheduler_invalid_schedule" for row in rows)
+        assert all(row["illegal_action_count"] == 1 for row in rows)
+        assert all(row["score_ratio"] == 10.0 for row in rows)
+
+    report_path = build_evaluation_report(
+        contract_path,
+        evidence_path,
+        tmp_path / "illegal-report",
+    )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    for slice_report in report["slices"]:
+        for policy in ("random", "masked_mlp"):
+            metrics = slice_report["policies"][policy]
+            assert metrics["failure_count"] == 4
+            assert metrics["illegal_action_count"] == 4
+            assert metrics["illegal_record_count"] == 4
+
+
+def test_evidence_structures_wrong_result_type_and_fails_reference(
+    tmp_path: Path,
+) -> None:
+    contract_path, manifest_path, _ = materialized_fixture(tmp_path)
+    root = manifest_path.parent
+
+    def wrong_random_provider(policy: str, seed: int) -> Any:
+        if policy == "random":
+            return WrongTypeRunner(policy)
+        return RenamedHeftRunner(policy)
+
+    evidence_path = produce_development_evidence(
+        contract_path,
+        root,
+        wrong_random_provider,
+        tmp_path / "wrong-type-evidence.json",
+        code={"commit": "f" * 40, "working_tree_dirty": False},
+    )
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    rows = [row for row in evidence["records"] if row["policy"] == "random"]
+    assert len(rows) == 16
+    assert all(row["status"] == "failure" for row in rows)
+    assert all(row["error_code"] == "scheduler_invalid_response" for row in rows)
+    assert all(row["illegal_action_count"] == 0 for row in rows)
+    assert all(row["score_ratio"] == 10.0 for row in rows)
+
+    output = tmp_path / "wrong-reference.json"
+
+    def wrong_heft_provider(policy: str, seed: int) -> Any:
+        if policy == "heft":
+            return WrongTypeRunner(policy)
+        return RenamedHeftRunner(policy)
+
+    with pytest.raises(OODWorkflowError) as captured:
+        produce_development_evidence(
+            contract_path,
+            root,
+            wrong_heft_provider,
+            output,
+            code={"commit": "0" * 40, "working_tree_dirty": False},
+        )
+    assert captured.value.code == "ood_reference_failed"
+    assert captured.value.details["error"]["code"] == "scheduler_invalid_response"
     assert not output.exists()
 
 

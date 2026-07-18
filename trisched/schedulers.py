@@ -10,7 +10,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from .env import ScheduleEntry, ScheduleResult, run_policy, validate_schedule
+from .env import (
+    IllegalActionError,
+    ScheduleEntry,
+    ScheduleResult,
+    run_policy,
+    validate_schedule,
+)
 from .oracle import validate_schedule_independent
 from .policies import (
     CpopPolicy,
@@ -66,7 +72,8 @@ class SchedulerAdapterError(RuntimeError):
 class SchedulerRunner(Protocol):
     name: str
 
-    def schedule(self, scenario: Scenario) -> ScheduleResult: ...
+    def schedule(self, scenario: Scenario) -> ScheduleResult:
+        ...
 
 
 @dataclass(frozen=True)
@@ -87,7 +94,20 @@ class PolicySchedulerRunner:
                 scenario_id=scenario.id,
                 details={"actual_name": policy_name},
             )
-        return run_policy(scenario, policy)
+        try:
+            return run_policy(scenario, policy)
+        except IllegalActionError as error:
+            raise SchedulerAdapterError(
+                "scheduler_invalid_schedule",
+                "in-process policy returned an illegal action",
+                scheduler=self.name,
+                scenario_id=scenario.id,
+                details={
+                    "task_id": error.task_id,
+                    "resource_id": error.resource_id,
+                    "reason": str(error),
+                },
+            ) from error
 
 
 @dataclass(frozen=True)
@@ -170,17 +190,11 @@ def _learned_runner(context: SchedulerContext) -> SchedulerRunner:
 
 def create_default_scheduler_registry() -> SchedulerRegistry:
     registry = SchedulerRegistry()
-    registry.register(
-        "heft", lambda context: PolicySchedulerRunner("heft", HeftPolicy)
-    )
-    registry.register(
-        "cpop", lambda context: PolicySchedulerRunner("cpop", CpopPolicy)
-    )
+    registry.register("heft", lambda context: PolicySchedulerRunner("heft", HeftPolicy))
+    registry.register("cpop", lambda context: PolicySchedulerRunner("cpop", CpopPolicy))
     registry.register(
         "greedy_eft",
-        lambda context: PolicySchedulerRunner(
-            "greedy_eft", GreedyEarliestFinishPolicy
-        ),
+        lambda context: PolicySchedulerRunner("greedy_eft", GreedyEarliestFinishPolicy),
     )
     registry.register(
         "random",
@@ -221,18 +235,14 @@ def _response_error(
     )
 
 
-def _finite_number(
-    value: Any, scheduler: str, scenario_id: str, path: str
-) -> float:
+def _finite_number(value: Any, scheduler: str, scenario_id: str, path: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise _response_error(
             scheduler, scenario_id, path, "value must be a JSON number"
         )
     number = float(value)
     if not math.isfinite(number):
-        raise _response_error(
-            scheduler, scenario_id, path, "value must be finite"
-        )
+        raise _response_error(scheduler, scenario_id, path, "value must be finite")
     return number
 
 
@@ -324,9 +334,7 @@ def _parse_external_response(
                 ),
             )
         )
-    makespan = _finite_number(
-        payload["makespan"], scheduler, scenario_id, "$.makespan"
-    )
+    makespan = _finite_number(payload["makespan"], scheduler, scenario_id, "$.makespan")
     return ScheduleResult(
         scenario_id=scenario_id,
         policy_name=scheduler,
@@ -472,9 +480,7 @@ class ExternalProcessScheduler:
         try:
             payload = json.loads(stdout, parse_constant=_reject_json_constant)
         except (json.JSONDecodeError, ValueError) as error:
-            details: dict[str, Any] = {
-                "stdout_excerpt": stdout[:_MAX_DIAGNOSTIC_CHARS]
-            }
+            details: dict[str, Any] = {"stdout_excerpt": stdout[:_MAX_DIAGNOSTIC_CHARS]}
             if isinstance(error, json.JSONDecodeError):
                 details.update({"line": error.lineno, "column": error.colno})
             raise SchedulerAdapterError(
@@ -522,9 +528,7 @@ def _external_runner_from_spec(
         )
     name = _validate_scheduler_name(spec["name"])
     raw_command = spec["command"]
-    if isinstance(raw_command, (str, bytes)) or not isinstance(
-        raw_command, Sequence
-    ):
+    if isinstance(raw_command, (str, bytes)) or not isinstance(raw_command, Sequence):
         raise SchedulerAdapterError(
             "scheduler_invalid_spec",
             "external command must be a non-empty string array",

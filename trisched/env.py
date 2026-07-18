@@ -10,6 +10,18 @@ from .scenario import Scenario
 EPSILON = 1e-9
 
 
+class IllegalActionError(ValueError):
+    """Typed policy-contract failure for an action outside the legal mask."""
+
+    def __init__(self, policy_name: str, task_id: Any, resource_id: Any) -> None:
+        self.policy_name = policy_name
+        self.task_id = task_id
+        self.resource_id = resource_id
+        super().__init__(
+            f"policy {policy_name} returned illegal action ({task_id}, {resource_id})"
+        )
+
+
 @dataclass(frozen=True)
 class ScheduleEntry:
     task_id: int
@@ -66,10 +78,7 @@ class HeterogeneousDagEnv:
                 task.id
                 for task in self.scenario.tasks
                 if task.id not in self.entries
-                and all(
-                    parent in self.entries
-                    for parent in self.predecessors[task.id]
-                )
+                and all(parent in self.entries for parent in self.predecessors[task.id])
             )
         return self._ready_cache
 
@@ -170,9 +179,7 @@ def validate_schedule(
             child.resource_id,
         )
         if child.start + tolerance < parent.finish + transfer:
-            raise ValueError(
-                f"dependency {edge.source}->{edge.target} is violated"
-            )
+            raise ValueError(f"dependency {edge.source}->{edge.target} is violated")
     for resource_id, intervals in enumerate(by_resource):
         ordered = sorted(intervals, key=lambda item: (item.start, item.finish))
         for previous, current in zip(ordered, ordered[1:]):
@@ -194,13 +201,12 @@ def run_policy(scenario: Scenario, policy: Any) -> ScheduleResult:
     while not env.done:
         candidates = env.candidate_actions()
         if not candidates:
-            raise RuntimeError("no legal action is available before the episode is done")
+            raise RuntimeError(
+                "no legal action is available before the episode is done"
+            )
         task_id, resource_id = policy.select_action(env)
         if (task_id, resource_id) not in candidates:
-            raise ValueError(
-                f"policy {policy.name} returned illegal action "
-                f"({task_id}, {resource_id})"
-            )
+            raise IllegalActionError(policy.name, task_id, resource_id)
         env.step(task_id, resource_id)
     result = env.result(policy.name)
     validate_schedule(scenario, result)
