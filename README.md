@@ -283,7 +283,7 @@ tests/                   单元与集成测试
 - P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；正式 development 候选已由 A 独立复跑通过，public test 继续禁止；
 - 正式 development 显示 MLP 在 ID/CCR-OOD 上有明确优势，在 system-OOD 上不确定，在 size-OOD 上退化到 `1.568302`；自动门禁不允许发布；
 - P1-B03 已实现 raw/normalized-LF 双 hash 和固定 LF 属性，但仍须由 A 从远端不可变提交做独立 worktree 复核；旧 evidence 不改写；
-- P1-A05 训练前实现已通过本地 255 项全量回归和真实物化审计，但尚未由 B 从远端不可变提交复核，receipt 不存在，因此未加载 checkpoint、未创建优化器、未训练；
+- P1-A05 训练前实现已通过本地 256 项全量回归和真实物化审计，但尚未由 B 从远端不可变提交复核，receipt 不存在，因此未加载 checkpoint、未创建优化器、未训练；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 
 ## 开源许可证

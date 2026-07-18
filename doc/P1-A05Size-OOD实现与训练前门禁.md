@@ -75,7 +75,7 @@ python -m trisched dry-run-p1-a05 --config configs/p1_a05_size_robustness.json
 - 把 public test 固定为 `forbidden`；
 - 六个冻结 gate 全为 true；
 - `approved_source_commit` 为远端不可变实现 commit；
-- 正式训练工作树干净，且当前 HEAD 与 `approved_source_commit` 完全相同。
+- 正式训练工作树干净，且 `.gitattributes`、`trisched/`、生产配置、依赖声明和 `pyproject.toml` 与 `approved_source_commit` 零差异；允许后续提交只增加 receipt/复核文档。
 
 当前 receipt 故意不存在。实际执行：
 
@@ -83,7 +83,7 @@ python -m trisched dry-run-p1-a05 --config configs/p1_a05_size_robustness.json
 python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
 ```
 
-返回退出码 2 和 `p1_a05_review_missing`；`outputs/p1-a05-size-robustness/` 未创建。测试还用 monkeypatch 证明 checkpoint loader 未被调用，并验证“当前 HEAD 与批准 commit 不同”同样在输出创建前失败。
+返回退出码 2 和 `p1_a05_review_missing`；`outputs/p1-a05-size-robustness/` 未创建。测试还用 monkeypatch 证明 checkpoint loader 未被调用，并验证批准 commit 后任何受控训练源码变化都会失败、只增加 receipt 的后续 commit 可通过源码树门禁。
 
 ## 验证结果
 
@@ -95,8 +95,8 @@ python -m json.tool configs/p1_a05_size_robustness.json
 git diff --check
 ```
 
-- 两个专项文件当前 19 项通过；
-- 全量回归当前 255 项通过；
+- 两个专项文件当前 20 项通过；
+- 全量回归当前 256 项通过；
 - compileall、严格 JSON 解析和 `git diff --check` 通过；
 - 正式训练入口拒绝，未创建 checkpoint/优化器/训练输出；
 - public test 未访问、未复制、未物化。

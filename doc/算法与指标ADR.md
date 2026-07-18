@@ -36,7 +36,7 @@
 17. P1-A05 唯一候选冻结为等 transition 的 rollout-source 干预：每 PPO epoch 用 60×50-task STG + 30×100-task synthetic，恰为 `3000+3000=6000` transitions；五 seed×两 epoch 总预算仍为 60,000。14-D MLP、P1-A04 warm start、奖励、优化器、超参数和 ID checkpoint selection 全部不变；当前只提交设计，B 签字前不训练。
 18. B 已从远端不可变提交 `5857931...` 完成 `P1-A05-DESIGN-REVIEW`：A 报告 hash 可重建，60/60 场景内容 hash、性能与复合偏移重算一致，冻结 seed 重叠、91 episodes、6001 transitions、gamma、模型、public test 和训练调用共 7/7 注入被拒绝。设计通过只授权 `P1-A05-IMPLEMENT`；60 场景实际物化去重、90/6000 dry-run、生产配置拒绝器和物理无 public-test 训练根仍须实现并由 B 复核，完成前不训练。
 19. P1-B03 采用双 hash 而非覆盖语义：原始 SHA-256 绑定实际执行字节，严格 UTF-8 normalized-LF SHA-256 只用于跨 worktree 文本身份；canonical JSON hash 绑定解析值。`.gitattributes` 固定源码/配置/文档为 LF，二进制显式排除；旧 evidence 不改写。B 已实现并通过本地测试，A 从远端不可变提交复核前不写“双签关闭”。
-20. P1-A05 生产实现只允许预注册的逐 epoch 场景 ID 列表。实际隔离根为 120 train + 30 validation + 60 synthetic + 5 warm-start，四类 ID/hash 交集和 public-test/archive 均为 0；两轮 dry-run 均为 90/6000 且未加载 checkpoint/优化器。正式入口必须在输出创建前校验 B receipt，并要求干净 HEAD 等于 receipt 的 `approved_source_commit`。当前 receipt 不存在，因此未训练。
+20. P1-A05 生产实现只允许预注册的逐 epoch 场景 ID 列表。实际隔离根为 120 train + 30 validation + 60 synthetic + 5 warm-start，四类 ID/hash 交集和 public-test/archive 均为 0；两轮 dry-run 均为 90/6000 且未加载 checkpoint/优化器。正式入口必须在输出创建前校验 B receipt，并要求干净工作树的受控训练源码与 receipt 的 `approved_source_commit` 零差异；后续只增加 receipt/复核文档不影响该比较。当前 receipt 不存在，因此未训练。
 
 ## 2. 本次审计范围与证据
 

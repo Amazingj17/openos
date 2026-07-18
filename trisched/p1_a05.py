@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import uuid
 from collections import Counter
@@ -57,6 +58,14 @@ _REVIEW_GATES = (
     "public_test_bytes_absent",
     "warm_start_bytes_bound",
     "full_regression_passed",
+)
+_APPROVED_SOURCE_PATHS = (
+    ".gitattributes",
+    "trisched",
+    "configs/p1_a05_size_robustness.json",
+    "requirements.txt",
+    "requirements-lock.txt",
+    "pyproject.toml",
 )
 
 
@@ -117,6 +126,43 @@ def _resolve(config_source: Path, value: str) -> Path:
 
 def _repository() -> Path:
     return Path(__file__).resolve().parents[1]
+
+
+def _assert_approved_source_matches(repository: Path, approved_commit: str) -> None:
+    """Allow a later receipt commit, but no reviewed training-source changes."""
+
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "diff",
+                "--quiet",
+                approved_commit,
+                "--",
+                *_APPROVED_SOURCE_PATHS,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        _fail("p1_a05_formal_commit", "$.code.commit", str(error))
+    if result.returncode == 0:
+        return
+    _fail(
+        "p1_a05_formal_commit",
+        "$.code.commit",
+        "training source differs from the implementation commit approved by B",
+        details={
+            "approved_source_commit": approved_commit,
+            "controlled_paths": list(_APPROVED_SOURCE_PATHS),
+            "git_exit_code": result.returncode,
+            "git_stderr": result.stderr.strip(),
+        },
+    )
 
 
 def _expected_ppo(base: Mapping[str, Any]) -> dict[str, Any]:
@@ -917,16 +963,7 @@ def _formal_run_in_directory(
             "$.code",
             "formal training requires a clean immutable worktree",
         )
-    if code_metadata.get("commit") != review["approved_source_commit"]:
-        _fail(
-            "p1_a05_formal_commit",
-            "$.code.commit",
-            "current source commit is not the implementation commit approved by B",
-            details={
-                "expected": review["approved_source_commit"],
-                "actual": code_metadata.get("commit"),
-            },
-        )
+    _assert_approved_source_matches(repository, review["approved_source_commit"])
     if resume:
         previous = _load_json(
             output_dir / "resolved_config.json", "$.output.resolved_config"

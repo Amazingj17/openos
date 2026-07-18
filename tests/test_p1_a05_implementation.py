@@ -173,47 +173,34 @@ def test_cli_refuses_training_before_review_without_creating_output_or_loading_c
     assert not Path(payload["output_dir"]).exists()
 
 
-def test_formal_training_rejects_a_source_commit_other_than_the_reviewed_commit(
+def test_formal_training_rejects_source_changes_after_the_reviewed_commit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     output = tmp_path / "formal-output"
-    prepared = tmp_path / "prepared-input"
-    config = {"output_dir": str(output)}
-    monkeypatch.setattr(p1_a05, "load_p1_a05_config", lambda path: config)
     monkeypatch.setattr(
-        p1_a05,
-        "_prepared_paths",
-        lambda *args: (
-            prepared,
-            prepared / PREPARED_MANIFEST_NAME,
-            prepared / p1_a05.DRY_RUN_NAME,
+        p1_a05.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=1,
+            stderr="controlled source changed",
         ),
-    )
-    monkeypatch.setattr(
-        p1_a05,
-        "verify_p1_a05_prepared_inputs",
-        lambda path: ({}, {}),
-    )
-    monkeypatch.setattr(
-        p1_a05,
-        "_load_implementation_review",
-        lambda *args: (
-            tmp_path / "review.json",
-            {"approved_source_commit": "a" * 40},
-        ),
-    )
-    monkeypatch.setattr(
-        p1_a05,
-        "_git_metadata",
-        lambda repository: {
-            "working_tree_dirty": False,
-            "commit": "b" * 40,
-        },
     )
 
     with pytest.raises(BehaviorCloningError) as captured:
-        p1_a05._formal_run_in_directory(tmp_path / "config.json", output, resume=False)
+        p1_a05._assert_approved_source_matches(ROOT, "a" * 40)
 
     assert captured.value.code == "p1_a05_formal_commit"
     assert not output.exists()
+
+
+def test_formal_source_gate_allows_a_later_receipt_only_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        p1_a05.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0, stderr=""),
+    )
+
+    p1_a05._assert_approved_source_matches(ROOT, "a" * 40)
