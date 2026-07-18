@@ -76,6 +76,8 @@ python -m pytest
 
 上述输入、环境、HEFT、CPOP、小图最优参考和跨平台证据已汇总到 [G1 正确性门禁评审包](doc/G1正确性门禁评审.md)，并由成员 A [独立复核通过](doc/G1独立复核记录.md)。P0-10 openEuler smoke 也已由 A 从远端不可变提交[独立复核通过](doc/P0-10独立复核记录.md)。这些结论只覆盖当前静态模型正确性和 openEuler 用户态兼容性，仍不能宣称当前学习策略优于 HEFT。
 
+legacy synthetic smoke 的最新干净提交复现、checkpoint-only 复评和失败根因见[P0-09 MVP 复现与失败分析](doc/P0-09MVP复现与失败分析.md)。该路径的 masked MLP 只是复制 HEFT；正式算法选择、复杂度、证据边界和停止规则集中在[P0-11 算法总览与限制](doc/P0-11算法总览与限制.md)。
+
 ## 获取公开 STG benchmark
 
 P1-B01 冻结了 Zenodo `10.5281/zenodo.18927122` 中 180 个 rnc50 hetero JSON 的来源字节、CC BY 4.0 署名、TriSched projection v1 和 120/30/30 split。原始数据不提交 Git，首次在线获取后可离线复核：
@@ -204,6 +206,18 @@ Get-Content outputs\p0-10-openeuler\validation.json
 
 脚本会在全新虚拟环境中安装非 editable 包，执行完整测试、pipeline 和 checkpoint 复评，并把证据写到被 Git 忽略的 `outputs/p0-10-openeuler/`。容器使用 `--rm`，成功或失败退出后均不作为交付物保留。固定镜像、结果、已知失败和 WSL2 容器边界见 [P0-10 openEuler 验证记录](doc/P0-10openEuler验证记录.md)及其[独立复核记录](doc/P0-10独立复核记录.md)。
 
+## 源码发布与五分钟演示
+
+确定性发布构建器直接读取指定 commit 的 Git blobs，拒绝 generated/raw-data 前缀、credential 风险路径、私钥 marker、symlink 和 submodule；内部 manifest 记录每个文件的 SHA-256 与 Git blob：
+
+```powershell
+python scripts/build_release_bundle.py --commit HEAD
+python scripts/build_release_bundle.py --verify outputs/release/trisched-source-<commit12>.zip
+.\scripts\run_demo.ps1 -Presenter A
+```
+
+同一 commit 的 source zip 必须逐字节一致。发布边界、许可证、干净安装和最终模型包检查表见[P0-12 发布与复现手册](doc/P0-12发布与复现手册.md)；A/B 轮换讲稿、预期失败和恢复路径见[P0-13 五分钟演示手册](doc/P0-13五分钟演示与故障恢复.md)。最终模型/结果包仍受 P1-A05、G3 和 P1-06 阻塞。
+
 ## 接入外部调度器
 
 `evaluation.schedulers` 可混合 registry 中的内置 runner 与外部进程 adapter。外部程序每个 Scenario 从 stdin 接收一个版本化 JSON，并在 stdout 返回完整 schedule；结果与内置策略进入同一 evaluator、生产 validator 和独立 validator。
@@ -268,6 +282,8 @@ trisched/hashing.py      原始字节、normalized-LF 与 canonical JSON hash
 trisched/p1_a05.py       P1-A05 隔离输入、dry-run、复核门禁与正式训练事务
 trisched/cli.py          pipeline、各训练命令和 P1-A05 门禁命令
 trisched/benchmark.py    公开 STG loader、冻结 split 与来源校验
+scripts/build_release_bundle.py 确定性 source zip、secret/raw-data fail-closed
+scripts/run_demo.ps1     五分钟 synthetic smoke、故障注入与 checkpoint 恢复
 data/benchmarks/         第三方来源/许可证元数据和冻结 manifest
 examples/                外部 scheduler 协议参考程序
 tests/                   单元与集成测试
@@ -284,6 +300,7 @@ tests/                   单元与集成测试
 - 正式 development 显示 MLP 在 ID/CCR-OOD 上有明确优势，在 system-OOD 上不确定，在 size-OOD 上退化到 `1.568302`；自动门禁不允许发布；
 - P1-B03 已实现 raw/normalized-LF 双 hash 和固定 LF 属性，但仍须由 A 从远端不可变提交做独立 worktree 复核；旧 evidence 不改写；
 - P1-A05 训练前实现已通过本地 256 项全量回归和真实物化审计，但尚未由 B 从远端不可变提交复核，receipt 不存在，因此未加载 checkpoint、未创建优化器、未训练；
+- P0-09/P0-11 主责复现和算法限制文档已完成，P0-12 source release 流程已实现，P0-13 脚本已就绪；交叉复核、双人实跑和最终模型包仍待完成；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 
 ## 开源许可证
