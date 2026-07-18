@@ -19,7 +19,7 @@
 - 用机器可读契约冻结 ID/OOD、5-seed、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，masked MLP 五 seed 包也已由 B 在物理无 test 根正式预算复跑通过。B 生成的 2040 条正式 development ID/OOD 候选已由 A 从远端 `fab540c...` 独立复跑并复核通过，P1-B02 development/OOD 评测子阶段关闭。但 masked MLP 的 size-OOD ratio 为 `1.568302`，自动门禁 `release_publishable=false`，G3 仍阻塞。A 的 P1-A05 根因分析和单一 rollout-mixture 预注册已由 B 从远端 `5857931...` 独立重算并通过设计复核；当前只允许进入实现前门禁，尚未训练，public test 仍未加载。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，masked MLP 五 seed 包也已由 B 在物理无 test 根正式预算复跑通过。B 生成的 2040 条正式 development ID/OOD 候选已由 A 从远端 `fab540c...` 独立复跑并复核通过，P1-B02 development/OOD 评测子阶段关闭。但 masked MLP 的 size-OOD ratio 为 `1.568302`，自动门禁 `release_publishable=false`，G3 仍阻塞。P1-A05 的单一 rollout-mixture 已完成生产拒绝器、隔离输入物化、去重和无模型 dry-run；P1-B03 也已实现 LF/CRLF portable hash 合同。两项均等待从新的远端不可变提交交叉复核，正式训练入口仍因缺少 B 的绑定 receipt 而拒绝，public test 从未加载。
 
 ## 快速运行
 
@@ -173,11 +173,23 @@ python scripts/run_p1_b02_development.py
 
 正式 evidence 含 2040 条完整记录，全部成功且 failure/illegal 为 0。masked MLP 的 ID/size/CCR/system mean ratio 分别为 `0.709190/1.568302/0.406325/0.965250`；size-OOD 明显劣于 HEFT，system-OOD 配对 CI 跨 0，因此报告正确给出 `release_publishable=false`。记录笛卡尔积、9/9 checkpoint hash 和 4/4 报告 artifact hash 已由 B 自审可重算；完整命令、数字和边界见[正式 Development 结果记录](doc/P1-B02正式Development结果记录.md)。A 又在隔离 detached worktree 完成 `896.5s` 唯一复跑；去除 wall-clock 后 A/B 2040 条记录和非时延报告完全一致，并[独立复核通过](doc/P1-B02正式Development独立复核记录.md)。public test 继续禁止。
 
-## P1-A05 size-OOD 根因与预注册（设计复核通过，未训练）
+## P1-A05 size-OOD 单一候选（实现完成、待复核、未训练）
 
 只读诊断确认 masked MLP 的 150/150 条 size 记录、task-GNN 的 90/90 条 size 记录均劣于 HEFT；一个按 ID 规则保留 BC warm start、没有接受 PPO epoch 的 seed 仍为 `1.462686`。训练轨迹固定为 50 tasks，而 size 切片为 100 tasks；该切片还同时改变生成器、根节点结构、关键路径、带宽和时延，因此不能把失败简化为纯 size 因果。
 
-A 只预注册一个候选：保持五 seed、14-D MLP、warm start、奖励、优化器、两 epoch、每 epoch 6000 transitions 和 ID checkpoint selection 不变，把 PPO rollout 的 transition 改为 50% STG-50 + 50% 独立 synthetic-100。B 已在不导入 checkpoint 的 detached worktree 重建报告，独立核对 60 个场景内容 hash、性能/分布统计和 7 类故障注入，结论为[设计复核通过](doc/P1-A05Size-OOD设计独立复核记录.md)。完整根因、seed、预算、成功/停止规则见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)和机器配置 [`configs/p1_a05_size_robustness_preregister.json`](configs/p1_a05_size_robustness_preregister.json)。当前只授权实现 synthetic 物化去重、90/6000 dry-run、生产配置拒绝器和无 public-test 训练根证明；B 复核实现前不得训练。
+A 只预注册一个候选：保持五 seed、14-D MLP、warm start、奖励、优化器、两 epoch、每 epoch 6000 transitions 和 ID checkpoint selection 不变，把 PPO rollout 的 transition 改为 50% STG-50 + 50% 独立 synthetic-100。B 已在不导入 checkpoint 的 detached worktree 重建报告并[通过设计复核](doc/P1-A05Size-OOD设计独立复核记录.md)。实现现已物化 120 train、30 validation、60 个 synthetic-100 和 5 个已绑定 warm-start；四类 ID/content-hash 交集、public-test 文件、archive 和禁用文件名均为 0，两轮 dry-run 均为 `90 episodes/6000 transitions`，且 `checkpoint_loaded/optimizer_created/training_started=false`。
+
+```powershell
+python -m trisched prepare-p1-a05 --config configs/p1_a05_size_robustness.json
+python -m trisched dry-run-p1-a05 --config configs/p1_a05_size_robustness.json
+python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
+```
+
+第三条命令当前必须返回 `p1_a05_review_missing` 且不创建正式输出。只有 B 从远端不可变实现提交复核，并提交绑定源码 commit、配置、prepared manifest 和 dry-run hash 的 receipt 后，才允许唯一正式训练。完整设计、实现和停止规则见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)、[训练前门禁实现记录](doc/P1-A05Size-OOD实现与训练前门禁.md)和生产配置 [`configs/p1_a05_size_robustness.json`](configs/p1_a05_size_robustness.json)。
+
+## P1-B03 portable source hash（实现完成、待复核）
+
+文本证据现在同时保存执行字节的 raw SHA-256 和仅把 CRLF/CR 转成 LF 的 normalized-LF SHA-256；`.gitattributes` 固定常见源码/配置/文档为 LF，并显式标记 checkpoint、archive 和文档容器为 binary。P1-B02 历史 evidence 不改写；新的 development producer 在兼容字段之外增加 `script.portable_text`。合同、迁移规则和独立 worktree 复核步骤见[P1-B03 Portable Hash 合同](doc/P1-B03Portable-Hash合同.md)。
 
 ## openEuler CPU smoke
 
@@ -237,6 +249,7 @@ configs/stg_ppo.json     公开 STG 3-seed masked PPO 配置
 configs/stg_ppo_5seed.json 绑定旧证据、只补两 seed 的 5-seed 配置
 configs/stg_task_gnn.json 公开 STG 3-seed task-GNN 单变量配置
 configs/p1_b02_evaluation_contract.json ID/OOD、5-seed 与 test gate 契约
+configs/p1_a05_size_robustness.json P1-A05 唯一正式候选与训练前门禁
 schemas/                 Scenario JSON Schema
 trisched/scenario.py     场景 schema、校验、生成和 hash
 trisched/env.py          调度环境、插入式时间线和生产合法性检查
@@ -251,7 +264,9 @@ trisched/ppo.py          MLP/task-GNN 增量奖励、GAE/PPO、epoch 状态与 r
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
 trisched/reporting.py    P1-B02 evidence 校验、配对统计与自动报告
 trisched/ood.py          P1-B02 development ID/OOD 物化与只读 evidence producer
-trisched/cli.py          pipeline/train-bc/train-ppo/train-task-gnn 等命令
+trisched/hashing.py      原始字节、normalized-LF 与 canonical JSON hash
+trisched/p1_a05.py       P1-A05 隔离输入、dry-run、复核门禁与正式训练事务
+trisched/cli.py          pipeline、各训练命令和 P1-A05 门禁命令
 trisched/benchmark.py    公开 STG loader、冻结 split 与来源校验
 data/benchmarks/         第三方来源/许可证元数据和冻结 manifest
 examples/                外部 scheduler 协议参考程序
@@ -267,8 +282,9 @@ tests/                   单元与集成测试
 - legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程学习；
 - P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；正式 development 候选已由 A 独立复跑通过，public test 继续禁止；
 - 正式 development 显示 MLP 在 ID/CCR-OOD 上有明确优势，在 system-OOD 上不确定，在 size-OOD 上退化到 `1.568302`；自动门禁不允许发布；
-- Windows 不同 worktree 的 LF/CRLF 检出会改变原始源文件 hash；归一化源码与 Git blob 一致，但 release 前仍须完成 `P1-B03-PORTABLE-HASH`；
-- task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移，原始文本 hash 还会受 LF/CRLF 检出策略影响，release 前须补规范化 hash 和跨 clone 测试。
+- P1-B03 已实现 raw/normalized-LF 双 hash 和固定 LF 属性，但仍须由 A 从远端不可变提交做独立 worktree 复核；旧 evidence 不改写；
+- P1-A05 训练前实现已通过本地 255 项全量回归和真实物化审计，但尚未由 B 从远端不可变提交复核，receipt 不存在，因此未加载 checkpoint、未创建优化器、未训练；
+- task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 
 ## 开源许可证
 

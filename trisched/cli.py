@@ -25,6 +25,11 @@ from .evaluation import (
 )
 from .learning import MaskedMLPPolicy, train_policy
 from .ood import OODWorkflowError, materialize_p1_b02_ood
+from .p1_a05 import (
+    prepare_p1_a05_inputs,
+    run_p1_a05_pipeline,
+    write_p1_a05_dry_run,
+)
 from .ppo import run_ppo_pipeline, run_task_gnn_pipeline
 from .reporting import (
     EvaluationReportError,
@@ -616,6 +621,35 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         default="outputs/p1-b02-development-slices",
     )
+    prepare_p1_a05 = subparsers.add_parser(
+        "prepare-p1-a05",
+        help="materialize and audit the isolated P1-A05 training inputs",
+    )
+    prepare_p1_a05.add_argument(
+        "--config",
+        default="configs/p1_a05_size_robustness.json",
+    )
+    dry_run_p1_a05 = subparsers.add_parser(
+        "dry-run-p1-a05",
+        help="verify the frozen P1-A05 90-episode/6000-transition rollout plan",
+    )
+    dry_run_p1_a05.add_argument(
+        "--config",
+        default="configs/p1_a05_size_robustness.json",
+    )
+    train_p1_a05 = subparsers.add_parser(
+        "train-p1-a05",
+        help="run the reviewed single P1-A05 formal candidate",
+    )
+    train_p1_a05.add_argument(
+        "--config",
+        default="configs/p1_a05_size_robustness.json",
+    )
+    train_p1_a05.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume the reviewed formal run from complete PPO epoch states",
+    )
     return parser
 
 
@@ -676,6 +710,12 @@ def main(argv: list[str] | None = None) -> int:
                 args.output,
             )
             print(manifest_path.resolve())
+        elif args.command == "prepare-p1-a05":
+            print(prepare_p1_a05_inputs(args.config).resolve())
+        elif args.command == "dry-run-p1-a05":
+            print(write_p1_a05_dry_run(args.config).resolve())
+        elif args.command == "train-p1-a05":
+            print(run_p1_a05_pipeline(args.config, resume=args.resume).resolve())
         else:
             raise AssertionError(f"unknown command: {args.command}")
     except EvaluationReportError as error:

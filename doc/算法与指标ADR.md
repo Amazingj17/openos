@@ -3,7 +3,7 @@
 - 任务：P0-A01
 - 主责：成员 A
 - 复核：成员 B
-- 状态：已完成（P1-A03/P1-B02 已双签；P1-A05 设计复核通过、实现与性能门禁未过）
+- 状态：已完成（P1-A03/P1-B02 已双签；P1-A05/P1-B03 实现待交叉复核，性能门禁未过）
 - 日期：2026-07-16
 - 适用版本：首次 GitHub 基线 `28f6305` 之后的 P0-A01 工作区
 
@@ -35,6 +35,8 @@
 16. P1-A05 只读诊断确认：MLP 150/150 和 task-GNN 90/90 条 size 记录全部劣于 HEFT；seed `20260718` 按 ID 规则直接选择 epoch 0 warm start，size mean 仍为 `1.462686`。训练固定 50 tasks，而 size 为 100 tasks，且同时改变 generator、根节点结构、关键路径、workload、bandwidth 和 latency。因此拒绝“只修 PPO 漂移”“重开 task-GNN”与“纯 size 因果”表述。
 17. P1-A05 唯一候选冻结为等 transition 的 rollout-source 干预：每 PPO epoch 用 60×50-task STG + 30×100-task synthetic，恰为 `3000+3000=6000` transitions；五 seed×两 epoch 总预算仍为 60,000。14-D MLP、P1-A04 warm start、奖励、优化器、超参数和 ID checkpoint selection 全部不变；当前只提交设计，B 签字前不训练。
 18. B 已从远端不可变提交 `5857931...` 完成 `P1-A05-DESIGN-REVIEW`：A 报告 hash 可重建，60/60 场景内容 hash、性能与复合偏移重算一致，冻结 seed 重叠、91 episodes、6001 transitions、gamma、模型、public test 和训练调用共 7/7 注入被拒绝。设计通过只授权 `P1-A05-IMPLEMENT`；60 场景实际物化去重、90/6000 dry-run、生产配置拒绝器和物理无 public-test 训练根仍须实现并由 B 复核，完成前不训练。
+19. P1-B03 采用双 hash 而非覆盖语义：原始 SHA-256 绑定实际执行字节，严格 UTF-8 normalized-LF SHA-256 只用于跨 worktree 文本身份；canonical JSON hash 绑定解析值。`.gitattributes` 固定源码/配置/文档为 LF，二进制显式排除；旧 evidence 不改写。B 已实现并通过本地测试，A 从远端不可变提交复核前不写“双签关闭”。
+20. P1-A05 生产实现只允许预注册的逐 epoch 场景 ID 列表。实际隔离根为 120 train + 30 validation + 60 synthetic + 5 warm-start，四类 ID/hash 交集和 public-test/archive 均为 0；两轮 dry-run 均为 90/6000 且未加载 checkpoint/优化器。正式入口必须在输出创建前校验 B receipt，并要求干净 HEAD 等于 receipt 的 `approved_source_commit`。当前 receipt 不存在，因此未训练。
 
 ## 2. 本次审计范围与证据
 
@@ -154,9 +156,9 @@ P1-B02 将上述方法固化为机器契约：主策略和 Random 使用 5 seeds
 | HEFT teacher | P1-A01 参考含 `is_heft_task/is_heft_pair`；P1-A02 主路径强制删除 | 同 seed 16/14 维 BC ratio 为 `1.0/0.852539`，teacher accuracy 为 `1.0/0.514`；B 注入任一特征均在训练前失败 | PPO/GNN 主路径保持删除 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | B 独立推导通过；正式最大恒等式误差 `1.78e-15`，`gamma=0.99` 注入被拒绝 | task-GNN 保持奖励与 `gamma=1.0` 不变 |
-| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | P1-A05 唯一干预已冻结为等 transition 的 50/100-task rollout mixture，并通过 B 设计复核；未创建新 checkpoint | A 实现训练前门禁；B 从不可变实现提交复核通过后才允许唯一正式训练 |
+| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | P1-A05 等 transition 的 50/100-task rollout 已实现；真实物化/dry-run 通过，receipt 缺失时训练入口拒绝；未创建新 checkpoint | B 从不可变实现提交复核并签发绑定 receipt 后才允许唯一正式训练 |
 | 图表示 | PPO 主模型为 14 维 MLP；P1-A03 对照为一层双向 task-GNN | GNN mean 点估计改善 `-0.032733`，但配对 CI 跨 0；参数约 `1.969×`、CPU P50 约 `1.046×` | 保留 MLP；GNN 作为未证实消融，不追加新图变量 |
-| checkpoint/源码元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | A 确认 9/9 参数 hash 可重算；同一 Git blob 的 LF/CRLF 工作树原始源码 hash 不同，规范化 LF 后一致 | B 执行 P1-B03：固定 `.gitattributes`、规范化文本 hash 和跨 worktree 测试；旧 evidence 不改写 |
+| checkpoint/源码元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P1-B03 已实现 `.gitattributes`、raw/normalized-LF 双 hash、canonical JSON hash 和 producer 迁移；旧 evidence 未改写 | A 从远端不可变提交做跨 worktree/Git blob 独立复核 |
 | test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁；P1-B02 development materializer 固定只加载 `validation/model_selection` | A/B evidence 均记录 `test_accessed=false`、`training_started=false`、`public_test_loaded=false`；未运行 `claim-test-gate` | size 门禁未过前不得加载 public test，最终将 claim 固定在 loader 前 |
 
 ## 5. 当前结果的正确解释
@@ -208,7 +210,7 @@ G1 通过后的唯一允许顺序：
 3. P1-03 断点续训首轮被 B 退回，A 实现 staging 发布后已通过 B 的第二轮独立复核。（已完成）
 4. 只把 MLP 替换为 task-GNN 的正式对照和 B 独立复核均已完成；点估计改善但 CI 跨 0，按止损保留 MLP，不以追加 resource-GNN、课程或新奖励补救。（已关闭）
 5. P1-B02 development/OOD 已完成双人独立复跑；证据可信但 size 性能门禁失败，冻结原始负结果。（已关闭评测子阶段）
-6. A 已完成 size-OOD 根因分析并预注册等 transition 的 50/100-task rollout 候选；B 已独立复核设计。下一步只实现物化去重、90/6000 dry-run、生产配置拒绝器和无 public-test 根证明；B 复核实现前不训练，候选通过 development 全切片门禁前不访问 public test。（设计已通过，实现待开始）
+6. A 已完成等 transition 的 50/100-task rollout 生产实现、物化去重、90/6000 dry-run 和无 public-test 训练根证明；B 尚须从远端不可变提交复核并签发绑定 receipt。receipt 前不训练，候选通过 development 全切片门禁前不访问 public test。（实现完成，待复核）
 
 ## 7. 三个独立手算案例
 
@@ -339,4 +341,4 @@ P1-03 epoch 边界状态覆盖 actor/value 参数、两个 Adam、两套 RNG、h
 
 P1-A03 已按上述冻结项实现并运行：节点只复用 14 维输入中的 workload、upward-rank、indegree、outdegree，经一次前驱/后继均值消息传递后与候选表示融合。B 已从远端 `f6301ae7...` 独立重验微型事务；A 随后在提交 `a8c08c0...` 上完成正式 3-seed；B 又从远端 `f4c7e4d...` 重算 31/32-artifact、三个状态、配对 CI，并用六个 checkpoint 复评 180 次 validation 调度，全部一致。GNN/MLP mean 为 `0.690460/0.723193`，90 对为 `50/19/21`，但配对 CI 跨 0；因此停止扩展并保留 MLP。完整证据见 [P1-A03 设计与验收](./P1-A03TaskGNN设计与验收.md)、[微型独立复核](./P1-A03独立复核记录.md)、[正式对照报告](./P1-A03正式对照报告.md)和[正式结果独立复核](./P1-A03正式结果独立复核记录.md)。
 
-P1-B02 首轮历史见 [独立复核记录](./P1-B02独立复核记录.md)；契约/聚合器、OOD materializer/manifest、producer 外层计时、失败语义和 hash 互操作现均通过双人复核，完整终态见 [OOD 第三轮复核](./P1-B02OOD证据路径第三轮独立复核记录.md)。A 已按 [P1-A04 记录](./P1-A04五种子扩展设计与正式结果.md)只补两个缺失 seed，B 又在[独立复核](./P1-A04五种子扩展独立复核记录.md)中用物理无 test 根复跑通过。B 随后完成[正式 development 候选](./P1-B02正式Development结果记录.md)，A 从远端 `fab540c...` 唯一复跑并[正式复核通过](./P1-B02正式Development独立复核记录.md)。P1-B02 development/OOD 评测子阶段关闭，但 size-OOD 五 seed 全部失败，`release_publishable=false`，G3 与 public test 继续阻塞。A 的 `P1-A05-SIZE-ROBUSTNESS-DESIGN` 已由 B [独立复核通过](./P1-A05Size-OOD设计独立复核记录.md)；下一步 A 只实现训练前门禁，B 继续 `P1-B03-PORTABLE-HASH` 并复核 A 的实现，两项均不得改写历史 evidence。
+P1-B02 首轮历史见 [独立复核记录](./P1-B02独立复核记录.md)；契约/聚合器、OOD materializer/manifest、producer 外层计时、失败语义和 hash 互操作现均通过双人复核，完整终态见 [OOD 第三轮复核](./P1-B02OOD证据路径第三轮独立复核记录.md)。A 已按 [P1-A04 记录](./P1-A04五种子扩展设计与正式结果.md)只补两个缺失 seed，B 又在[独立复核](./P1-A04五种子扩展独立复核记录.md)中用物理无 test 根复跑通过。B 随后完成[正式 development 候选](./P1-B02正式Development结果记录.md)，A 从远端 `fab540c...` 唯一复跑并[正式复核通过](./P1-B02正式Development独立复核记录.md)。P1-B02 development/OOD 评测子阶段关闭，但 size-OOD 五 seed 全部失败，`release_publishable=false`，G3 与 public test 继续阻塞。P1-A05 和 P1-B03 均已完成本地主责实现及测试；用户推送后，B/A 分别从远端不可变提交交叉复核。P1-A05 receipt 签发并推送前不得训练，历史 evidence 继续保持不变。

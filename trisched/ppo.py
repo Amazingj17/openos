@@ -149,9 +149,7 @@ def load_ppo_config(path: str | Path) -> dict[str, Any]:
             "unknown feature names",
             details={"unknown": unknown},
         )
-    missing_teacher_exclusions = sorted(
-        set(TEACHER_FEATURE_NAMES) - set(excluded)
-    )
+    missing_teacher_exclusions = sorted(set(TEACHER_FEATURE_NAMES) - set(excluded))
     if missing_teacher_exclusions:
         _fail(
             "ppo_teacher_feature_leakage",
@@ -172,9 +170,7 @@ def load_ppo_config(path: str | Path) -> dict[str, Any]:
         "hidden_dim": _positive_integer(
             bc.get("hidden_dim", 32), "$.behavior_cloning.hidden_dim"
         ),
-        "epochs": _positive_integer(
-            bc.get("epochs", 1), "$.behavior_cloning.epochs"
-        ),
+        "epochs": _positive_integer(bc.get("epochs", 1), "$.behavior_cloning.epochs"),
         "learning_rate": _finite_number(
             bc.get("learning_rate", 0.004),
             "$.behavior_cloning.learning_rate",
@@ -1024,24 +1020,16 @@ def _load_ppo_resume_state(
     for name, values in actor.params.items():
         shape = values.shape
         actor.params[name] = _resume_array(arrays, f"actor_param_{name}", shape)
-        actor._adam_m[name] = _resume_array(
-            arrays, f"actor_adam_m_{name}", shape
-        )
-        actor._adam_v[name] = _resume_array(
-            arrays, f"actor_adam_v_{name}", shape
-        )
+        actor._adam_m[name] = _resume_array(arrays, f"actor_adam_m_{name}", shape)
+        actor._adam_v[name] = _resume_array(arrays, f"actor_adam_v_{name}", shape)
         best_actor.params[name] = _resume_array(
             arrays, f"best_actor_param_{name}", shape
         )
     for name, values in critic.params.items():
         shape = values.shape
         critic.params[name] = _resume_array(arrays, f"critic_param_{name}", shape)
-        critic._adam_m[name] = _resume_array(
-            arrays, f"critic_adam_m_{name}", shape
-        )
-        critic._adam_v[name] = _resume_array(
-            arrays, f"critic_adam_v_{name}", shape
-        )
+        critic._adam_m[name] = _resume_array(arrays, f"critic_adam_m_{name}", shape)
+        critic._adam_v[name] = _resume_array(arrays, f"critic_adam_v_{name}", shape)
         best_critic.params[name] = _resume_array(
             arrays, f"best_critic_param_{name}", shape
         )
@@ -1500,9 +1488,7 @@ def _update_ppo(
     )
     advantage_mean = float(np.mean(raw_advantages))
     advantage_std = float(np.std(raw_advantages))
-    normalized_advantages = (raw_advantages - advantage_mean) / (
-        advantage_std + 1e-8
-    )
+    normalized_advantages = (raw_advantages - advantage_mean) / (advantage_std + 1e-8)
     clip_ratio = float(config["clip_ratio"])
     entropy_coefficient = float(config["entropy_coefficient"])
     update_records: list[dict[str, Any]] = []
@@ -1517,9 +1503,7 @@ def _update_ppo(
         value_norms: list[float] = []
         permutation = rng.permutation(len(transitions))
         for start in range(0, len(transitions), int(config["minibatch_size"])):
-            indices = permutation[
-                start : start + int(config["minibatch_size"])
-            ]
+            indices = permutation[start : start + int(config["minibatch_size"])]
             if len(indices) == 0:
                 continue
             actor_gradients = actor.empty_gradients()
@@ -1528,9 +1512,7 @@ def _update_ppo(
                 index = int(raw_index)
                 transition = transitions[index]
                 advantage = float(normalized_advantages[index])
-                cache = actor.distribution_from_features(
-                    transition.candidate_features
-                )
+                cache = actor.distribution_from_features(transition.candidate_features)
                 probability = float(cache.probabilities[transition.selected_index])
                 new_log_probability = float(np.log(probability + 1e-12))
                 log_ratio = new_log_probability - transition.old_log_probability
@@ -1555,10 +1537,7 @@ def _update_ppo(
                         scale=ratio * advantage,
                     )
                 entropy = -float(
-                    np.sum(
-                        cache.probabilities
-                        * np.log(cache.probabilities + 1e-12)
-                    )
+                    np.sum(cache.probabilities * np.log(cache.probabilities + 1e-12))
                 )
                 entropies.append(entropy)
                 if entropy_coefficient:
@@ -1576,12 +1555,10 @@ def _update_ppo(
                 approximate_kls.append(0.5 * log_ratio * log_ratio)
             scale = 1.0 / len(indices)
             actor_gradients = {
-                name: gradient * scale
-                for name, gradient in actor_gradients.items()
+                name: gradient * scale for name, gradient in actor_gradients.items()
             }
             value_gradients = {
-                name: gradient * scale
-                for name, gradient in value_gradients.items()
+                name: gradient * scale for name, gradient in value_gradients.items()
             }
             actor_norms.append(
                 actor.apply_gradients(
@@ -1704,9 +1681,7 @@ def _update_task_gnn_ppo(
     )
     advantage_mean = float(np.mean(raw_advantages))
     advantage_std = float(np.std(raw_advantages))
-    normalized_advantages = (raw_advantages - advantage_mean) / (
-        advantage_std + 1e-8
-    )
+    normalized_advantages = (raw_advantages - advantage_mean) / (advantage_std + 1e-8)
     clip_ratio = float(config["clip_ratio"])
     entropy_coefficient = float(config["entropy_coefficient"])
     update_records: list[dict[str, Any]] = []
@@ -1721,9 +1696,7 @@ def _update_task_gnn_ppo(
         value_norms: list[float] = []
         permutation = rng.permutation(len(transitions))
         for start in range(0, len(transitions), int(config["minibatch_size"])):
-            indices = permutation[
-                start : start + int(config["minibatch_size"])
-            ]
+            indices = permutation[start : start + int(config["minibatch_size"])]
             if len(indices) == 0:
                 continue
             actor_gradients = actor.empty_gradients()
@@ -1732,9 +1705,7 @@ def _update_task_gnn_ppo(
                 index = int(raw_index)
                 transition = transitions[index]
                 advantage = float(normalized_advantages[index])
-                cache = actor.distribution_from_frozen_state(
-                    transition.frozen_state
-                )
+                cache = actor.distribution_from_frozen_state(transition.frozen_state)
                 probability = float(cache.probabilities[transition.selected_index])
                 new_log_probability = float(np.log(probability + 1e-12))
                 log_ratio = new_log_probability - transition.old_log_probability
@@ -1759,10 +1730,7 @@ def _update_task_gnn_ppo(
                         scale=ratio * advantage,
                     )
                 entropy = -float(
-                    np.sum(
-                        cache.probabilities
-                        * np.log(cache.probabilities + 1e-12)
-                    )
+                    np.sum(cache.probabilities * np.log(cache.probabilities + 1e-12))
                 )
                 entropies.append(entropy)
                 if entropy_coefficient:
@@ -1780,12 +1748,10 @@ def _update_task_gnn_ppo(
                 approximate_kls.append(0.5 * log_ratio * log_ratio)
             scale = 1.0 / len(indices)
             actor_gradients = {
-                name: gradient * scale
-                for name, gradient in actor_gradients.items()
+                name: gradient * scale for name, gradient in actor_gradients.items()
             }
             value_gradients = {
-                name: gradient * scale
-                for name, gradient in value_gradients.items()
+                name: gradient * scale for name, gradient in value_gradients.items()
             }
             actor_norms.append(
                 actor.apply_gradients(
@@ -1833,19 +1799,11 @@ def train_task_gnn_ppo(
     config: Mapping[str, Any],
     *,
     seed: int,
-    validation_frozen_states: (
-        Mapping[str, FrozenTaskGNNTeacherStates] | None
-    ) = None,
+    validation_frozen_states: (Mapping[str, FrozenTaskGNNTeacherStates] | None) = None,
     resume_state_path: str | Path | None = None,
     resume_contract: Mapping[str, Any] | None = None,
     resume: bool = False,
-) -> tuple[
-    TaskGNNPolicy,
-    TaskGNNPolicy,
-    ValueNetwork,
-    ValueNetwork,
-    dict[str, Any],
-]:
+) -> tuple[TaskGNNPolicy, TaskGNNPolicy, ValueNetwork, ValueNetwork, dict[str, Any],]:
     if warm_start.seed != seed:
         _fail(
             "ppo_seed_mismatch",
@@ -1886,9 +1844,7 @@ def train_task_gnn_ppo(
         if validation_frozen_states is None
         else dict(validation_frozen_states)
     )
-    if set(validation_states) != {
-        scenario.id for scenario in validation_scenarios
-    }:
+    if set(validation_states) != {scenario.id for scenario in validation_scenarios}:
         _fail(
             "validation_reference",
             "$.entries",
@@ -1896,9 +1852,7 @@ def train_task_gnn_ppo(
         )
     state_path = Path(resume_state_path) if resume_state_path is not None else None
     if state_path is not None and resume_contract is None:
-        raise ValueError(
-            "resume_contract is required when saving task-GNN PPO state"
-        )
+        raise ValueError("resume_contract is required when saving task-GNN PPO state")
     if resume and state_path is None:
         _fail(
             "ppo_resume_state_missing",
@@ -2020,9 +1974,7 @@ def train_task_gnn_ppo(
                 "train_mean_ratio": float(np.mean(train_ratios)),
                 "train_min_ratio": float(np.min(train_ratios)),
                 "train_max_ratio": float(np.max(train_ratios)),
-                "reward_identity_max_abs_error": float(
-                    np.max(reward_errors)
-                ),
+                "reward_identity_max_abs_error": float(np.max(reward_errors)),
                 "update": update,
                 "validation": validation,
             }
@@ -2095,6 +2047,7 @@ def train_masked_ppo(
     resume_state_path: str | Path | None = None,
     resume_contract: Mapping[str, Any] | None = None,
     resume: bool = False,
+    epoch_scenario_ids: Sequence[Sequence[str]] | None = None,
 ) -> tuple[
     MaskedMLPPolicy,
     MaskedMLPPolicy,
@@ -2127,6 +2080,33 @@ def train_masked_ppo(
         split="train",
         purpose="behavior_cloning_teacher",
     )
+    scenario_by_id = {scenario.id: scenario for scenario in train_scenarios}
+    normalized_epoch_scenario_ids: list[list[str]] | None = None
+    if epoch_scenario_ids is not None:
+        if len(epoch_scenario_ids) != int(config["epochs"]):
+            _fail(
+                "ppo_rollout_plan",
+                "$.ppo.epoch_scenario_ids",
+                "rollout plan must contain exactly one scenario list per epoch",
+            )
+        normalized_epoch_scenario_ids = []
+        for epoch_index, raw_ids in enumerate(epoch_scenario_ids):
+            ids = list(raw_ids)
+            if (
+                len(ids) != int(config["episodes_per_epoch"])
+                or len(set(ids)) != len(ids)
+                or any(
+                    not isinstance(scenario_id, str)
+                    or scenario_id not in scenario_by_id
+                    for scenario_id in ids
+                )
+            ):
+                _fail(
+                    "ppo_rollout_plan",
+                    f"$.ppo.epoch_scenario_ids[{epoch_index}]",
+                    "epoch scenarios must be distinct, known, and match episodes_per_epoch",
+                )
+            normalized_epoch_scenario_ids.append(ids)
     _manifest_records(
         validation_reference_manifest,
         validation_scenarios,
@@ -2223,11 +2203,20 @@ def train_masked_ppo(
         transitions: list[PPOTransition] = []
         train_ratios: list[float] = []
         reward_errors: list[float] = []
-        selected = rng.permutation(len(train_scenarios))[
-            : int(config["episodes_per_epoch"])
-        ]
-        for raw_index in selected:
-            scenario = train_scenarios[int(raw_index)]
+        if normalized_epoch_scenario_ids is None:
+            selected = rng.permutation(len(train_scenarios))[
+                : int(config["episodes_per_epoch"])
+            ]
+            epoch_scenarios = [
+                train_scenarios[int(raw_index)] for raw_index in selected
+            ]
+        else:
+            planned_ids = normalized_epoch_scenario_ids[epoch - 1]
+            selected = rng.permutation(len(planned_ids))
+            epoch_scenarios = [
+                scenario_by_id[planned_ids[int(raw_index)]] for raw_index in selected
+            ]
+        for scenario in epoch_scenarios:
             episode, ratio, reward_error = _collect_episode(
                 actor,
                 critic,
@@ -2255,6 +2244,15 @@ def train_masked_ppo(
                 "train_mean_ratio": float(np.mean(train_ratios)),
                 "train_min_ratio": float(np.min(train_ratios)),
                 "train_max_ratio": float(np.max(train_ratios)),
+                "train_task_count_counts": {
+                    str(task_count): sum(
+                        scenario.task_count == task_count
+                        for scenario in epoch_scenarios
+                    )
+                    for task_count in sorted(
+                        {scenario.task_count for scenario in epoch_scenarios}
+                    )
+                },
                 "reward_identity_max_abs_error": float(np.max(reward_errors)),
                 "update": update,
                 "validation": validation,
@@ -2284,23 +2282,29 @@ def train_masked_ppo(
                 best_key=best_key,
                 best_epoch=best_epoch,
             )
-    return best_actor, _clone_policy(actor), best_critic, critic.clone(), {
-        "format_version": 1,
-        "algorithm": "masked PPO with GAE and BC warm start",
-        "seed": seed,
-        "feature_names": list(actor.feature_names),
-        "reward": "negative incremental makespan divided by HEFT makespan",
-        "reward_sum_identity": "sum(step_reward) == -final_ratio",
-        "epochs": history,
-        "selection": {
-            "split": "validation",
-            "test_accessed": False,
-            "metric": "validation_mean_ratio",
-            "candidates": "BC warm start plus every PPO epoch",
-            "tie_break": ["zero_failures", "lower_mean_ratio", "earlier_epoch"],
-            "best_epoch": best_epoch,
+    return (
+        best_actor,
+        _clone_policy(actor),
+        best_critic,
+        critic.clone(),
+        {
+            "format_version": 1,
+            "algorithm": "masked PPO with GAE and BC warm start",
+            "seed": seed,
+            "feature_names": list(actor.feature_names),
+            "reward": "negative incremental makespan divided by HEFT makespan",
+            "reward_sum_identity": "sum(step_reward) == -final_ratio",
+            "epochs": history,
+            "selection": {
+                "split": "validation",
+                "test_accessed": False,
+                "metric": "validation_mean_ratio",
+                "candidates": "BC warm start plus every PPO epoch",
+                "tie_break": ["zero_failures", "lower_mean_ratio", "earlier_epoch"],
+                "best_epoch": best_epoch,
+            },
         },
-    }
+    )
 
 
 def _checkpoint_metadata(
@@ -2372,9 +2376,7 @@ def _prepare_seed_extension(
     if extension_config is None:
         return None
 
-    source_dir = _resolve_config_path(
-        config_source, extension_config["source_dir"]
-    )
+    source_dir = _resolve_config_path(config_source, extension_config["source_dir"])
     if not source_dir.is_dir():
         _fail(
             "ppo_seed_extension_source",
@@ -2462,9 +2464,7 @@ def _prepare_seed_extension(
             )
 
     required_control_artifacts = {"resolved_config.json", "ppo_summary.json"}
-    missing_control_artifacts = sorted(
-        required_control_artifacts - set(artifacts)
-    )
+    missing_control_artifacts = sorted(required_control_artifacts - set(artifacts))
     if missing_control_artifacts:
         _fail(
             "ppo_seed_extension_artifact",
@@ -2547,9 +2547,7 @@ def _prepare_seed_extension(
         "seed_results": seed_results,
         "artifacts": artifacts,
         "reuse_seeds": reuse_seeds,
-        "new_seeds": [
-            seed for seed in config["seeds"] if seed not in reuse_seeds
-        ],
+        "new_seeds": [seed for seed in config["seeds"] if seed not in reuse_seeds],
     }
 
 
@@ -2604,10 +2602,7 @@ def _inherit_seed_result(
                     str(error),
                 )
             actual_hash = _file_hash(destination)
-            if (
-                actual_size != expected["bytes"]
-                or actual_hash != expected["sha256"]
-            ):
+            if actual_size != expected["bytes"] or actual_hash != expected["sha256"]:
                 _fail(
                     "ppo_seed_extension_artifact",
                     f"$.output_dir.{name}",
@@ -2620,9 +2615,7 @@ def _inherit_seed_result(
         result["training_state"] = None
     result["seed_extension"] = {
         "mode": "inherited_verified",
-        "source_run_manifest_sha256": extension[
-            "source_manifest_sha256"
-        ],
+        "source_run_manifest_sha256": extension["source_manifest_sha256"],
     }
     return result, names
 
@@ -2638,9 +2631,7 @@ def _run_ppo_pipeline_in_directory(
     config_source = Path(config_path).resolve()
     config = load_ppo_config(config_source)
     seed_extension = _prepare_seed_extension(config_source, config)
-    manifest_path = _resolve_config_path(
-        config_source, config["benchmark"]["manifest"]
-    )
+    manifest_path = _resolve_config_path(config_source, config["benchmark"]["manifest"])
     raw_root = _resolve_config_path(config_source, config["benchmark"]["raw_root"])
     output_dir = (
         _resolve_config_path(config_source, config["output_dir"])
@@ -2833,15 +2824,12 @@ def _run_ppo_pipeline_in_directory(
     ]
     extension_manifest_snapshot: str | None = None
     if seed_extension is not None:
-        extension_manifest_snapshot = (
-            "seed_extension_source_run_manifest.json"
-        )
+        extension_manifest_snapshot = "seed_extension_source_run_manifest.json"
         snapshot_path = output_dir / extension_manifest_snapshot
         if resume:
             if (
                 not snapshot_path.is_file()
-                or _file_hash(snapshot_path)
-                != seed_extension["source_manifest_sha256"]
+                or _file_hash(snapshot_path) != seed_extension["source_manifest_sha256"]
             ):
                 _fail(
                     "ppo_seed_extension_artifact",
@@ -2858,10 +2846,7 @@ def _run_ppo_pipeline_in_directory(
     resumed_seeds: list[int] = []
     first_no_teacher_metrics: dict[str, Any] | None = None
     for seed in config["seeds"]:
-        if (
-            seed_extension is not None
-            and seed in seed_extension["reuse_seeds"]
-        ):
+        if seed_extension is not None and seed in seed_extension["reuse_seeds"]:
             inherited_result, inherited_names = _inherit_seed_result(
                 seed_extension,
                 output_dir,
@@ -2869,9 +2854,7 @@ def _run_ppo_pipeline_in_directory(
                 resume=resume,
             )
             if int(seed) == reference_seed:
-                first_no_teacher_metrics = inherited_result[
-                    "warm_start_validation"
-                ]
+                first_no_teacher_metrics = inherited_result["warm_start_validation"]
             seed_results.append(inherited_result)
             artifact_names.extend(inherited_names)
             continue
@@ -2911,8 +2894,10 @@ def _run_ppo_pipeline_in_directory(
             f"{prefix}_validation_diagnostics.json",
             f"{prefix}_validation_failures.jsonl",
         ]
-        if resume and not state_exists and any(
-            (output_dir / name).exists() for name in completed_output_names
+        if (
+            resume
+            and not state_exists
+            and any((output_dir / name).exists() for name in completed_output_names)
         ):
             _fail(
                 "ppo_resume_state_missing",
@@ -2932,18 +2917,14 @@ def _run_ppo_pipeline_in_directory(
             "features": config["features"]["selected"],
             "ppo": {
                 **config["ppo"],
-                "failure_penalty_ratio": config["selection"][
-                    "failure_penalty_ratio"
-                ],
+                "failure_penalty_ratio": config["selection"]["failure_penalty_ratio"],
             },
             "warm_start_parameter_sha256": policy_parameter_hash(warm_actor),
             "train": {
                 "scenario_hashes": [
                     scenario.content_hash() for scenario in train_scenarios
                 ],
-                "teacher_trace_hashes_sha256": train_teacher[
-                    "trace_hashes_sha256"
-                ],
+                "teacher_trace_hashes_sha256": train_teacher["trace_hashes_sha256"],
                 "teacher_schedule_hashes_sha256": train_teacher[
                     "schedule_hashes_sha256"
                 ],
@@ -2978,9 +2959,7 @@ def _run_ppo_pipeline_in_directory(
             validation_reference,
             {
                 **config["ppo"],
-                "failure_penalty_ratio": config["selection"][
-                    "failure_penalty_ratio"
-                ],
+                "failure_penalty_ratio": config["selection"]["failure_penalty_ratio"],
             },
             seed=int(seed),
             validation_frozen_states=validation_states,
@@ -3070,9 +3049,7 @@ def _run_ppo_pipeline_in_directory(
             "selected_warm_start": ppo_curve["selection"]["best_epoch"] == 0,
         }
         if seed_extension is not None:
-            seed_result["seed_extension"] = {
-                "mode": "trained_current_run"
-            }
+            seed_result["seed_extension"] = {"mode": "trained_current_run"}
         seed_results.append(seed_result)
         artifact_names.extend(
             [
@@ -3115,8 +3092,7 @@ def _run_ppo_pipeline_in_directory(
     artifact_names.append(ablation_path.name)
 
     seed_ratios = [
-        float(result["best_validation"]["mean_ratio"])
-        for result in seed_results
+        float(result["best_validation"]["mean_ratio"]) for result in seed_results
     ]
     validation_gate_passed = all(
         result["best_validation"]["failure_count"] == 0
@@ -3154,8 +3130,7 @@ def _run_ppo_pipeline_in_directory(
             "min_seed_mean_ratio": float(np.min(seed_ratios)),
             "max_seed_mean_ratio": float(np.max(seed_ratios)),
             "improved_seed_count": sum(
-                int(result["improved_over_warm_start"])
-                for result in seed_results
+                int(result["improved_over_warm_start"]) for result in seed_results
             ),
             "warm_start_fallback_count": sum(
                 int(result["selected_warm_start"]) for result in seed_results
@@ -3195,9 +3170,7 @@ def _run_ppo_pipeline_in_directory(
     if seed_extension is not None:
         summary["seed_extension"] = {
             "source_run_manifest": extension_manifest_snapshot,
-            "source_run_manifest_sha256": seed_extension[
-                "source_manifest_sha256"
-            ],
+            "source_run_manifest_sha256": seed_extension["source_manifest_sha256"],
             "inherited_seeds": seed_extension["reuse_seeds"],
             "trained_seeds": seed_extension["new_seeds"],
             "source_test_accessed": False,
@@ -3226,9 +3199,7 @@ def _run_ppo_pipeline_in_directory(
     if seed_extension is not None:
         execution["seed_extension"] = {
             "source_run_manifest": extension_manifest_snapshot,
-            "source_run_manifest_sha256": seed_extension[
-                "source_manifest_sha256"
-            ],
+            "source_run_manifest_sha256": seed_extension["source_manifest_sha256"],
             "inherited_seeds": seed_extension["reuse_seeds"],
             "trained_seeds": seed_extension["new_seeds"],
         }
@@ -3423,9 +3394,7 @@ def _run_task_gnn_pipeline_in_directory(
 
     config_source = Path(config_path).resolve()
     config = load_task_gnn_config(config_source)
-    manifest_path = _resolve_config_path(
-        config_source, config["benchmark"]["manifest"]
-    )
+    manifest_path = _resolve_config_path(config_source, config["benchmark"]["manifest"])
     raw_root = _resolve_config_path(config_source, config["benchmark"]["raw_root"])
     output_dir = (
         _resolve_config_path(config_source, config["output_dir"])
@@ -3626,8 +3595,10 @@ def _run_task_gnn_pipeline_in_directory(
             f"{prefix}_validation_diagnostics.json",
             f"{prefix}_validation_failures.jsonl",
         ]
-        if resume and not state_exists and any(
-            (output_dir / name).exists() for name in completed_output_names
+        if (
+            resume
+            and not state_exists
+            and any((output_dir / name).exists() for name in completed_output_names)
         ):
             _fail(
                 "ppo_resume_state_missing",
@@ -3649,18 +3620,14 @@ def _run_task_gnn_pipeline_in_directory(
             "features": config["features"]["selected"],
             "ppo": {
                 **config["ppo"],
-                "failure_penalty_ratio": config["selection"][
-                    "failure_penalty_ratio"
-                ],
+                "failure_penalty_ratio": config["selection"]["failure_penalty_ratio"],
             },
             "warm_start_parameter_sha256": task_gnn_parameter_hash(warm_actor),
             "train": {
                 "scenario_hashes": [
                     scenario.content_hash() for scenario in train_scenarios
                 ],
-                "teacher_trace_hashes_sha256": train_teacher[
-                    "trace_hashes_sha256"
-                ],
+                "teacher_trace_hashes_sha256": train_teacher["trace_hashes_sha256"],
                 "teacher_schedule_hashes_sha256": train_teacher[
                     "schedule_hashes_sha256"
                 ],
@@ -3695,9 +3662,7 @@ def _run_task_gnn_pipeline_in_directory(
             validation_reference,
             {
                 **config["ppo"],
-                "failure_penalty_ratio": config["selection"][
-                    "failure_penalty_ratio"
-                ],
+                "failure_penalty_ratio": config["selection"]["failure_penalty_ratio"],
             },
             seed=int(seed),
             validation_frozen_states=validation_states,
@@ -3806,8 +3771,7 @@ def _run_task_gnn_pipeline_in_directory(
 
     print("[5/6] aggregating the task-GNN validation gate")
     seed_ratios = [
-        float(result["best_validation"]["mean_ratio"])
-        for result in seed_results
+        float(result["best_validation"]["mean_ratio"]) for result in seed_results
     ]
     validation_gate_passed = all(
         result["best_validation"]["failure_count"] == 0
@@ -3845,8 +3809,7 @@ def _run_task_gnn_pipeline_in_directory(
             "min_seed_mean_ratio": float(np.min(seed_ratios)),
             "max_seed_mean_ratio": float(np.max(seed_ratios)),
             "improved_seed_count": sum(
-                int(result["improved_over_warm_start"])
-                for result in seed_results
+                int(result["improved_over_warm_start"]) for result in seed_results
             ),
             "warm_start_fallback_count": sum(
                 int(result["selected_warm_start"]) for result in seed_results
