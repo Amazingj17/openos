@@ -19,7 +19,7 @@
 - 用机器可读契约冻结 ID/OOD、5-seed、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 首轮退回的逐 seed mean、receipt basename 和严格 UTC 三项缺陷已由 A 从远端不可变提交二次复核通过；B 现已提交确定性 OOD materializer、冻结 development manifest 和只读 evidence producer 候选，等待 A 从新不可变提交独立复核。真实 validation/生成 OOD 场景已物化，但尚未运行任何策略或产生 OOD 性能结果；公开 test 未加载，新训练未启动，P1-B02 总任务仍保持部分完成。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器子阶段已通过；OOD materializer、冻结 development manifest、无 test 路径和 scheduler-only 外层计时也通过 A 的独立重算，但 evidence producer 因“runner 内部非法调度漏计”和“错误返回类型泄漏 `AttributeError`”两项失败语义缺陷被[独立复核退回](doc/P1-B02OOD证据路径独立复核记录.md)。尚未运行任何真实策略或产生 OOD 性能结果；公开 test 未加载，新训练未启动，P1-B02 继续保持部分完成。
 
 ## 快速运行
 
@@ -155,7 +155,7 @@ python -m trisched materialize-ood `
 
 命令只以 `validation/model_selection` capability 加载官方 split，并原子发布 `id_validation`、`ood_size`、`ood_ccr` 和 `ood_system`。冻结清单为 [`data/benchmarks/p1-b02-development-slices-v1.json`](data/benchmarks/p1-b02-development-slices-v1.json)，绑定契约 canonical hash、benchmark manifest SHA-256、每个源文件/Scenario hash、变换 provenance、每个场景文件 hash 和四个切片 aggregate hash；目标目录已存在时拒绝覆盖。只读 evidence producer 重新验证全部字节、来源和确定性变换，只计时 `runner.schedule(...)` 调用，并在停止计时后执行生产与独立 validator；HEFT 失败会阻断报告，其他策略失败保留惩罚行。
 
-B 针对[首轮独立复核记录](doc/P1-B02独立复核记录.md)中的 R1–R3 输出全部逐 seed mean 和 `evaluation_per_seed.csv`，在 claim/final 两处执行冻结 receipt basename，并将授权时间冻结为严格的 `YYYY-MM-DDTHH:MM:SSZ`。A 已从提交 `071b861...` 独立构造不同 seed mean、重算四份 artifact、注入错误 basename/receipt 字段/六类非法 UTC 并[二次复核通过](doc/P1-B02第二轮独立复核记录.md)。本轮只完成 OOD 证据路径候选和真实场景物化，未运行任何策略、未生成 development/OOD 指标，也未读取 public test；A 独立复核通过前，P1-B02 仍为部分完成。
+B 针对[首轮独立复核记录](doc/P1-B02独立复核记录.md)中的 R1–R3 输出全部逐 seed mean 和 `evaluation_per_seed.csv`，在 claim/final 两处执行冻结 receipt basename，并将授权时间冻结为严格的 `YYYY-MM-DDTHH:MM:SSZ`。A 已从提交 `071b861...` 独立构造不同 seed mean、重算四份 artifact、注入错误 basename/receipt 字段/六类非法 UTC 并[二次复核通过](doc/P1-B02第二轮独立复核记录.md)。OOD 证据路径复核中，120 个完整场景、两次物化、8 类篡改和外层计时边界均通过；但 adapter/进程内 runner 提前判非法时被错误报告为零 illegal，非参考 runner 返回错误对象时又直接泄漏 `AttributeError`，详见[独立复核记录](doc/P1-B02OOD证据路径独立复核记录.md)。B 修复并由 A 二次复核前不得运行 5-seed development/OOD。
 
 ## openEuler CPU smoke
 
@@ -242,7 +242,7 @@ tests/                   单元与集成测试
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
 - task-GNN 已使用一层任务 DAG 消息传递，但资源关系仍只由手工候选特征表达；
 - legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程或 OOD 性能结果；
-- P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；B 的 materializer/evidence producer 候选等待 A 独立复核，仍不得访问 public test；
+- P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；materializer 通过复核，但 evidence producer 的非法统计/错误返回类型两项缺陷待 B 修复，仍不得访问 public test；
 - 已在公开 STG topology projection 上完成并独立复核 3-seed PPO/task-GNN validation 开发结果及分层配对 bootstrap；公开 test 最终评测、5-seed 主结果和竞赛方隐藏测试尚未完成；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移，原始文本 hash 还会受 LF/CRLF 检出策略影响，release 前须补规范化 hash 和跨 clone 测试。
 
