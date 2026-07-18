@@ -252,6 +252,44 @@ def _fixture(tmp_path: Path) -> dict[str, Any]:
         "decision": "eligible_for_independent_review_before_G3",
     }
     _write_json(comparison_path, comparison)
+    independent_review_path = _write_json(
+        evidence_dir / "p1-a05-independent-review" / "p1_a05_independent_review.json",
+        {
+            "format_version": 1,
+            "task": "P1-A05-INDEPENDENT-DEVELOPMENT-REVIEW",
+            "reviewer": "B",
+            "candidate_commit": commit,
+            "code": {
+                "commit": commit,
+                "working_tree_dirty": False,
+                "script": {
+                    "path": "scripts/review_p1_a05_development.py",
+                    "raw_sha256": "a" * 64,
+                    "normalized_lf_sha256": "a" * 64,
+                },
+            },
+            "immutable_remote": {"contains_candidate_commit": True},
+            "inputs": {"formal": {"comparison_sha256": _sha256(comparison_path)}},
+            "normalized_equivalence": {
+                "record_count": 2040,
+                "records_canonical_sha256": "d" * 64,
+                "report_canonical_sha256": "e" * 64,
+                "csvs_canonical_sha256": "f" * 64,
+                "comparison_canonical_sha256": "1" * 64,
+            },
+            "checkpoints": formal_checkpoints,
+            "assertions": {
+                "immutable_remote_commit_verified": True,
+                "five_checkpoint_hashes_recomputed": True,
+                "normalized_scheduling_records_equal": True,
+                "normalized_reports_equal": True,
+                "normalized_csvs_equal": True,
+                "paired_comparisons_equal": True,
+                "public_test_accessed": False,
+            },
+            "decision": "approve_before_g3",
+        },
+    )
     g3_authorization_path = _write_json(
         evidence_dir / "p1-06" / "g3_authorization.json",
         {
@@ -260,6 +298,7 @@ def _fixture(tmp_path: Path) -> dict[str, Any]:
             "candidate_commit": commit,
             "release_commit": commit,
             "comparison_sha256": _sha256(comparison_path),
+            "independent_review_sha256": _sha256(independent_review_path),
             "development_gate_passed": True,
             "decision": "approve_p1_a05_as_primary",
             "test_accessed": False,
@@ -281,6 +320,7 @@ def _fixture(tmp_path: Path) -> dict[str, Any]:
         "candidate_evidence_path": candidate_evidence_path,
         "candidate_report_dir": report_dir,
         "training_dir": training_dir,
+        "independent_review_path": independent_review_path,
         "g3_authorization_path": g3_authorization_path,
     }
     return {
@@ -288,6 +328,7 @@ def _fixture(tmp_path: Path) -> dict[str, Any]:
         "contract": contract,
         "comparison_path": comparison_path,
         "checkpoint": training_dir / f"seed_{SEEDS[0]}_p1_a05_best_policy.npz",
+        "g3_authorization": g3_authorization_path,
         "kwargs": kwargs,
     }
 
@@ -393,5 +434,18 @@ def test_p1_06_refuses_checkpoint_drift_after_review(tmp_path: Path) -> None:
             output_path=fixture["repository"] / "outputs" / "release" / "bad.zip",
             review_request_path=request,
             review_receipt_paths=[review_a, review_b],
+            **fixture["kwargs"],
+        )
+
+
+def test_p1_06_refuses_g3_without_bound_independent_review(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    authorization = json.loads(fixture["g3_authorization"].read_text(encoding="utf-8"))
+    authorization["independent_review_sha256"] = "0" * 64
+    _write_json(fixture["g3_authorization"], authorization)
+
+    with pytest.raises(P106BundleError, match="G3 authorization"):
+        prepare_review_request(
+            output_path=fixture["repository"] / "outputs" / "refused.json",
             **fixture["kwargs"],
         )

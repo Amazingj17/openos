@@ -15,9 +15,9 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 MANIFEST_NAME = "MODEL_RESULT_MANIFEST.json"
 _FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 _PRIVATE_KEY_MARKERS = (
-    b"-----BEGIN PRIVATE KEY-----",
-    b"-----BEGIN OPENSSH PRIVATE KEY-----",
-    b"-----BEGIN RSA PRIVATE KEY-----",
+    b"-----BEGIN " + b"PRIVATE KEY-----",
+    b"-----BEGIN " + b"OPENSSH PRIVATE KEY-----",
+    b"-----BEGIN " + b"RSA PRIVATE KEY-----",
 )
 
 
@@ -175,14 +175,57 @@ def _expect_record(path: Path, value: Any, label: str) -> None:
 
 
 def _validate_contract(contract: Mapping[str, Any]) -> None:
+    independent_review = contract.get("p1_a05_independent_review")
+    p1_06_review = contract.get("p1_06_review")
     if (
         contract.get("format_version") != 1
         or contract.get("task_id") != "P1-06"
         or contract.get("bundle_type") != "trisched_model_results_release"
         or contract.get("expected_seeds")
         != [20260717, 20260718, 20260719, 20260720, 20260721]
-        or contract.get("g3", {}).get("members") != ["A", "B"]
-        or contract.get("p1_06_review", {}).get("members") != ["A", "B"]
+        or contract.get("comparison", {}).get("task") != "P1-A05-DEVELOPMENT-COMPARISON"
+        or contract.get("comparison", {}).get("required_decision")
+        != "eligible_for_independent_review_before_G3"
+        or contract.get("development_report_artifacts")
+        != [
+            "evaluation_per_seed.csv",
+            "evaluation_per_slice.csv",
+            "evaluation_primary_comparisons.csv",
+            "evaluation_report.json",
+            "evaluation_report_manifest.json",
+        ]
+        or contract.get("g3")
+        != {
+            "task": "G3",
+            "required_decision": "approve_p1_a05_as_primary",
+            "members": ["A", "B"],
+        }
+        or independent_review
+        != {
+            "task": "P1-A05-INDEPENDENT-DEVELOPMENT-REVIEW",
+            "reviewer": "B",
+            "required_decision": "approve_before_g3",
+            "required_assertions": [
+                "immutable_remote_commit_verified",
+                "five_checkpoint_hashes_recomputed",
+                "normalized_scheduling_records_equal",
+                "normalized_reports_equal",
+                "normalized_csvs_equal",
+                "paired_comparisons_equal",
+            ],
+            "public_test_accessed": False,
+        }
+        or p1_06_review
+        != {
+            "task": "P1-06",
+            "members": ["A", "B"],
+            "required_assertions": [
+                "checkpoint_hashes_recomputed",
+                "development_result_hashes_recomputed",
+                "minimal_ablation_reviewed",
+                "package_inventory_reviewed",
+            ],
+        }
         or contract.get("public_test")
         != {
             "accessed": False,
@@ -223,6 +266,60 @@ def _validate_comparison(
     return commit
 
 
+def _validate_independent_review(
+    review: Mapping[str, Any],
+    contract: Mapping[str, Any],
+    *,
+    candidate_commit: str,
+    comparison_sha256: str,
+    expected_checkpoints: Mapping[str, Any],
+) -> None:
+    expected = contract["p1_a05_independent_review"]
+    assertions = review.get("assertions")
+    script = review.get("code", {}).get("script")
+    normalized = review.get("normalized_equivalence")
+    if (
+        review.get("format_version") != 1
+        or review.get("task") != expected["task"]
+        or review.get("reviewer") != expected["reviewer"]
+        or review.get("decision") != expected["required_decision"]
+        or review.get("candidate_commit") != candidate_commit
+        or review.get("code", {}).get("commit") != candidate_commit
+        or review.get("code", {}).get("working_tree_dirty") is not False
+        or not isinstance(script, dict)
+        or not isinstance(script.get("path"), str)
+        or any(
+            not isinstance(script.get(name), str) or len(script[name]) != 64
+            for name in ("raw_sha256", "normalized_lf_sha256")
+        )
+        or review.get("immutable_remote", {}).get("contains_candidate_commit")
+        is not True
+        or review.get("inputs", {}).get("formal", {}).get("comparison_sha256")
+        != comparison_sha256
+        or review.get("checkpoints") != expected_checkpoints
+        or not isinstance(normalized, dict)
+        or not isinstance(normalized.get("record_count"), int)
+        or normalized["record_count"] <= 0
+        or any(
+            not isinstance(normalized.get(name), str) or len(normalized[name]) != 64
+            for name in (
+                "records_canonical_sha256",
+                "report_canonical_sha256",
+                "csvs_canonical_sha256",
+                "comparison_canonical_sha256",
+            )
+        )
+        or not isinstance(assertions, dict)
+        or any(
+            assertions.get(name) is not True for name in expected["required_assertions"]
+        )
+        or assertions.get("public_test_accessed") is not False
+    ):
+        raise P106BundleError(
+            "P1-A05 independent review does not bind the immutable candidate"
+        )
+
+
 def _validate_g3_authorization(
     authorization: Mapping[str, Any],
     contract: Mapping[str, Any],
@@ -230,6 +327,7 @@ def _validate_g3_authorization(
     candidate_commit: str,
     release_commit: str,
     comparison_sha256: str,
+    independent_review_sha256: str,
 ) -> None:
     expected = contract["g3"]
     if (
@@ -239,6 +337,7 @@ def _validate_g3_authorization(
         or authorization.get("candidate_commit") != candidate_commit
         or authorization.get("release_commit") != release_commit
         or authorization.get("comparison_sha256") != comparison_sha256
+        or authorization.get("independent_review_sha256") != independent_review_sha256
         or authorization.get("development_gate_passed") is not True
         or authorization.get("test_accessed") is not False
         or authorization.get("public_test") != "forbidden"
@@ -318,6 +417,7 @@ def _collect_review_inputs(
     candidate_evidence_path: Path,
     candidate_report_dir: Path,
     training_dir: Path,
+    independent_review_path: Path,
     g3_authorization_path: Path,
 ) -> tuple[dict[str, Any], list[Artifact]]:
     root = repository.resolve()
@@ -463,6 +563,20 @@ def _collect_review_inputs(
     report_artifacts = _report_artifacts(
         root, contract, comparison, candidate_report_dir
     )
+    independent_review_path = _repository_file(
+        root, independent_review_path, "P1-A05 independent review"
+    )
+    independent_review = _load_json(
+        independent_review_path, "P1-A05 independent review"
+    )
+    _validate_independent_review(
+        independent_review,
+        contract,
+        candidate_commit=candidate_commit,
+        comparison_sha256=comparison_sha256,
+        expected_checkpoints=formal.get("checkpoints", {}),
+    )
+    independent_review_sha256 = _file_sha256(independent_review_path)
     g3_authorization_path = _repository_file(
         root, g3_authorization_path, "G3 authorization"
     )
@@ -473,6 +587,7 @@ def _collect_review_inputs(
         candidate_commit=candidate_commit,
         release_commit=release_commit,
         comparison_sha256=comparison_sha256,
+        independent_review_sha256=independent_review_sha256,
     )
 
     artifacts = [
@@ -520,6 +635,11 @@ def _collect_review_inputs(
             "minimal_ablation_comparison",
         ),
         Artifact(
+            "governance/p1_a05_independent_review.json",
+            independent_review_path,
+            "p1_a05_independent_review",
+        ),
+        Artifact(
             "governance/g3_authorization.json",
             g3_authorization_path,
             "g3_authorization",
@@ -538,6 +658,7 @@ def _collect_review_inputs(
         "candidate_commit": candidate_commit,
         "release_commit": release_commit,
         "comparison_sha256": comparison_sha256,
+        "independent_review_sha256": independent_review_sha256,
         "g3_authorization_sha256": _file_sha256(g3_authorization_path),
         "minimal_ablation": {
             "definition": contract["comparison"]["minimal_ablation"],
@@ -546,6 +667,7 @@ def _collect_review_inputs(
         },
         "gates": {
             "development_gate_passed": True,
+            "independent_replay_approved_by_b": True,
             "g3_approved_by_a_and_b": True,
             "five_primary_checkpoints_bound": True,
         },
@@ -845,6 +967,14 @@ def _add_input_arguments(parser: argparse.ArgumentParser) -> None:
         type=Path,
         default=REPOSITORY / "outputs" / "p1-06" / "g3_authorization.json",
     )
+    parser.add_argument(
+        "--independent-review",
+        type=Path,
+        default=REPOSITORY
+        / "outputs"
+        / "p1-a05-independent-review"
+        / "p1_a05_independent_review.json",
+    )
 
 
 def _input_kwargs(args: argparse.Namespace) -> dict[str, Any]:
@@ -859,6 +989,7 @@ def _input_kwargs(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_evidence_path": args.candidate_evidence,
         "candidate_report_dir": args.candidate_report_dir,
         "training_dir": args.training_dir,
+        "independent_review_path": args.independent_review,
         "g3_authorization_path": args.g3_authorization,
     }
 

@@ -21,6 +21,20 @@
     "required_decision": "approve_p1_a05_as_primary",
     "members": ["A", "B"]
   },
+  "p1_a05_independent_review": {
+    "task": "P1-A05-INDEPENDENT-DEVELOPMENT-REVIEW",
+    "reviewer": "B",
+    "required_decision": "approve_before_g3",
+    "required_assertions": [
+      "immutable_remote_commit_verified",
+      "five_checkpoint_hashes_recomputed",
+      "normalized_scheduling_records_equal",
+      "normalized_reports_equal",
+      "normalized_csvs_equal",
+      "paired_comparisons_equal"
+    ],
+    "public_test_accessed": false
+  },
   "p1_06_review": {
     "task": "P1-06",
     "members": ["A", "B"],
