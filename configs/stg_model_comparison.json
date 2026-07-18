@@ -1,0 +1,11 @@
+{
+  "format_version": 1,
+  "output_dir": "../outputs/stg-model-comparison",
+  "masked_mlp_config": "stg_ppo.json",
+  "task_gnn_config": "stg_task_gnn.json",
+  "comparison": {
+    "bootstrap_samples": 10000,
+    "bootstrap_seed": 20260717,
+    "latency_repeats": 1
+  }
+}

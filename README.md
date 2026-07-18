@@ -3,6 +3,8 @@
 [![CI](https://github.com/Amazingj17/openos/actions/workflows/ci.yml/badge.svg)](https://github.com/Amazingj17/openos/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+新用户可先阅读[详细使用说明](doc/使用说明.md)，其中集中介绍安装、CLI、配置、Scenario、Python API、外部调度器、公开 STG 训练、输出指标和常见故障。
+
 赛题十五“基于深度强化学习的云-边-端异构计算资源管理调度方法”的最小可执行实现。
 
 它已经形成一个完整闭环：
@@ -88,6 +90,33 @@ python scripts/fetch_stg_benchmark.py --offline
 ```
 
 脚本先校验 125,500 字节 archive 的 SHA-256，再安全解包并逐个重算 source/Scenario hash；任何源文件、projection 或 split 变动都会失败。当前投影只保留 STG topology、duration 和 predecessor output data，不保留上游 GPU/core/memory capability，不能表述为完整 GrapheonRL 系统复现。许可证决策与固定 hash 见 [P1-B01 公开基准、许可证与冻结划分](doc/P1-B01公开基准与许可证.md)，远端 CI、10 实例抽查和故障注入见 [A 的独立复核记录](doc/P1-B01独立复核记录.md)。
+
+## 一键训练并比较 Masked MLP 与 Task-GNN
+
+获取公开 STG 数据后，一条命令会用相同 seed、train/validation split、BC、PPO 和选模口径依次训练两种模型，完成配对 validation 评测，并生成 JSON、CSV、SVG 和 HTML 可视化结果：
+
+```powershell
+python scripts/run_model_comparison.py `
+  --config configs/stg_model_comparison.json
+```
+
+默认输出到 `outputs/stg-model-comparison/`：
+
+```text
+masked_mlp/                         Masked MLP checkpoint、曲线和 validation 诊断
+task_gnn/                           Task-GNN checkpoint、曲线和 validation 诊断
+results/comparison.json             配对统计、bootstrap、参数量和时延
+results/comparison_per_instance.csv 同 seed×同场景明细
+results/comparison_per_seed.csv     逐 seed mean/P50/P95 与胜平负
+results/comparison_per_scenario.csv 逐场景 seed 均值差
+results/comparison.svg              可直接引用的静态性能图
+results/comparison.html             可在浏览器打开的完整可视化报告
+results/comparison_manifest.json    上述结果文件 SHA-256
+comparison_pipeline_summary.json    一键流水线总摘要
+comparison_pipeline_manifest.json   训练摘要、报告与图表的统一清单
+```
+
+异常中断后使用相同配置和输出目录执行 `python scripts/run_model_comparison.py --config configs/stg_model_comparison.json --resume`。两种模型的 seed、数据、特征、BC/PPO 超参数或 validation 口径不一致时会在训练前拒绝比较；公开 test 不会被加载。
 
 ## 训练公开 STG 行为克隆基线
 
@@ -270,6 +299,7 @@ configs/stg_bc.json      公开 STG teacher/BC 冻结配置
 configs/stg_ppo.json     公开 STG 3-seed masked PPO 配置
 configs/stg_ppo_5seed.json 绑定旧证据、只补两 seed 的 5-seed 配置
 configs/stg_task_gnn.json 公开 STG 3-seed task-GNN 单变量配置
+configs/stg_model_comparison.json MLP/GNN 一键训练、验证、比较配置
 configs/p1_b02_evaluation_contract.json ID/OOD、5-seed 与 test gate 契约
 configs/p1_a05_size_robustness.json P1-A05 唯一正式候选与训练前门禁
 schemas/                 Scenario JSON Schema
@@ -286,11 +316,14 @@ trisched/ppo.py          MLP/task-GNN 增量奖励、GAE/PPO、epoch 状态与 r
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
 trisched/reporting.py    P1-B02 evidence 校验、配对统计与自动报告
 trisched/ood.py          P1-B02 development ID/OOD 物化与只读 evidence producer
+trisched/visualization.py MLP/GNN 对比 SVG 与独立 HTML 报告生成
 trisched/hashing.py      原始字节、normalized-LF 与 canonical JSON hash
 trisched/p1_a05.py       P1-A05 隔离输入、dry-run、复核门禁与正式训练事务
 trisched/cli.py          pipeline、各训练命令和 P1-A05 门禁命令
 trisched/benchmark.py    公开 STG loader、冻结 split 与来源校验
 scripts/build_release_bundle.py 确定性 source zip、secret/raw-data fail-closed
+scripts/run_model_comparison.py Masked MLP/Task-GNN 一键训练与可视化比较
+scripts/compare_task_gnn_mlp.py 同 seed×同场景配对统计与结果文件生成
 scripts/run_demo.ps1     五分钟 synthetic smoke、故障注入与 checkpoint 恢复
 data/benchmarks/         第三方来源/许可证元数据和冻结 manifest
 examples/                外部 scheduler 协议参考程序

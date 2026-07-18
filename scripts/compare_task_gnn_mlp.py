@@ -20,6 +20,7 @@ from trisched.env import run_policy
 from trisched.gnn import TaskGNNPolicy, task_gnn_parameter_hash
 from trisched.learning import MaskedMLPPolicy
 from trisched.bc import policy_parameter_hash
+from trisched.visualization import write_model_comparison_visualizations
 
 
 TOLERANCE = 1e-9
@@ -38,6 +39,23 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"expected an object in {path}")
     return value
+
+
+def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        raise ValueError(f"cannot write an empty comparison table: {path.name}")
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _artifact(path: Path) -> dict[str, Any]:
+    return {
+        "name": path.name,
+        "bytes": path.stat().st_size,
+        "sha256": _file_hash(path),
+    }
 
 
 def _outcome(delta: float) -> str:
@@ -222,6 +240,11 @@ def compare(args: argparse.Namespace) -> Path:
     task_gnn_root = Path(args.task_gnn_root).resolve()
     output = Path(args.output).resolve()
     csv_path = output.with_name(output.stem + "_per_instance.csv")
+    seed_csv_path = output.with_name(output.stem + "_per_seed.csv")
+    scenario_csv_path = output.with_name(output.stem + "_per_scenario.csv")
+    html_path = output.with_suffix(".html")
+    svg_path = output.with_suffix(".svg")
+    manifest_path = output.with_name(output.stem + "_manifest.json")
     mlp_summary_path = mlp_root / "ppo_summary.json"
     task_gnn_summary_path = task_gnn_root / "task_gnn_summary.json"
     mlp_manifest_path = mlp_root / "ppo_run_manifest.json"
@@ -399,10 +422,32 @@ def compare(args: argparse.Namespace) -> Path:
         )
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    with csv_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(paired_rows[0]))
-        writer.writeheader()
-        writer.writerows(paired_rows)
+    _write_csv(csv_path, paired_rows)
+    seed_csv_rows = []
+    for item in per_seed:
+        seed_csv_rows.append(
+            {
+                "seed": item["seed"],
+                "masked_mlp_mean_ratio": item["masked_mlp_mean_ratio"],
+                "task_gnn_mean_ratio": item["task_gnn_mean_ratio"],
+                "mean_paired_delta": item["mean_paired_delta"],
+                "masked_mlp_p50_ratio": item["masked_mlp_p50_ratio"],
+                "task_gnn_p50_ratio": item["task_gnn_p50_ratio"],
+                "masked_mlp_p95_ratio": item["masked_mlp_p95_ratio"],
+                "task_gnn_p95_ratio": item["task_gnn_p95_ratio"],
+                "task_gnn_win": item["pairs"]["task_gnn_win"],
+                "tie": item["pairs"]["tie"],
+                "masked_mlp_win": item["pairs"]["mlp_win"],
+                "masked_mlp_failure_count": item["masked_mlp_failure_count"],
+                "task_gnn_failure_count": item["task_gnn_failure_count"],
+                "masked_mlp_illegal_action_count": item[
+                    "masked_mlp_illegal_action_count"
+                ],
+                "task_gnn_illegal_action_count": item["task_gnn_illegal_action_count"],
+            }
+        )
+    _write_csv(seed_csv_path, seed_csv_rows)
+    _write_csv(scenario_csv_path, scenario_comparison)
 
     seed_mean_delta = np.mean(task_gnn_array, axis=1) - np.mean(
         mlp_array,
@@ -473,6 +518,20 @@ def compare(args: argparse.Namespace) -> Path:
             "sha256": _file_hash(csv_path),
             "row_count": len(paired_rows),
         },
+        "result_tables": {
+            "per_seed": {
+                **_artifact(seed_csv_path),
+                "row_count": len(seed_csv_rows),
+            },
+            "per_scenario": {
+                **_artifact(scenario_csv_path),
+                "row_count": len(scenario_comparison),
+            },
+        },
+        "visualization": {
+            "html": html_path.name,
+            "svg": svg_path.name,
+        },
         "development_gate_passed": bool(evidence_gate),
         "recommendation": (
             "retain_task_gnn_as_validation_candidate_for_independent_review"
@@ -486,6 +545,39 @@ def compare(args: argparse.Namespace) -> Path:
     }
     output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    write_model_comparison_visualizations(
+        report,
+        html_path=html_path,
+        svg_path=svg_path,
+        json_name=output.name,
+        per_instance_name=csv_path.name,
+        per_seed_name=seed_csv_path.name,
+        per_scenario_name=scenario_csv_path.name,
+    )
+    artifact_paths = (
+        output,
+        csv_path,
+        seed_csv_path,
+        scenario_csv_path,
+        html_path,
+        svg_path,
+    )
+    manifest = {
+        "format_version": 1,
+        "mode": "model_comparison_result_manifest",
+        "hash_algorithm": "sha256",
+        "artifacts": {
+            path.name: {
+                "bytes": path.stat().st_size,
+                "sha256": _file_hash(path),
+            }
+            for path in artifact_paths
+        },
+    }
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
     return output
