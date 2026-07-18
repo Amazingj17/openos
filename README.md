@@ -19,7 +19,7 @@
 - 用机器可读契约冻结 ID/OOD、5-seed、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，masked MLP 五 seed 包也已由 B 在物理无 test 根正式预算复跑通过。B 生成的 2040 条正式 development ID/OOD 候选已由 A 从远端 `fab540c...` 独立复跑并复核通过，P1-B02 development/OOD 评测子阶段关闭。但 masked MLP 的 size-OOD ratio 为 `1.568302`，自动门禁 `release_publishable=false`，G3 仍阻塞。P1-A05 的单一 rollout-mixture 训练前实现已由 B 从远端提交独立复核，绑定配置、输入、dry-run 和批准源码的 receipt 已生成；P1-B03 portable hash 也已由 A 复核关闭。receipt 所在提交被再次推送并确认前不得启动唯一正式训练，public test 从未加载。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，masked MLP 五 seed 包也已由 B 在物理无 test 根正式预算复跑通过。P1-A05 又在不可变候选 `7d5cab6...` 上完成唯一一次五 seed 正式训练和唯一一次含 2040 条记录的 Development；候选的 ID/size/CCR/system mean ratio 为 `0.703718/1.553568/0.419796/0.999317`，size 仍未优于 HEFT，且相对 P1-A04 的配对 CI 上界未小于 0。成员 B 已独立重算 artifact、配对 bootstrap 和停止决定；项目按预注册规则保留 P1-A04、关闭 P1-A05，不启动 G3，P1-06 正式产包不适用。public test 从未加载，正式 `claim-test-gate` 从未运行。
 
 ## 快速运行
 
@@ -175,11 +175,11 @@ python scripts/run_p1_b02_development.py
 
 正式 evidence 含 2040 条完整记录，全部成功且 failure/illegal 为 0。masked MLP 的 ID/size/CCR/system mean ratio 分别为 `0.709190/1.568302/0.406325/0.965250`；size-OOD 明显劣于 HEFT，system-OOD 配对 CI 跨 0，因此报告正确给出 `release_publishable=false`。记录笛卡尔积、9/9 checkpoint hash 和 4/4 报告 artifact hash 已由 B 自审可重算；完整命令、数字和边界见[正式 Development 结果记录](doc/P1-B02正式Development结果记录.md)。A 又在隔离 detached worktree 完成 `896.5s` 唯一复跑；去除 wall-clock 后 A/B 2040 条记录和非时延报告完全一致，并[独立复核通过](doc/P1-B02正式Development独立复核记录.md)。public test 继续禁止。
 
-## P1-A05 size-OOD 单一候选（训练前实现已复核、未训练）
+## P1-A05 size-OOD 单一候选（正式负结果已双人复核关闭）
 
 只读诊断确认 masked MLP 的 150/150 条 size 记录、task-GNN 的 90/90 条 size 记录均劣于 HEFT；一个按 ID 规则保留 BC warm start、没有接受 PPO epoch 的 seed 仍为 `1.462686`。训练轨迹固定为 50 tasks，而 size 切片为 100 tasks；该切片还同时改变生成器、根节点结构、关键路径、带宽和时延，因此不能把失败简化为纯 size 因果。
 
-A 只预注册一个候选：保持五 seed、14-D MLP、warm start、奖励、优化器、两 epoch、每 epoch 6000 transitions 和 ID checkpoint selection 不变，把 PPO rollout 的 transition 改为 50% STG-50 + 50% 独立 synthetic-100。B 已在不导入 checkpoint 的 detached worktree 重建报告并[通过设计复核](doc/P1-A05Size-OOD设计独立复核记录.md)。实现现已物化 120 train、30 validation、60 个 synthetic-100 和 5 个已绑定 warm-start；四类 ID/content-hash 交集、public-test 文件、archive 和禁用文件名均为 0，两轮 dry-run 均为 `90 episodes/6000 transitions`，且 `checkpoint_loaded/optimizer_created/training_started=false`。
+A 只预注册一个候选：保持五 seed、14-D MLP、warm start、奖励、优化器、两 epoch、每 epoch 6000 transitions 和 ID checkpoint selection 不变，把 PPO rollout 的 transition 改为 50% STG-50 + 50% 独立 synthetic-100。B 已在不导入 checkpoint 的 detached worktree 重建报告并[通过设计复核](doc/P1-A05Size-OOD设计独立复核记录.md)。实现物化了 120 train、30 validation、60 个 synthetic-100 和 5 个已绑定 warm-start；四类 ID/content-hash 交集、public-test 文件、archive 和禁用文件名均为 0，两轮 dry-run 均为 `90 episodes/6000 transitions`，且 `checkpoint_loaded/optimizer_created/training_started=false`。
 
 ```powershell
 python -m trisched prepare-p1-a05 --config configs/p1_a05_size_robustness.json
@@ -187,13 +187,13 @@ python -m trisched dry-run-p1-a05 --config configs/p1_a05_size_robustness.json
 python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
 ```
 
-第三条命令只允许在 receipt 所在提交已推送、远端 commit 可复核且工作树干净后执行一次。B 已从远端不可变实现提交完成[独立复核](doc/P1-A05Size-OOD实现独立复核记录.md)，机器 receipt 绑定批准源码 commit、配置、prepared manifest 和 dry-run hash；本次提交推送前仍不得训练。完整设计、实现和停止规则见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)、[训练前门禁实现记录](doc/P1-A05Size-OOD实现与训练前门禁.md)和生产配置 [`configs/p1_a05_size_robustness.json`](configs/p1_a05_size_robustness.json)。
+上述序列已按冻结规程执行：远端 receipt、`HEAD==origin/main`、干净 tracked 工作树和输出不存在门禁全部通过；第三条命令只运行一次，未使用 `--resume`，没有第二候选或调参重跑。五 seed×两 epoch 共 60,000 transitions，50 个训练 artifact 均可重算，validation failure/illegal 均为 0。完整设计、实现和训练身份见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)、[训练前门禁实现记录](doc/P1-A05Size-OOD实现与训练前门禁.md)、[实现独立复核](doc/P1-A05Size-OOD实现独立复核记录.md)和[正式负结果记录](doc/P1-A05正式负结果与停止记录.md)。
 
-训练后的唯一四切片 evidence 继续复用冻结 P1-B02 producer；`scripts/compare_p1_a05_development.py` 会绑定正式训练 manifest/checkpoint、旧 P1-A04 evidence 和新标准报告，对每个切片执行同 seed×同场景配对 bootstrap，并自动给出通过或停止决定。精确命令、事务恢复和 `release_publishable` 的 development/final 边界见[P1-A05 正式运行与 G3 收口规程](doc/P1-A05正式运行与G3收口规程.md)。
+唯一四切片 evidence 复用了冻结 P1-B02 producer，2040/2040 条记录全部成功。P1-A05 的 ID/size/CCR/system mean ratio 为 `0.703718/1.553568/0.419796/0.999317`；size mean 仍大于 1，P1-A05−P1-A04 的 size 95% paired CI 为 `[-0.045177, 0.000027]`，上界未小于 0。机器决定为 `retain_p1_a04_publish_negative_result_and_stop_p1_a05`。精确命令、事务边界和停止规则见[P1-A05 正式运行与 G3 收口规程](doc/P1-A05正式运行与G3收口规程.md)。
 
-G3 前的 B 独立 replay 也有机器入口：`scripts/review_p1_a05_development.py` 要求 candidate commit 已在 `origin/main`，重算两轮 report manifest 和五 checkpoint，并验证正式/replay 的去 wall-clock 调度记录、报告 JSON/CSV 与配对 comparison 全部一致；非时延字段漂移即拒绝。
+成员 B 没有运行只属于 Development 全通过分支的第二次调度 replay，而是在同一不可变候选上独立重算 50/50 training artifact、5/5 checkpoint、2040 条 Development 记录、4/4 报告 artifact 和四切片各 10,000 次 bootstrap；结果与停止决定通过复核。详见[正式负结果独立复核记录](doc/P1-A05正式负结果独立复核记录.md)。
 
-P1-06 的最终模型/结果包入口也已预先机器化。P1-A05−P1-A04 comparison 是唯一最小消融；构建器只有在六项 Development 门禁、B 独立 replay receipt、G3 A/B 授权、五 checkpoint 和 P1-06 A/B 独立回执全部匹配时才生成确定性 zip。当前因 receipt 尚未进入远端且正式训练未运行，不能执行该构建。签署格式、包清单和验证命令见[P1-06 最终模型与结果包双签规程](doc/P1-06最终模型结果包规程.md)。
+P1-06 的最终模型/结果包入口已预先机器化，但只有 Development 全通过、B replay receipt 和 G3 A/B 授权齐备时才允许执行。P1-A05 已在更早的性能门禁失败，因此 G3 不启动、P1-06 正式执行不适用；构建工具和测试保留用于审计，不生成虚假的最终模型包。签署格式、包清单和拒绝规则见[P1-06 最终模型与结果包双签规程](doc/P1-06最终模型结果包规程.md)。
 
 ## P1-B03 portable source hash（已双签关闭）
 
@@ -222,9 +222,9 @@ python scripts/build_release_bundle.py --verify outputs/release/trisched-source-
 .\scripts\run_demo.ps1 -Presenter A
 ```
 
-同一 commit 的 source zip 必须逐字节一致。A/B 已完成 P0-09/P0-11/P0-12/P0-13 的[收口复核](doc/P0收口独立复核记录.md)。发布边界、许可证、干净安装和最终模型包检查表见[P0-12 发布与复现手册](doc/P0-12发布与复现手册.md)；轮换讲稿、预期失败和恢复路径见[P0-13 五分钟演示手册](doc/P0-13五分钟演示与故障恢复.md)。最终模型/结果包仍受 P1-A05、G3 和 P1-06 阻塞。
+同一 commit 的 source zip 必须逐字节一致。A/B 已完成 P0-09/P0-11/P0-12/P0-13 的[收口复核](doc/P0收口独立复核记录.md)。发布边界、许可证、干净安装和负结果发布检查表见[P0-12 发布与复现手册](doc/P0-12发布与复现手册.md)；轮换讲稿、预期失败和恢复路径见[P0-13 五分钟演示手册](doc/P0-13五分钟演示与故障恢复.md)。本轮只发布源码、可复现工具和真实负结果，不生成 G3/P1-06 最终模型包。
 
-G3 通过后的模型/结果包命令为 `python scripts/build_p1_06_bundle.py prepare-review`、A/B 分别签署 request，随后执行 `build` 和 `verify`。构建器不创建 public-test 授权，也不会打包 raw benchmark 或 public-test 字节。
+若未来新赛程重新开启独立、预注册的候选，P1-06 工具仍要求 `prepare-review`、A/B 分别签署 request、`build` 和 `verify` 的完整顺序；本候选不得借此重新开启。构建器不会创建 public-test 授权，也不会打包 raw benchmark 或 public-test 字节。
 
 ## 接入外部调度器
 
@@ -307,9 +307,9 @@ tests/                   单元与集成测试
 - P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；正式 development 候选已由 A 独立复跑通过，public test 继续禁止；
 - 正式 development 显示 MLP 在 ID/CCR-OOD 上有明确优势，在 system-OOD 上不确定，在 size-OOD 上退化到 `1.568302`；自动门禁不允许发布；
 - P1-B03 raw/normalized-LF 双 hash、固定 LF 属性、历史 evidence 不改写和 source bundle 互操作已由 A 从独立 worktree 复核关闭；
-- P1-A05 训练前实现已由 B 从远端提交复核，机器 receipt 已生成；receipt 提交被推送确认前仍未加载 checkpoint、未创建优化器、未训练；
-- P1-A05 的 B 独立 replay receipt 与 P1-06 确定性模型/结果包、最小消融绑定和 A/B 双签拒绝器已有专项测试；工具就绪不等于复核或 P1-06 已执行，仍须先通过唯一正式训练和 Development；
-- P0-09/P0-11/P0-12/P0-13 已完成交叉复核与 A/B 双人实跑；最终模型包仍受唯一 P1-A05 正式训练、G3 和 P1-06 阻塞；
+- P1-A05 已完成唯一正式训练和唯一 Development，50 个训练 artifact 与 2040 条评测记录可重算，failure/illegal 均为 0；
+- P1-A05 的 size 绝对门禁和相对 P1-A04 的显著改善门禁均失败，B 已独立复核负结果；保留 P1-A04，P1-A05/G3/P1-06 正式分支关闭；
+- P0-09/P0-11/P0-12/P0-13 已完成交叉复核与 A/B 双人实跑；当前交付是功能完整的源码、复现工具和真实 Development 负结果，不包含 public-test 结论；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 
 ## 开源许可证

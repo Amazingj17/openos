@@ -4,13 +4,15 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-18
-- 状态：实现与 B 独立复核通过，receipt 已生成；未训练
+- 状态：实现与 B 独立复核通过；后续唯一正式训练已完成，负结果关闭
 
 ## 目标与非目标
 
 本任务只实现已经双签的单一候选：保持五个 seed、14 维 MLP、P1-A04 warm start、奖励、优化器、两轮 PPO、每轮 6000 transitions 和 validation 选模规则不变，把每轮 rollout 改为 `60×STG-50 + 30×synthetic-100`。
 
 本阶段不加载正式 checkpoint、不创建优化器、不训练、不评测 development、不访问 public test，也不改变预注册设计。
+
+以上是训练前实现阶段的边界。receipt 进入远端祖先链后，唯一正式训练与 Development 已执行；终态见[P1-A05 正式负结果](./P1-A05正式负结果与停止记录.md)及其[独立复核](./P1-A05正式负结果独立复核记录.md)。
 
 ## 实现组成
 
@@ -83,7 +85,7 @@ python -m trisched dry-run-p1-a05 --config configs/p1_a05_size_robustness.json
 python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
 ```
 
-返回退出码 2 和 `p1_a05_review_missing`；`outputs/p1-a05-size-robustness/` 未创建。测试还用 monkeypatch 证明 checkpoint loader 未被调用，并验证批准 commit 后任何受控训练源码变化都会失败、只增加 receipt 的后续 commit 可通过源码树门禁。B 现已完成独立复核并生成 receipt；包含 receipt 的提交被用户推送确认前仍禁止执行该命令。
+在 receipt 尚不存在的实现阶段，该命令返回退出码 2 和 `p1_a05_review_missing`，且不创建 `outputs/p1-a05-size-robustness/`。测试还用 monkeypatch 证明 checkpoint loader 未被调用，并验证批准 commit 后任何受控训练源码变化都会失败、只增加 receipt 的后续 commit 可通过源码树门禁。此后 B 完成独立复核并生成 receipt，receipt 提交进入远端祖先链，正式入口才获准执行一次。
 
 ## 验证结果
 
