@@ -1,0 +1,39 @@
+{
+  "format_version": 1,
+  "task_id": "P1-06",
+  "bundle_type": "trisched_model_results_release",
+  "candidate_task": "P1-A05-SIZE-ROBUSTNESS",
+  "expected_seeds": [20260717, 20260718, 20260719, 20260720, 20260721],
+  "comparison": {
+    "task": "P1-A05-DEVELOPMENT-COMPARISON",
+    "required_decision": "eligible_for_independent_review_before_G3",
+    "minimal_ablation": "P1-A05 rollout mixture versus frozen P1-A04 under identical training seeds and development scenarios"
+  },
+  "development_report_artifacts": [
+    "evaluation_per_seed.csv",
+    "evaluation_per_slice.csv",
+    "evaluation_primary_comparisons.csv",
+    "evaluation_report.json",
+    "evaluation_report_manifest.json"
+  ],
+  "g3": {
+    "task": "G3",
+    "required_decision": "approve_p1_a05_as_primary",
+    "members": ["A", "B"]
+  },
+  "p1_06_review": {
+    "task": "P1-06",
+    "members": ["A", "B"],
+    "required_assertions": [
+      "checkpoint_hashes_recomputed",
+      "development_result_hashes_recomputed",
+      "minimal_ablation_reviewed",
+      "package_inventory_reviewed"
+    ]
+  },
+  "public_test": {
+    "accessed": false,
+    "status": "forbidden",
+    "raw_bytes_in_bundle": false
+  }
+}

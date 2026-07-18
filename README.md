@@ -191,6 +191,8 @@ python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
 
 训练后的唯一四切片 evidence 继续复用冻结 P1-B02 producer；`scripts/compare_p1_a05_development.py` 会绑定正式训练 manifest/checkpoint、旧 P1-A04 evidence 和新标准报告，对每个切片执行同 seed×同场景配对 bootstrap，并自动给出通过或停止决定。精确命令、事务恢复和 `release_publishable` 的 development/final 边界见[P1-A05 正式运行与 G3 收口规程](doc/P1-A05正式运行与G3收口规程.md)。
 
+P1-06 的最终模型/结果包入口也已预先机器化。P1-A05−P1-A04 comparison 是唯一最小消融；构建器只有在六项 Development 门禁、G3 A/B 授权、五 checkpoint 和 P1-06 A/B 独立回执全部匹配时才生成确定性 zip。当前因 receipt 尚未进入远端且正式训练未运行，不能执行该构建。签署格式、包清单和验证命令见[P1-06 最终模型与结果包双签规程](doc/P1-06最终模型结果包规程.md)。
+
 ## P1-B03 portable source hash（已双签关闭）
 
 文本证据现在同时保存执行字节的 raw SHA-256 和仅把 CRLF/CR 转成 LF 的 normalized-LF SHA-256；`.gitattributes` 固定常见源码/配置/文档为 LF，并显式标记 checkpoint、archive 和文档容器为 binary。P1-B02 历史 evidence 不改写；新的 development producer 在兼容字段之外增加 `script.portable_text`。A 已从独立 worktree 核对 Git blob、LF/CRLF 注入、历史 evidence 和确定性 source bundle。详见[P1-B03 Portable Hash 合同](doc/P1-B03Portable-Hash合同.md)及其[独立复核记录](doc/P1-B03Portable-Hash独立复核记录.md)。
@@ -219,6 +221,8 @@ python scripts/build_release_bundle.py --verify outputs/release/trisched-source-
 ```
 
 同一 commit 的 source zip 必须逐字节一致。A/B 已完成 P0-09/P0-11/P0-12/P0-13 的[收口复核](doc/P0收口独立复核记录.md)。发布边界、许可证、干净安装和最终模型包检查表见[P0-12 发布与复现手册](doc/P0-12发布与复现手册.md)；轮换讲稿、预期失败和恢复路径见[P0-13 五分钟演示手册](doc/P0-13五分钟演示与故障恢复.md)。最终模型/结果包仍受 P1-A05、G3 和 P1-06 阻塞。
+
+G3 通过后的模型/结果包命令为 `python scripts/build_p1_06_bundle.py prepare-review`、A/B 分别签署 request，随后执行 `build` 和 `verify`。构建器不创建 public-test 授权，也不会打包 raw benchmark 或 public-test 字节。
 
 ## 接入外部调度器
 
@@ -302,6 +306,7 @@ tests/                   单元与集成测试
 - 正式 development 显示 MLP 在 ID/CCR-OOD 上有明确优势，在 system-OOD 上不确定，在 size-OOD 上退化到 `1.568302`；自动门禁不允许发布；
 - P1-B03 raw/normalized-LF 双 hash、固定 LF 属性、历史 evidence 不改写和 source bundle 互操作已由 A 从独立 worktree 复核关闭；
 - P1-A05 训练前实现已由 B 从远端提交复核，机器 receipt 已生成；receipt 提交被推送确认前仍未加载 checkpoint、未创建优化器、未训练；
+- P1-06 确定性模型/结果包、最小消融绑定和 A/B 双签拒绝器已有专项测试；工具就绪不等于 P1-06 已执行，仍须先通过唯一正式训练、独立复核和 G3；
 - P0-09/P0-11/P0-12/P0-13 已完成交叉复核与 A/B 双人实跑；最终模型包仍受唯一 P1-A05 正式训练、G3 和 P1-06 阻塞；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 
