@@ -19,7 +19,7 @@
 - 用机器可读契约冻结 ID/OOD、5-seed、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
 - 一条命令完成训练、验证、测试并产出 `summary.json`。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，masked MLP 五 seed 包也已由 B 在物理无 test 根正式预算复跑通过。B 生成的 2040 条正式 development ID/OOD 候选已由 A 从远端 `fab540c...` 独立复跑并复核通过，P1-B02 development/OOD 评测子阶段关闭。但 masked MLP 的 size-OOD ratio 为 `1.568302`，自动门禁 `release_publishable=false`，G3 仍阻塞。P1-A05 的单一 rollout-mixture 已完成生产拒绝器、隔离输入物化、去重和无模型 dry-run；P1-B03 也已实现 LF/CRLF portable hash 合同。两项均等待从新的远端不可变提交交叉复核，正式训练入口仍因缺少 B 的绑定 receipt 而拒绝，public test 从未加载。
+这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，masked MLP 五 seed 包也已由 B 在物理无 test 根正式预算复跑通过。B 生成的 2040 条正式 development ID/OOD 候选已由 A 从远端 `fab540c...` 独立复跑并复核通过，P1-B02 development/OOD 评测子阶段关闭。但 masked MLP 的 size-OOD ratio 为 `1.568302`，自动门禁 `release_publishable=false`，G3 仍阻塞。P1-A05 的单一 rollout-mixture 训练前实现已由 B 从远端提交独立复核，绑定配置、输入、dry-run 和批准源码的 receipt 已生成；P1-B03 portable hash 也已由 A 复核关闭。receipt 所在提交被再次推送并确认前不得启动唯一正式训练，public test 从未加载。
 
 ## 快速运行
 
@@ -175,7 +175,7 @@ python scripts/run_p1_b02_development.py
 
 正式 evidence 含 2040 条完整记录，全部成功且 failure/illegal 为 0。masked MLP 的 ID/size/CCR/system mean ratio 分别为 `0.709190/1.568302/0.406325/0.965250`；size-OOD 明显劣于 HEFT，system-OOD 配对 CI 跨 0，因此报告正确给出 `release_publishable=false`。记录笛卡尔积、9/9 checkpoint hash 和 4/4 报告 artifact hash 已由 B 自审可重算；完整命令、数字和边界见[正式 Development 结果记录](doc/P1-B02正式Development结果记录.md)。A 又在隔离 detached worktree 完成 `896.5s` 唯一复跑；去除 wall-clock 后 A/B 2040 条记录和非时延报告完全一致，并[独立复核通过](doc/P1-B02正式Development独立复核记录.md)。public test 继续禁止。
 
-## P1-A05 size-OOD 单一候选（实现完成、待复核、未训练）
+## P1-A05 size-OOD 单一候选（训练前实现已复核、未训练）
 
 只读诊断确认 masked MLP 的 150/150 条 size 记录、task-GNN 的 90/90 条 size 记录均劣于 HEFT；一个按 ID 规则保留 BC warm start、没有接受 PPO epoch 的 seed 仍为 `1.462686`。训练轨迹固定为 50 tasks，而 size 切片为 100 tasks；该切片还同时改变生成器、根节点结构、关键路径、带宽和时延，因此不能把失败简化为纯 size 因果。
 
@@ -187,11 +187,11 @@ python -m trisched dry-run-p1-a05 --config configs/p1_a05_size_robustness.json
 python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
 ```
 
-第三条命令当前必须返回 `p1_a05_review_missing` 且不创建正式输出。只有 B 从远端不可变实现提交复核，并提交绑定源码 commit、配置、prepared manifest 和 dry-run hash 的 receipt 后，才允许唯一正式训练。完整设计、实现和停止规则见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)、[训练前门禁实现记录](doc/P1-A05Size-OOD实现与训练前门禁.md)和生产配置 [`configs/p1_a05_size_robustness.json`](configs/p1_a05_size_robustness.json)。
+第三条命令只允许在 receipt 所在提交已推送、远端 commit 可复核且工作树干净后执行一次。B 已从远端不可变实现提交完成[独立复核](doc/P1-A05Size-OOD实现独立复核记录.md)，机器 receipt 绑定批准源码 commit、配置、prepared manifest 和 dry-run hash；本次提交推送前仍不得训练。完整设计、实现和停止规则见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)、[训练前门禁实现记录](doc/P1-A05Size-OOD实现与训练前门禁.md)和生产配置 [`configs/p1_a05_size_robustness.json`](configs/p1_a05_size_robustness.json)。
 
-## P1-B03 portable source hash（实现完成、待复核）
+## P1-B03 portable source hash（已双签关闭）
 
-文本证据现在同时保存执行字节的 raw SHA-256 和仅把 CRLF/CR 转成 LF 的 normalized-LF SHA-256；`.gitattributes` 固定常见源码/配置/文档为 LF，并显式标记 checkpoint、archive 和文档容器为 binary。P1-B02 历史 evidence 不改写；新的 development producer 在兼容字段之外增加 `script.portable_text`。合同、迁移规则和独立 worktree 复核步骤见[P1-B03 Portable Hash 合同](doc/P1-B03Portable-Hash合同.md)。
+文本证据现在同时保存执行字节的 raw SHA-256 和仅把 CRLF/CR 转成 LF 的 normalized-LF SHA-256；`.gitattributes` 固定常见源码/配置/文档为 LF，并显式标记 checkpoint、archive 和文档容器为 binary。P1-B02 历史 evidence 不改写；新的 development producer 在兼容字段之外增加 `script.portable_text`。A 已从独立 worktree 核对 Git blob、LF/CRLF 注入、历史 evidence 和确定性 source bundle。详见[P1-B03 Portable Hash 合同](doc/P1-B03Portable-Hash合同.md)及其[独立复核记录](doc/P1-B03Portable-Hash独立复核记录.md)。
 
 ## openEuler CPU smoke
 
@@ -216,7 +216,7 @@ python scripts/build_release_bundle.py --verify outputs/release/trisched-source-
 .\scripts\run_demo.ps1 -Presenter A
 ```
 
-同一 commit 的 source zip 必须逐字节一致。发布边界、许可证、干净安装和最终模型包检查表见[P0-12 发布与复现手册](doc/P0-12发布与复现手册.md)；A/B 轮换讲稿、预期失败和恢复路径见[P0-13 五分钟演示手册](doc/P0-13五分钟演示与故障恢复.md)。最终模型/结果包仍受 P1-A05、G3 和 P1-06 阻塞。
+同一 commit 的 source zip 必须逐字节一致。A/B 已完成 P0-09/P0-11/P0-12/P0-13 的[收口复核](doc/P0收口独立复核记录.md)。发布边界、许可证、干净安装和最终模型包检查表见[P0-12 发布与复现手册](doc/P0-12发布与复现手册.md)；轮换讲稿、预期失败和恢复路径见[P0-13 五分钟演示手册](doc/P0-13五分钟演示与故障恢复.md)。最终模型/结果包仍受 P1-A05、G3 和 P1-06 阻塞。
 
 ## 接入外部调度器
 
@@ -298,9 +298,9 @@ tests/                   单元与集成测试
 - legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程学习；
 - P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；正式 development 候选已由 A 独立复跑通过，public test 继续禁止；
 - 正式 development 显示 MLP 在 ID/CCR-OOD 上有明确优势，在 system-OOD 上不确定，在 size-OOD 上退化到 `1.568302`；自动门禁不允许发布；
-- P1-B03 已实现 raw/normalized-LF 双 hash 和固定 LF 属性，但仍须由 A 从远端不可变提交做独立 worktree 复核；旧 evidence 不改写；
-- P1-A05 训练前实现已通过本地 256 项全量回归和真实物化审计，但尚未由 B 从远端不可变提交复核，receipt 不存在，因此未加载 checkpoint、未创建优化器、未训练；
-- P0-09/P0-11 主责复现和算法限制文档已完成，P0-12 source release 流程已实现，P0-13 脚本已就绪；交叉复核、双人实跑和最终模型包仍待完成；
+- P1-B03 raw/normalized-LF 双 hash、固定 LF 属性、历史 evidence 不改写和 source bundle 互操作已由 A 从独立 worktree 复核关闭；
+- P1-A05 训练前实现已由 B 从远端提交复核，机器 receipt 已生成；receipt 提交被推送确认前仍未加载 checkpoint、未创建优化器、未训练；
+- P0-09/P0-11/P0-12/P0-13 已完成交叉复核与 A/B 双人实跑；最终模型包仍受唯一 P1-A05 正式训练、G3 和 P1-06 阻塞；
 - task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 
 ## 开源许可证

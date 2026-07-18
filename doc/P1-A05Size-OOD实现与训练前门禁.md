@@ -4,7 +4,7 @@
 - 主责：成员 A
 - 复核：成员 B
 - 日期：2026-07-18
-- 状态：实现和本地主责验证完成，等待远端不可变提交复核；未训练
+- 状态：实现与 B 独立复核通过，receipt 已生成；未训练
 
 ## 目标与非目标
 
@@ -77,13 +77,13 @@ python -m trisched dry-run-p1-a05 --config configs/p1_a05_size_robustness.json
 - `approved_source_commit` 为远端不可变实现 commit；
 - 正式训练工作树干净，且 `.gitattributes`、`trisched/`、生产配置、依赖声明和 `pyproject.toml` 与 `approved_source_commit` 零差异；允许后续提交只增加 receipt/复核文档。
 
-当前 receipt 故意不存在。实际执行：
+在 A 的实现提交中 receipt 故意不存在。B 复核前实际执行：
 
 ```powershell
 python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
 ```
 
-返回退出码 2 和 `p1_a05_review_missing`；`outputs/p1-a05-size-robustness/` 未创建。测试还用 monkeypatch 证明 checkpoint loader 未被调用，并验证批准 commit 后任何受控训练源码变化都会失败、只增加 receipt 的后续 commit 可通过源码树门禁。
+返回退出码 2 和 `p1_a05_review_missing`；`outputs/p1-a05-size-robustness/` 未创建。测试还用 monkeypatch 证明 checkpoint loader 未被调用，并验证批准 commit 后任何受控训练源码变化都会失败、只增加 receipt 的后续 commit 可通过源码树门禁。B 现已完成独立复核并生成 receipt；包含 receipt 的提交被用户推送确认前仍禁止执行该命令。
 
 ## 验证结果
 
@@ -101,9 +101,9 @@ git diff --check
 - 正式训练入口拒绝，未创建 checkpoint/优化器/训练输出；
 - public test 未访问、未复制、未物化。
 
-## B 的独立实现复核
+## B 的独立实现复核（已完成）
 
-用户推送后，成员 B 必须从远端不可变提交：
+成员 B 已从远端不可变提交：
 
 1. 在干净 worktree 重跑全量测试和严格 JSON 校验；
 2. 重新物化隔离训练根，独立重算 60 个场景 ID、内容 hash 和四类去重交集；
@@ -113,7 +113,7 @@ git diff --check
 6. 在 receipt 不存在时确认训练入口未创建输出、未调用 checkpoint loader；
 7. 只有全部通过，才创建绑定实际远端 commit 和本次产物 hash 的 `configs/p1_a05_implementation_review.json`。
 
-receipt 也须提交并由用户推送。只有 receipt 所在远端提交可复核、且其批准的实现 commit 不变后，才允许启动唯一正式训练。
+完整结果见[P1-A05 实现独立复核记录](./P1-A05Size-OOD实现独立复核记录.md)。receipt 已写入 `configs/p1_a05_implementation_review.json`，仍须提交并由用户推送。只有 receipt 所在远端提交可复核、且其批准的实现 commit 不变后，才允许启动唯一正式训练。
 
 ## 已知限制与停止规则
 
