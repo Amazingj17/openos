@@ -274,6 +274,107 @@ def test_masked_ppo_pipeline_is_reproducible_multiseed_and_test_free(
         assert _file_hash(artifact) == metadata["sha256"]
 
 
+def test_ppo_seed_extension_inherits_verified_prefix_and_trains_only_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path, _, _ = _prepare_config(tmp_path)
+    source = tmp_path / "source-three-seed"
+    run_ppo_pipeline(config_path, source)
+    source_manifest_path = source / "ppo_run_manifest.json"
+    source_manifest_sha256 = _file_hash(source_manifest_path)
+
+    extension_config = json.loads(config_path.read_text(encoding="utf-8"))
+    extension_config["seeds"] = [31, 32, 33, 34, 35]
+    extension_config["output_dir"] = str(tmp_path / "five-seed")
+    extension_config["seed_extension"] = {
+        "source_dir": str(source),
+        "run_manifest_sha256": source_manifest_sha256,
+        "reuse_seeds": [31, 32, 33],
+    }
+    extension_config_path = tmp_path / "extension-config.json"
+    extension_config_path.write_text(
+        json.dumps(extension_config),
+        encoding="utf-8",
+    )
+
+    original_train = ppo_module.train_masked_ppo
+    trained_seeds: list[int] = []
+
+    def record_train(*args, **kwargs):
+        trained_seeds.append(int(kwargs["seed"]))
+        return original_train(*args, **kwargs)
+
+    monkeypatch.setattr(ppo_module, "train_masked_ppo", record_train)
+    output = tmp_path / "five-seed"
+    summary_path = run_ppo_pipeline(extension_config_path, output)
+    assert trained_seeds == [34, 35]
+
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert [result["seed"] for result in summary["seeds"]] == [
+        31,
+        32,
+        33,
+        34,
+        35,
+    ]
+    assert summary["aggregate_validation"]["seed_count"] == 5
+    assert summary["seed_extension"] == {
+        "source_run_manifest": "seed_extension_source_run_manifest.json",
+        "source_run_manifest_sha256": source_manifest_sha256,
+        "inherited_seeds": [31, 32, 33],
+        "trained_seeds": [34, 35],
+        "source_test_accessed": False,
+    }
+    for result in summary["seeds"][:3]:
+        assert result["seed_extension"]["mode"] == "inherited_verified"
+    for result in summary["seeds"][3:]:
+        assert result["seed_extension"]["mode"] == "trained_current_run"
+
+    for seed in (31, 32, 33):
+        for suffix in (
+            "bc_warm_start.npz",
+            "ppo_best_policy.npz",
+            "ppo_best_value.npz",
+            "ppo_last_policy.npz",
+            "ppo_last_value.npz",
+            "ppo_training_state.npz",
+            "training_curve.json",
+            "validation_diagnostics.json",
+            "validation_failures.jsonl",
+        ):
+            name = f"seed_{seed}_{suffix}"
+            assert (output / name).read_bytes() == (source / name).read_bytes()
+    assert (
+        output / "seed_extension_source_run_manifest.json"
+    ).read_bytes() == source_manifest_path.read_bytes()
+
+    run_manifest = json.loads(
+        (output / "ppo_run_manifest.json").read_text(encoding="utf-8")
+    )
+    assert run_manifest["execution"]["seed_extension"] == {
+        "source_run_manifest": "seed_extension_source_run_manifest.json",
+        "source_run_manifest_sha256": source_manifest_sha256,
+        "inherited_seeds": [31, 32, 33],
+        "trained_seeds": [34, 35],
+    }
+    assert run_manifest["inputs"]["test_accessed"] is False
+    for name, metadata in run_manifest["artifacts"].items():
+        artifact = output / name
+        assert artifact.stat().st_size == metadata["bytes"]
+        assert _file_hash(artifact) == metadata["sha256"]
+
+    inherited_actor = source / "seed_31_ppo_best_policy.npz"
+    inherited_actor.write_bytes(inherited_actor.read_bytes() + b"tampered")
+    with pytest.raises(BehaviorCloningError) as tampered:
+        run_ppo_pipeline(
+            extension_config_path,
+            tmp_path / "rejected-extension",
+        )
+    assert tampered.value.code == "ppo_seed_extension_artifact"
+    assert not (tmp_path / "rejected-extension").exists()
+
+
 def test_ppo_epoch_resume_matches_uninterrupted_and_rejects_bad_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

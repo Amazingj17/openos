@@ -1,0 +1,48 @@
+{
+  "format_version": 1,
+  "seeds": [20260717, 20260718, 20260719, 20260720, 20260721],
+  "output_dir": "../outputs/p1-a04-stg-ppo-5seed",
+  "benchmark": {
+    "manifest": "../data/benchmarks/stg-rnc50-hetero-v1.json",
+    "raw_root": "../outputs/benchmarks/stg-rnc50-hetero-v1/raw"
+  },
+  "features": {
+    "exclude": ["is_heft_task", "is_heft_pair"]
+  },
+  "behavior_cloning": {
+    "hidden_dim": 32,
+    "epochs": 1,
+    "learning_rate": 0.004,
+    "gradient_clip": 5.0,
+    "shuffle_seed_offset": 101
+  },
+  "ppo": {
+    "epochs": 2,
+    "episodes_per_epoch": 120,
+    "update_epochs": 2,
+    "minibatch_size": 256,
+    "actor_learning_rate": 0.0003,
+    "value_learning_rate": 0.001,
+    "value_hidden_dim": 32,
+    "gamma": 1.0,
+    "gae_lambda": 0.95,
+    "clip_ratio": 0.2,
+    "entropy_coefficient": 0.001,
+    "target_kl": 0.03,
+    "gradient_clip": 5.0,
+    "shuffle_seed_offset": 303
+  },
+  "selection": {
+    "metric": "validation_mean_ratio",
+    "failure_penalty_ratio": 10.0,
+    "target_ratio": 1.0
+  },
+  "ablation": {
+    "teacher_feature_reference_seed": 20260717
+  },
+  "seed_extension": {
+    "source_dir": "../outputs/p1-a02-stg-ppo",
+    "run_manifest_sha256": "b4320d1bd880434cb16a9bd6cbf69ae441e8ca9fcbdfb8aaefd77de43513f594",
+    "reuse_seeds": [20260717, 20260718, 20260719]
+  }
+}

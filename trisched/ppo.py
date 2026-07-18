@@ -291,7 +291,66 @@ def load_ppo_config(path: str | Path) -> dict[str, Any]:
             "reference seed must be one of the training seeds",
         )
 
-    return {
+    normalized_extension: dict[str, Any] | None = None
+    seed_extension = payload.get("seed_extension")
+    if seed_extension is not None:
+        if not isinstance(seed_extension, dict):
+            _fail("config_type", "$.seed_extension", "expected an object")
+        source_dir = seed_extension.get("source_dir")
+        if not isinstance(source_dir, str) or not source_dir.strip():
+            _fail(
+                "config_value",
+                "$.seed_extension.source_dir",
+                "expected a non-empty path",
+            )
+        source_manifest_sha256 = seed_extension.get("run_manifest_sha256")
+        if (
+            not isinstance(source_manifest_sha256, str)
+            or len(source_manifest_sha256) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in source_manifest_sha256
+            )
+        ):
+            _fail(
+                "config_value",
+                "$.seed_extension.run_manifest_sha256",
+                "expected a lowercase SHA-256",
+            )
+        reuse_seeds = seed_extension.get("reuse_seeds")
+        if (
+            not isinstance(reuse_seeds, list)
+            or not reuse_seeds
+            or any(
+                isinstance(seed, bool) or not isinstance(seed, int)
+                for seed in reuse_seeds
+            )
+            or len(set(reuse_seeds)) != len(reuse_seeds)
+        ):
+            _fail(
+                "config_value",
+                "$.seed_extension.reuse_seeds",
+                "expected distinct integer seeds",
+            )
+        if seeds[: len(reuse_seeds)] != reuse_seeds:
+            _fail(
+                "ppo_seed_extension",
+                "$.seed_extension.reuse_seeds",
+                "reused seeds must be an exact prefix of target seeds",
+            )
+        if len(reuse_seeds) == len(seeds):
+            _fail(
+                "ppo_seed_extension",
+                "$.seeds",
+                "seed extension must add at least one new seed",
+            )
+        normalized_extension = {
+            "source_dir": source_dir,
+            "run_manifest_sha256": source_manifest_sha256,
+            "reuse_seeds": list(reuse_seeds),
+        }
+
+    normalized = {
         "format_version": 1,
         "seeds": list(seeds),
         "output_dir": output_dir,
@@ -316,6 +375,9 @@ def load_ppo_config(path: str | Path) -> dict[str, Any]:
             "teacher_feature_reference_seed": reference_seed,
         },
     }
+    if normalized_extension is not None:
+        normalized["seed_extension"] = normalized_extension
+    return normalized
 
 
 def load_task_gnn_config(path: str | Path) -> dict[str, Any]:
@@ -2282,6 +2344,289 @@ def _task_gnn_checkpoint_metadata(
     }
 
 
+def _read_seed_extension_json(path: Path, error_path: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        _fail("ppo_seed_extension_read", error_path, str(error))
+    if not isinstance(value, dict):
+        _fail("ppo_seed_extension_read", error_path, "expected an object")
+    return value
+
+
+def _seed_extension_training_contract(
+    config: Mapping[str, Any],
+) -> dict[str, Any]:
+    contract = json.loads(json.dumps(config))
+    contract.pop("seeds", None)
+    contract.pop("output_dir", None)
+    contract.pop("seed_extension", None)
+    return contract
+
+
+def _prepare_seed_extension(
+    config_source: Path,
+    config: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    extension_config = config.get("seed_extension")
+    if extension_config is None:
+        return None
+
+    source_dir = _resolve_config_path(
+        config_source, extension_config["source_dir"]
+    )
+    if not source_dir.is_dir():
+        _fail(
+            "ppo_seed_extension_source",
+            "$.seed_extension.source_dir",
+            f"source evidence directory does not exist: {source_dir}",
+        )
+    source_manifest_path = source_dir / "ppo_run_manifest.json"
+    if not source_manifest_path.is_file():
+        _fail(
+            "ppo_seed_extension_source",
+            "$.seed_extension.source_dir",
+            "source evidence directory has no ppo_run_manifest.json",
+        )
+    actual_manifest_sha256 = _file_hash(source_manifest_path)
+    expected_manifest_sha256 = extension_config["run_manifest_sha256"]
+    if actual_manifest_sha256 != expected_manifest_sha256:
+        _fail(
+            "ppo_seed_extension_manifest",
+            "$.seed_extension.run_manifest_sha256",
+            "source run manifest hash mismatch",
+            details={
+                "expected_sha256": expected_manifest_sha256,
+                "actual_sha256": actual_manifest_sha256,
+            },
+        )
+
+    source_manifest = _read_seed_extension_json(
+        source_manifest_path,
+        "$.seed_extension.source_run_manifest",
+    )
+    if (
+        source_manifest.get("format_version") != 1
+        or source_manifest.get("mode") != "stg_masked_ppo"
+    ):
+        _fail(
+            "ppo_seed_extension_contract",
+            "$.seed_extension.source_run_manifest",
+            "source run must be a format-v1 masked-MLP PPO run",
+        )
+
+    artifacts = source_manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        _fail(
+            "ppo_seed_extension_contract",
+            "$.seed_extension.source_run_manifest.artifacts",
+            "source artifact manifest must be an object",
+        )
+    for name, metadata in artifacts.items():
+        if (
+            not isinstance(name, str)
+            or not name
+            or Path(name).name != name
+            or not isinstance(metadata, dict)
+            or not isinstance(metadata.get("sha256"), str)
+            or isinstance(metadata.get("bytes"), bool)
+            or not isinstance(metadata.get("bytes"), int)
+            or metadata["bytes"] < 0
+        ):
+            _fail(
+                "ppo_seed_extension_contract",
+                "$.seed_extension.source_run_manifest.artifacts",
+                "source artifact metadata is malformed",
+            )
+        path = source_dir / name
+        try:
+            size = path.stat().st_size
+        except OSError as error:
+            _fail(
+                "ppo_seed_extension_artifact",
+                f"$.seed_extension.artifacts.{name}",
+                str(error),
+            )
+        actual_hash = _file_hash(path)
+        if size != metadata["bytes"] or actual_hash != metadata["sha256"]:
+            _fail(
+                "ppo_seed_extension_artifact",
+                f"$.seed_extension.artifacts.{name}",
+                "source artifact size/hash mismatch",
+                details={
+                    "expected_bytes": metadata["bytes"],
+                    "actual_bytes": size,
+                    "expected_sha256": metadata["sha256"],
+                    "actual_sha256": actual_hash,
+                },
+            )
+
+    required_control_artifacts = {"resolved_config.json", "ppo_summary.json"}
+    missing_control_artifacts = sorted(
+        required_control_artifacts - set(artifacts)
+    )
+    if missing_control_artifacts:
+        _fail(
+            "ppo_seed_extension_artifact",
+            "$.seed_extension.source_run_manifest.artifacts",
+            "source control artifact set is incomplete",
+            details={"missing": missing_control_artifacts},
+        )
+    source_config = _read_seed_extension_json(
+        source_dir / "resolved_config.json",
+        "$.seed_extension.source_resolved_config",
+    )
+    source_summary = _read_seed_extension_json(
+        source_dir / "ppo_summary.json",
+        "$.seed_extension.source_summary",
+    )
+    reuse_seeds = list(extension_config["reuse_seeds"])
+    if (
+        source_config.get("seeds") != reuse_seeds
+        or source_manifest.get("inputs", {}).get("seeds") != reuse_seeds
+    ):
+        _fail(
+            "ppo_seed_extension_contract",
+            "$.seed_extension.reuse_seeds",
+            "source seeds do not exactly match reuse_seeds",
+        )
+    if _seed_extension_training_contract(
+        source_config
+    ) != _seed_extension_training_contract(config):
+        _fail(
+            "ppo_seed_extension_contract",
+            "$.seed_extension.source_resolved_config",
+            "source and target training contracts differ",
+        )
+    if source_manifest.get("inputs", {}).get("test_accessed") is not False:
+        _fail(
+            "ppo_seed_extension_contract",
+            "$.seed_extension.source_run_manifest.inputs.test_accessed",
+            "source run must declare test_accessed=false",
+        )
+    if source_summary.get("data_access", {}).get("test_accessed") is not False:
+        _fail(
+            "ppo_seed_extension_contract",
+            "$.seed_extension.source_summary.data_access.test_accessed",
+            "source summary must declare test_accessed=false",
+        )
+
+    raw_seed_results = source_summary.get("seeds")
+    if not isinstance(raw_seed_results, list):
+        _fail(
+            "ppo_seed_extension_contract",
+            "$.seed_extension.source_summary.seeds",
+            "source summary seeds must be an array",
+        )
+    seed_results: dict[int, dict[str, Any]] = {}
+    for result in raw_seed_results:
+        if not isinstance(result, dict) or isinstance(result.get("seed"), bool):
+            _fail(
+                "ppo_seed_extension_contract",
+                "$.seed_extension.source_summary.seeds",
+                "source summary contains an invalid seed result",
+            )
+        seed = result.get("seed")
+        if not isinstance(seed, int) or seed in seed_results:
+            _fail(
+                "ppo_seed_extension_contract",
+                "$.seed_extension.source_summary.seeds",
+                "source summary seed results must be unique integers",
+            )
+        seed_results[seed] = result
+    if list(seed_results) != reuse_seeds:
+        _fail(
+            "ppo_seed_extension_contract",
+            "$.seed_extension.source_summary.seeds",
+            "source summary seed order does not match reuse_seeds",
+        )
+    return {
+        "source_dir": source_dir,
+        "source_manifest_path": source_manifest_path,
+        "source_manifest_sha256": actual_manifest_sha256,
+        "seed_results": seed_results,
+        "artifacts": artifacts,
+        "reuse_seeds": reuse_seeds,
+        "new_seeds": [
+            seed for seed in config["seeds"] if seed not in reuse_seeds
+        ],
+    }
+
+
+def _inherited_seed_artifact_names(
+    extension: Mapping[str, Any],
+    seed: int,
+) -> list[str]:
+    prefix = f"seed_{seed}"
+    names = [
+        f"{prefix}_bc_warm_start.npz",
+        f"{prefix}_ppo_best_policy.npz",
+        f"{prefix}_ppo_best_value.npz",
+        f"{prefix}_ppo_last_policy.npz",
+        f"{prefix}_ppo_last_value.npz",
+        f"{prefix}_training_curve.json",
+        f"{prefix}_validation_diagnostics.json",
+        f"{prefix}_validation_failures.jsonl",
+    ]
+    state_name = f"{prefix}_ppo_training_state.npz"
+    if state_name in extension["artifacts"]:
+        names.append(state_name)
+    missing = [name for name in names if name not in extension["artifacts"]]
+    if missing:
+        _fail(
+            "ppo_seed_extension_artifact",
+            f"$.seed_extension.seeds.{seed}",
+            "source seed artifact set is incomplete",
+            details={"missing": missing},
+        )
+    return names
+
+
+def _inherit_seed_result(
+    extension: Mapping[str, Any],
+    output_dir: Path,
+    seed: int,
+    *,
+    resume: bool,
+) -> tuple[dict[str, Any], list[str]]:
+    names = _inherited_seed_artifact_names(extension, seed)
+    for name in names:
+        source = extension["source_dir"] / name
+        destination = output_dir / name
+        expected = extension["artifacts"][name]
+        if resume:
+            try:
+                actual_size = destination.stat().st_size
+            except OSError as error:
+                _fail(
+                    "ppo_seed_extension_artifact",
+                    f"$.output_dir.{name}",
+                    str(error),
+                )
+            actual_hash = _file_hash(destination)
+            if (
+                actual_size != expected["bytes"]
+                or actual_hash != expected["sha256"]
+            ):
+                _fail(
+                    "ppo_seed_extension_artifact",
+                    f"$.output_dir.{name}",
+                    "inherited output artifact differs from source",
+                )
+        else:
+            shutil.copy2(source, destination)
+    result = json.loads(json.dumps(extension["seed_results"][seed]))
+    if "training_state" not in result:
+        result["training_state"] = None
+    result["seed_extension"] = {
+        "mode": "inherited_verified",
+        "source_run_manifest_sha256": extension[
+            "source_manifest_sha256"
+        ],
+    }
+    return result, names
+
+
 def _run_ppo_pipeline_in_directory(
     config_path: str | Path,
     output_override: str | Path | None = None,
@@ -2292,6 +2637,7 @@ def _run_ppo_pipeline_in_directory(
 
     config_source = Path(config_path).resolve()
     config = load_ppo_config(config_source)
+    seed_extension = _prepare_seed_extension(config_source, config)
     manifest_path = _resolve_config_path(
         config_source, config["benchmark"]["manifest"]
     )
@@ -2301,6 +2647,12 @@ def _run_ppo_pipeline_in_directory(
         if output_override is None
         else Path(output_override).resolve()
     )
+    if seed_extension is not None and seed_extension["source_dir"] == output_dir:
+        _fail(
+            "ppo_seed_extension_source",
+            "$.seed_extension.source_dir",
+            "source and target output directories must differ",
+        )
     if resume:
         if not output_dir.is_dir() or not any(output_dir.iterdir()):
             _fail(
@@ -2479,10 +2831,50 @@ def _run_ppo_pipeline_in_directory(
         "teacher_failures.jsonl",
         reference_path.name,
     ]
+    extension_manifest_snapshot: str | None = None
+    if seed_extension is not None:
+        extension_manifest_snapshot = (
+            "seed_extension_source_run_manifest.json"
+        )
+        snapshot_path = output_dir / extension_manifest_snapshot
+        if resume:
+            if (
+                not snapshot_path.is_file()
+                or _file_hash(snapshot_path)
+                != seed_extension["source_manifest_sha256"]
+            ):
+                _fail(
+                    "ppo_seed_extension_artifact",
+                    f"$.output_dir.{extension_manifest_snapshot}",
+                    "source run manifest snapshot is missing or changed",
+                )
+        else:
+            shutil.copy2(
+                seed_extension["source_manifest_path"],
+                snapshot_path,
+            )
+        artifact_names.append(extension_manifest_snapshot)
     seed_results: list[dict[str, Any]] = []
     resumed_seeds: list[int] = []
     first_no_teacher_metrics: dict[str, Any] | None = None
     for seed in config["seeds"]:
+        if (
+            seed_extension is not None
+            and seed in seed_extension["reuse_seeds"]
+        ):
+            inherited_result, inherited_names = _inherit_seed_result(
+                seed_extension,
+                output_dir,
+                int(seed),
+                resume=resume,
+            )
+            if int(seed) == reference_seed:
+                first_no_teacher_metrics = inherited_result[
+                    "warm_start_validation"
+                ]
+            seed_results.append(inherited_result)
+            artifact_names.extend(inherited_names)
+            continue
         prefix = f"seed_{seed}"
         warm_actor, _, warm_curve = train_bc_baseline(
             train_scenarios,
@@ -2664,21 +3056,24 @@ def _run_ppo_pipeline_in_directory(
             "completed_epoch": int(config["ppo"]["epochs"]),
             "boundary": "completed_ppo_epoch",
         }
-        seed_results.append(
-            {
-                "seed": seed,
-                "warm_start_validation": warm_metrics,
-                "selection": ppo_curve["selection"],
-                "best_validation": best_metrics,
-                "last_validation": last_metrics,
-                "best_checkpoint": best_checkpoint,
-                "last_checkpoint": last_checkpoint,
-                "training_state": training_state,
-                "improved_over_warm_start": best_metrics["mean_ratio"]
-                < warm_metrics["mean_ratio"] - 1e-12,
-                "selected_warm_start": ppo_curve["selection"]["best_epoch"] == 0,
+        seed_result = {
+            "seed": seed,
+            "warm_start_validation": warm_metrics,
+            "selection": ppo_curve["selection"],
+            "best_validation": best_metrics,
+            "last_validation": last_metrics,
+            "best_checkpoint": best_checkpoint,
+            "last_checkpoint": last_checkpoint,
+            "training_state": training_state,
+            "improved_over_warm_start": best_metrics["mean_ratio"]
+            < warm_metrics["mean_ratio"] - 1e-12,
+            "selected_warm_start": ppo_curve["selection"]["best_epoch"] == 0,
+        }
+        if seed_extension is not None:
+            seed_result["seed_extension"] = {
+                "mode": "trained_current_run"
             }
-        )
+        seed_results.append(seed_result)
         artifact_names.extend(
             [
                 warm_path.name,
@@ -2783,7 +3178,9 @@ def _run_ppo_pipeline_in_directory(
             "state_format_version": 1,
             "boundary": "completed_ppo_epoch",
             "state_artifacts": [
-                result["training_state"]["name"] for result in seed_results
+                result["training_state"]["name"]
+                for result in seed_results
+                if result.get("training_state") is not None
             ],
             "test_accessed": False,
         },
@@ -2795,6 +3192,16 @@ def _run_ppo_pipeline_in_directory(
         ),
         "run_manifest": "ppo_run_manifest.json",
     }
+    if seed_extension is not None:
+        summary["seed_extension"] = {
+            "source_run_manifest": extension_manifest_snapshot,
+            "source_run_manifest_sha256": seed_extension[
+                "source_manifest_sha256"
+            ],
+            "inherited_seeds": seed_extension["reuse_seeds"],
+            "trained_seeds": seed_extension["new_seeds"],
+            "source_test_accessed": False,
+        }
     summary_path = output_dir / "ppo_summary.json"
     _write_json(summary_path, summary)
     artifact_names.append(summary_path.name)
@@ -2808,6 +3215,23 @@ def _run_ppo_pipeline_in_directory(
         for name in sorted(artifact_names)
     }
     lockfile = repository / "requirements-lock.txt"
+    execution = {
+        "resume_requested": resume,
+        "resumed_seeds": resumed_seeds,
+        "resume_boundary": "completed_ppo_epoch",
+        "publication_mode": (
+            "staging_directory_swap" if resume else "direct_new_directory"
+        ),
+    }
+    if seed_extension is not None:
+        execution["seed_extension"] = {
+            "source_run_manifest": extension_manifest_snapshot,
+            "source_run_manifest_sha256": seed_extension[
+                "source_manifest_sha256"
+            ],
+            "inherited_seeds": seed_extension["reuse_seeds"],
+            "trained_seeds": seed_extension["new_seeds"],
+        }
     run_manifest = {
         "format_version": 1,
         "mode": "stg_masked_ppo",
@@ -2821,14 +3245,7 @@ def _run_ppo_pipeline_in_directory(
             "platform": platform.platform(),
             "numpy": np.__version__,
         },
-        "execution": {
-            "resume_requested": resume,
-            "resumed_seeds": resumed_seeds,
-            "resume_boundary": "completed_ppo_epoch",
-            "publication_mode": (
-                "staging_directory_swap" if resume else "direct_new_directory"
-            ),
-        },
+        "execution": execution,
         "inputs": {
             "config": {
                 "name": config_source.name,
@@ -2856,7 +3273,12 @@ def _run_ppo_pipeline_in_directory(
             str(result["seed"]): {
                 "best": result["best_checkpoint"],
                 "last": result["last_checkpoint"],
-                "training_state": result["training_state"],
+                "training_state": result.get("training_state"),
+                **(
+                    {"seed_extension": result["seed_extension"]}
+                    if "seed_extension" in result
+                    else {}
+                ),
             }
             for result in seed_results
         },
