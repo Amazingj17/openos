@@ -4,7 +4,7 @@
 - 主责：成员 B
 - 复核：成员 A
 - 日期：2026-07-18
-- 状态：B 已生成正式候选并完成自审；等待 A 从用户推送后的不可变提交独立复核
+- 状态：B 正式候选已由 A 从远端不可变提交独立复跑并复核通过；P1-B02 development/OOD 评测子阶段关闭
 - 边界：public test 未加载、未声明、未运行；本记录不是最终 test 结论
 
 ## 1. 结论
@@ -19,7 +19,7 @@ primary_mean_ratio_below_reference_on_every_reported_slice = false
 release_publishable = false
 ```
 
-当前只能声明“ID/CCR-OOD 有利、system-OOD 不确定、size-OOD 失败”，不能声明整体 OOD 泛化通过，不能进入最终发布或访问 public test。P1-B02 仍是“部分完成”，须先由 A 独立复核本候选。
+当前只能声明“ID/CCR-OOD 有利、system-OOD 不确定、size-OOD 失败”，不能声明整体 OOD 泛化通过，不能进入最终发布或访问 public test。A 已确认证据可信并关闭 P1-B02 development/OOD 评测子阶段，但性能门禁仍失败，G3 保持阻塞。
 
 ## 2. 冻结输入与生产入口
 
@@ -101,8 +101,14 @@ B 在报告生成后用与生产命令分离的审计脚本重算：
 
 ## 7. 下一步和不可越过的边界
 
-1. 用户推送 B 的代码和本结果记录。
-2. A 从新的远端不可变提交建立干净 worktree，独立装载 9 个 checkpoint，重生成 evidence/report，重算笛卡尔积、门禁字段、参数 hash 和 4 份报告 artifact。
-3. A 无论复核通过或退回，都必须保留 size-OOD 的原始失败结果，不得更换 seed、场景或惩罚。
-4. 只有 A 确认数据可信后，才允许为 size 泛化定义一个新的、预注册的 A 主责任务；不允许对本次 development 场景进行无限调参。
+1. A 已从 `origin/main=fab540c...` 的干净 detached worktree 独立装载 9 个 checkpoint，重生成 2040 条 evidence/report，并[复核通过](./P1-B02正式Development独立复核记录.md)。
+2. B/A 两轮去除 wall-clock 后的 2040 条调度行为和非时延报告完全一致；size-OOD 原始失败结果已保留。
+3. A 下一步开始 `P1-A05-SIZE-ROBUSTNESS-DESIGN`，只做根因分析与单一改进候选预注册，不对当前 30 个 size-OOD 场景反复调参。
+4. B 并行负责 `P1-B03-PORTABLE-HASH`，固定跨 worktree 行尾和源码 hash 合同；该问题不改写本次原始 evidence。
 5. public test 仍受一次性 gate 禁止；不运行 `claim-test-gate`，不接入 public-test loader。
+
+## 8. A 独立复核更新
+
+A 的唯一一次复跑用时 `896.5s`，生成的 evidence 文件 SHA-256 为 `e2822774...e48d9`，`records` SHA-256 为 `bca214d0...1f02f`。A 重算 9/9 checkpoint、4/4 报告 artifact、逐 seed mean/std 和 gate 均通过；全量回归 `232 passed in 13.29s`。
+
+复核另发现非阻断 F1：同一 Git blob 在 B 主工作区为 LF、A detached worktree 为 CRLF，原始 runner SHA-256 因此为 `21043791...` / `860da9e3...`；统一归一化为 LF 后与 Git blob 完全一致。两份 evidence 都正确绑定各自实际字节，该差异不否定调度结果，但必须在 release 前修复。完整证据见 [P1-B02 正式 Development 独立复核记录](./P1-B02正式Development独立复核记录.md)。

@@ -3,7 +3,7 @@
 - 任务：P0-A01
 - 主责：成员 A
 - 复核：成员 B
-- 状态：已完成（B 复核通过；P1-A03 正式对照与止损已双签）
+- 状态：已完成（P1-A03 止损与 P1-B02 development/OOD 证据均已双签；性能门禁未过）
 - 日期：2026-07-16
 - 适用版本：首次 GitHub 基线 `28f6305` 之后的 P0-A01 工作区
 
@@ -29,7 +29,9 @@
 10. P1-03 在远端不可变提交 `cddca3b...` 上未通过 B 首轮复核：正常连续/恢复轨迹一致，但后置 seed 状态失败会先改写前序 seed artifact，使旧 manifest 失效。A 以 staging 目录交换修复；B 已在 `d27479f...` 上独立重验正常恢复、状态、10 类故障、目录快照和发布回滚并通过，允许开始 task-GNN。
 11. P1-A03 正式 3-seed task-GNN mean ratio 为 `0.690460`，对照 MLP 为 `0.723193`；90 对逐实例为 `50/19/21`，但分层配对 bootstrap 95% CI `[-0.083063, 0.007113]` 跨 0。B 已从远端 `f4c7e4d...` 独立重算 artifact、状态、checkpoint 和统计并通过；主模型保留 MLP，task-GNN 仅记为方向性改善、未证实，P1-A03 关闭。
 12. P1-A04 不重训既有三 seed：以固定来源 manifest `b4320d1b...f594` 逐字节继承 `20260717/18/19`，只训练 `20260720/21`。B 已从 detached `8692b61...` 在物理无 test 数据根正式预算复跑，五 seed validation mean/std `0.709190/0.064109`、零失败/非法，核心 artifact 与 A 包一致；P1-A04 关闭，允许开始正式 development/OOD。
-13. P1-B02 正式 development 候选绑定干净提交 `d9c5c10...`、17 个策略/seed 组合和 120 个冻结场景。2040 条记录全部成功、零非法动作；MLP 的 ID/size/CCR/system mean ratio 为 `0.709190/1.568302/0.406325/0.965250`。决策是原样保留 size-OOD 失败并依自动报告设置 `release_publishable=false`；不更换 seed、不临时调参、不访问 public test。当前候选待 A 独立复核，尚不关闭 P1-B02，不启动 G3。
+13. P1-B02 正式 development 候选包含 17 个策略/seed 组合和 120 个冻结场景。A 已从 `origin/main=fab540c...` 的隔离 detached worktree 唯一正式复跑；A/B 去除 wall-clock 后的 2040 条调度记录逐字段一致，非时延报告完全一致，9/9 checkpoint 与 4/4 报告 artifact hash 均可重算。P1-B02 development/OOD 证据复核通过并关闭评测子阶段。
+14. 证据通过不等于性能通过。MLP 的 ID/size/CCR/system mean ratio 为 `0.709190/1.568302/0.406325/0.965250`；size-OOD 五个 seed `1.601640/1.462686/1.610442/1.556301/1.610442` 均劣于 HEFT，system-OOD 配对 CI 跨 0。因此原样保留 `release_publishable=false`，不更换 seed、不临时调参、不访问 public test，G3 继续阻塞；A 下一步只预注册 `P1-A05-SIZE-ROBUSTNESS-DESIGN`。
+15. A 复核发现同一 Git blob 在 B 主工作区为 LF、A detached worktree 为 CRLF，runner 原始 SHA-256 分别为 `21043791...` 与 `860da9e3...`；规范化为 LF 后两者与 Git blob `21043791...` 一致。两份 evidence 均正确绑定实际执行字节，因此不否定本次结果；B 必须以 `P1-B03-PORTABLE-HASH` 固定 `.gitattributes`、规范化 hash 与跨 worktree 测试，且不得改写历史 evidence。
 
 ## 2. 本次审计范围与证据
 
@@ -144,15 +146,15 @@ P1-B02 将上述方法固化为机器契约：主策略和 Random 使用 5 seeds
 | 逐实例 ratio | 每个策略 makespan 除以同实例 HEFT makespan | 正确 | 保持 |
 | train/validation/test | smoke 使用派生 seed；公开 BC/PPO 只用 train 生成 teacher/梯度，validation 选模，test 不加载 | P1-A01/P1-A02 均已由 B 用无 test raw root 复核；PPO 复跑时 test JSON 和 archive 均物理不存在 | test 只留最终评测；task-GNN 继续复用同一门禁 |
 | checkpoint 选择 | legacy smoke 只存 last；公开 BC/PPO 均保存 best/last，PPO 将 warm start 作为 epoch 0 候选 | B 证明 seed 20260718 的 best actor 参数与 BC warm start 相同，未用 last 冒充 best | task-GNN 沿用相同 selection key |
-| CI | smoke 仍为正态近似；P1-A03 对照新增固定双层配对 bootstrap；P1-B02 冻结 5-seed 与异 seed 数 comparator 统计 | B 正式候选已执行 10,000 次分层配对 bootstrap；ID/CCR 有利、size 失败、system 跨 0 | A 从不可变提交独立重算和签字 |
+| CI | smoke 仍为正态近似；P1-A03 对照新增固定双层配对 bootstrap；P1-B02 冻结 5-seed 与异 seed 数 comparator 统计 | A 已从不可变提交独立重算；A/B 非时延报告一致，ID/CCR 有利、size 五 seed 全失败、system 跨 0 | 保留原报告和失败结论；新候选必须重新预注册并复核 |
 | 合法率 | 从逐实例成功/失败计数计算，失败进入 CSV/JSONL | P0-08 已实现并由 A 独立复核 | 保持零失败发布门禁 |
 | HEFT teacher | P1-A01 参考含 `is_heft_task/is_heft_pair`；P1-A02 主路径强制删除 | 同 seed 16/14 维 BC ratio 为 `1.0/0.852539`，teacher accuracy 为 `1.0/0.514`；B 注入任一特征均在训练前失败 | PPO/GNN 主路径保持删除 |
 | 动作空间 | 对 `ready task × resource` 联合候选打分 | 有严格 mask，但规模为乘积 | PPO 阶段比较两阶段因子化策略 |
 | 奖励 | legacy 为终局 `-ratio`；P1-A02 为逐步 `-(C_t-C_{t-1})/M_HEFT`，和严格等于 `-ratio` | B 独立推导通过；正式最大恒等式误差 `1.78e-15`，`gamma=0.99` 注入被拒绝 | task-GNN 保持奖励与 `gamma=1.0` 不变 |
-| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | 5-seed MLP、staging 断点续训和 task-GNN 已复核；B 已用冻结 checkpoint 完成正式 development 候选 | 保持候选不变；A 复核后另行预注册 size 泛化改进，不就地调参 |
+| 训练算法 | legacy episodic REINFORCE；公开路径为 BC warm start + clipped PPO/GAE/value/target-KL | 5-seed MLP、staging 断点续训、task-GNN 与正式 development 证据均已复核；size-OOD 门禁失败 | 保持候选不变；A 以 P1-A05 预注册一个 size 泛化改进，B 复核前不训练 |
 | 图表示 | PPO 主模型为 14 维 MLP；P1-A03 对照为一层双向 task-GNN | GNN mean 点估计改善 `-0.032733`，但配对 CI 跨 0；参数约 `1.969×`、CPU P50 约 `1.046×` | 保留 MLP；GNN 作为未证实消融，不追加新图变量 |
-| checkpoint 元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | P0-08 已实现外部清单；P1-A03 合同可由历史 Git blob 重建，但 clean clone 的 LF/CRLF 工作树字节不同 | release 前规范化文本 hash、补跨 clone 恢复测试，再考虑内嵌 manifest 摘要 |
-| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁；P1-B02 development materializer 固定只加载 `validation/model_selection` | B 正式 evidence 记录 `test_accessed=false`、`training_started=false`、`public_test_loaded=false`；未运行 `claim-test-gate` | A 复核无 test 边界；size 门禁未过前不得声明 public test，最终将 claim 固定在 loader 前 |
+| checkpoint/源码元数据 | checkpoint 自带维度/seed/特征；run manifest 记录配置、数据、代码、依赖和 checkpoint hash | A 确认 9/9 参数 hash 可重算；同一 Git blob 的 LF/CRLF 工作树原始源码 hash 不同，规范化 LF 后一致 | B 执行 P1-B03：固定 `.gitattributes`、规范化文本 hash 和跨 worktree 测试；旧 evidence 不改写 |
+| test 使用 | legacy `pipeline` 每次评测合成 test；公开 `train-bc/train-ppo` 对 test 设用途门禁；P1-B02 development materializer 固定只加载 `validation/model_selection` | A/B evidence 均记录 `test_accessed=false`、`training_started=false`、`public_test_loaded=false`；未运行 `claim-test-gate` | size 门禁未过前不得加载 public test，最终将 claim 固定在 loader 前 |
 
 ## 5. 当前结果的正确解释
 
@@ -177,7 +179,7 @@ P1-A02 删除两项直接 HEFT 决策特征后，在相同公开 train/validatio
 
 P1-A03 在相同 14 维输入、奖励、split、训练预算、3 seeds 和选模规则下，只把 MLP 替换为一层双向 task-GNN。三个 best validation ratio 为 `0.754139/0.633578/0.683664`，mean/std 为 `0.690460/0.049453`，failure/illegal 均为 0；与 MLP 的 90 对逐实例为 `50/19/21`。分层配对 bootstrap 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，因此当前只允许表述为“task-GNN 在 validation 上呈方向性改善，但未达到稳健替换门禁”。B 已独立复核通过，主模型继续保留 MLP，公开 test/OOD 未访问；详见 [P1-A03 正式对照报告](./P1-A03正式对照报告.md)和[正式结果独立复核](./P1-A03正式结果独立复核记录.md)。
 
-P1-B02 已把主策略、reference、policy seed 数、ID/OOD 切片、失败惩罚、scheduler-only runtime、交叉分层 bootstrap、主策略配对比较、artifact hash 和一次性 test 工作流写入机器契约。契约/聚合器、OOD materializer/evidence producer 与 5-seed validation 包均已通过双人复核。B 的正式 development 候选又生成 2040 条真实策略记录，对 9 个 checkpoint 和 4 份报告 artifact 完成 hash 自审。结果表明 ID/CCR 有利、system 不确定、size 明显失败，因此不能把“已运行 OOD”写成“泛化已验证”。完整证据见 [P1-B02 正式 Development 结果记录](./P1-B02正式Development结果记录.md)；候选仍待 A 复核。
+P1-B02 已把主策略、reference、policy seed 数、ID/OOD 切片、失败惩罚、scheduler-only runtime、交叉分层 bootstrap、主策略配对比较、artifact hash 和一次性 test 工作流写入机器契约。契约/聚合器、OOD materializer/evidence producer、5-seed validation 包与 2040 条正式 development 证据均已双人复核。A/B 去除 wall-clock 后的调度行为与非时延报告一致，9 个 checkpoint 和 4 份报告 artifact 均可重算；完整证据见[正式结果](./P1-B02正式Development结果记录.md)和[正式独立复核](./P1-B02正式Development独立复核记录.md)。结果只支持“ID/CCR 有利、system 不确定、size 五 seed 全部失败”，不能写成“整体 OOD 泛化通过”；P1-B02 评测子阶段虽已关闭，`release_publishable=false` 与 G3 阻塞状态不变。
 
 ## 6. 当前 MLP/PPO 与 legacy REINFORCE 的局限
 
@@ -189,8 +191,8 @@ P1-B02 已把主策略、reference、policy seed 数、ID/OOD 切片、失败惩
 6. **PPO 收益不稳定**：虽然已有 value、GAE、clipping 和 KL 诊断，仍有 1/3 seed 回退 warm start，seed std 为 `0.07595`。
 7. **训练与部署策略不一致**：PPO 训练随机采样、validation 使用确定性 argmax；训练均值不能替代部署策略结果。
 8. **两条训练路径并存**：公开 PPO 已统一 best/last 与 warm-start 回退，legacy smoke 仍只保存最终 REINFORCE 模型。
-9. **公开数据仍只有 validation 证据**：P1-A02 已完成独立复核且不再只是复制 HEFT，但尚无公开 test、CCR、OOD 或外部泛化证据。
-10. **统计证据不足**：已有 5 个开发 seed × 30 validation，但尚未进入冻结 OOD/一次性 test 报告；P1-A03 的配对 CI 仍跨 0。
+9. **仍无公开 test 证据**：development ID/CCR/size/system OOD 已双签，但 public test 从未加载；开发结论不得冒充最终测试结论。
+10. **泛化门禁明确失败**：已有 5 个开发 seed 和冻结 OOD 报告，但 size-OOD 五 seed 均劣于 HEFT，system-OOD CI 跨 0；必须先完成新的预注册候选，不能靠重复试验挑结果。
 11. **失败惩罚仍需 benchmark 冻结**：P0-08 已实现真实失败记录和可配置惩罚，但默认 10.0 只是工程值，正式实验必须只在 validation 上冻结。
 12. **checkpoint 未内嵌完整元数据**：外部 run manifest 已记录配置、数据、commit、依赖和 checkpoint hash；模型文件本身仍只保存维度、seed、特征名和权重。
 
@@ -202,6 +204,8 @@ G1 通过后的唯一允许顺序：
 2. 在相同 MLP 和相同数据上用 PPO + GAE 替换 REINFORCE。（3 seeds 已由 B 复核）
 3. P1-03 断点续训首轮被 B 退回，A 实现 staging 发布后已通过 B 的第二轮独立复核。（已完成）
 4. 只把 MLP 替换为 task-GNN 的正式对照和 B 独立复核均已完成；点估计改善但 CI 跨 0，按止损保留 MLP，不以追加 resource-GNN、课程或新奖励补救。（已关闭）
+5. P1-B02 development/OOD 已完成双人独立复跑；证据可信但 size 性能门禁失败，冻结原始负结果。（已关闭评测子阶段）
+6. A 只对 size-OOD 做根因分析并预注册一个改进候选；B 复核设计前不训练，候选通过 development 全切片门禁前不访问 public test。（下一任务）
 
 ## 7. 三个独立手算案例
 
@@ -332,4 +336,4 @@ P1-03 epoch 边界状态覆盖 actor/value 参数、两个 Adam、两套 RNG、h
 
 P1-A03 已按上述冻结项实现并运行：节点只复用 14 维输入中的 workload、upward-rank、indegree、outdegree，经一次前驱/后继均值消息传递后与候选表示融合。B 已从远端 `f6301ae7...` 独立重验微型事务；A 随后在提交 `a8c08c0...` 上完成正式 3-seed；B 又从远端 `f4c7e4d...` 重算 31/32-artifact、三个状态、配对 CI，并用六个 checkpoint 复评 180 次 validation 调度，全部一致。GNN/MLP mean 为 `0.690460/0.723193`，90 对为 `50/19/21`，但配对 CI 跨 0；因此停止扩展并保留 MLP。完整证据见 [P1-A03 设计与验收](./P1-A03TaskGNN设计与验收.md)、[微型独立复核](./P1-A03独立复核记录.md)、[正式对照报告](./P1-A03正式对照报告.md)和[正式结果独立复核](./P1-A03正式结果独立复核记录.md)。
 
-P1-B02 首轮历史见 [独立复核记录](./P1-B02独立复核记录.md)；契约/聚合器、OOD materializer/manifest、producer 外层计时、失败语义和 hash 互操作现均通过双人复核，完整终态见 [OOD 第三轮复核](./P1-B02OOD证据路径第三轮独立复核记录.md)。A 已按 [P1-A04 记录](./P1-A04五种子扩展设计与正式结果.md)只补两个缺失 seed，B 又在[独立复核](./P1-A04五种子扩展独立复核记录.md)中用物理无 test 根复跑通过。B 随后完成[正式 development 候选](./P1-B02正式Development结果记录.md)；当前门禁是 A 从用户推送后的不可变提交独立复核。size-OOD 失败必须保留，本阶段仍不读取公开 test。
+P1-B02 首轮历史见 [独立复核记录](./P1-B02独立复核记录.md)；契约/聚合器、OOD materializer/manifest、producer 外层计时、失败语义和 hash 互操作现均通过双人复核，完整终态见 [OOD 第三轮复核](./P1-B02OOD证据路径第三轮独立复核记录.md)。A 已按 [P1-A04 记录](./P1-A04五种子扩展设计与正式结果.md)只补两个缺失 seed，B 又在[独立复核](./P1-A04五种子扩展独立复核记录.md)中用物理无 test 根复跑通过。B 随后完成[正式 development 候选](./P1-B02正式Development结果记录.md)，A 从远端 `fab540c...` 唯一复跑并[正式复核通过](./P1-B02正式Development独立复核记录.md)。P1-B02 development/OOD 评测子阶段关闭，但 size-OOD 五 seed 全部失败，`release_publishable=false`，G3 与 public test 继续阻塞。下一步由 A 预注册 `P1-A05-SIZE-ROBUSTNESS-DESIGN`，B 以 `P1-B03-PORTABLE-HASH` 修复 LF/CRLF 可移植 hash 合同；两项均须由对方独立复核。
