@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
 import sys
@@ -19,6 +18,7 @@ from trisched.gnn import (
     TaskGNNPolicy,
     task_gnn_parameter_hash,
 )
+from trisched.hashing import file_sha256, portable_text_hashes
 from trisched.learning import (
     FEATURE_NAMES,
     TEACHER_FEATURE_NAMES,
@@ -33,14 +33,6 @@ from trisched.policies import (
 )
 from trisched.reporting import load_evaluation_contract
 from trisched.schedulers import PolicySchedulerRunner, SchedulerRunner
-
-
-def _file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _repository_path(path: Path, repository: Path) -> str:
@@ -63,7 +55,7 @@ def _checkpoint_metadata(
     return {
         "path": _repository_path(path, repository),
         "bytes": path.stat().st_size,
-        "sha256": _file_sha256(path),
+        "sha256": file_sha256(path),
         "parameter_sha256": parameter_sha256,
         "internal_seed": policy.seed,
         "feature_names": list(policy.feature_names),
@@ -77,10 +69,7 @@ def build_runner_bundle(
     bc_checkpoint: Path,
     masked_mlp_dir: Path,
     task_gnn_dir: Path,
-) -> tuple[
-    dict[tuple[str, int], SchedulerRunner],
-    dict[str, Any],
-]:
+) -> tuple[dict[tuple[str, int], SchedulerRunner], dict[str, Any]]:
     expected_mlp_features = tuple(
         name for name in FEATURE_NAMES if name not in TEACHER_FEATURE_NAMES
     )
@@ -253,7 +242,8 @@ def main(argv: list[str] | None = None) -> int:
         **bundle,
         "script": {
             "path": _repository_path(Path(__file__), REPOSITORY),
-            "sha256": _file_sha256(Path(__file__)),
+            "sha256": file_sha256(Path(__file__)),
+            "portable_text": portable_text_hashes(Path(__file__)),
         },
     }
 
