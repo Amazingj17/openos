@@ -16,6 +16,11 @@ import numpy as np
 
 from . import __version__
 from .bc import BehaviorCloningError, run_bc_pipeline
+from .branding import (
+    LEGACY_TASK_GNN_CLI_COMMAND,
+    TRISCHED_GNN_PPO_CLI_COMMAND,
+    TRISCHED_GNN_PPO_DISPLAY_NAME,
+)
 from .evaluation import (
     DEFAULT_FAILURE_PENALTY_RATIO,
     dataset_manifest,
@@ -30,7 +35,7 @@ from .p1_a05 import (
     run_p1_a05_pipeline,
     write_p1_a05_dry_run,
 )
-from .ppo import run_ppo_pipeline, run_task_gnn_pipeline
+from .ppo import run_ppo_pipeline, run_trisched_gnn_ppo_pipeline
 from .reporting import (
     EvaluationReportError,
     build_evaluation_report,
@@ -525,7 +530,10 @@ def _evaluation_failure_report(summary_path: Path) -> dict[str, Any] | None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="trisched",
-        description="Minimum executable cloud-edge-device DAG scheduling framework",
+        description=(
+            "TriSched cloud-edge-device heterogeneous computing resource "
+            "management scheduler"
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     pipeline = subparsers.add_parser(
@@ -541,28 +549,41 @@ def build_parser() -> argparse.ArgumentParser:
     train_bc.add_argument("--output", default=None)
     train_ppo = subparsers.add_parser(
         "train-ppo",
-        help="train multi-seed masked PPO on public-STG train/validation",
+        help=(
+            "train the Masked MLP PPO ablation across independent random "
+            "initializations on public-STG train/validation"
+        ),
     )
     train_ppo.add_argument("--config", default="configs/stg_ppo.json")
     train_ppo.add_argument("--output", default=None)
     train_ppo.add_argument(
         "--resume",
         action="store_true",
-        help="resume each seed from its last complete PPO epoch state",
+        help=(
+            "resume each random-initialization run from its last complete "
+            "PPO epoch state"
+        ),
     )
     train_task_gnn = subparsers.add_parser(
-        "train-task-gnn",
-        help="train multi-seed task-GNN BC plus PPO on STG train/validation",
+        TRISCHED_GNN_PPO_CLI_COMMAND,
+        aliases=[LEGACY_TASK_GNN_CLI_COMMAND],
+        help=(
+            f"train multi-initialization {TRISCHED_GNN_PPO_DISPLAY_NAME} "
+            "with HEFT BC warm start, GAE, and clipped PPO"
+        ),
     )
     train_task_gnn.add_argument(
         "--config",
-        default="configs/stg_task_gnn.json",
+        default="configs/stg_trisched_gnn_ppo.json",
     )
     train_task_gnn.add_argument("--output", default=None)
     train_task_gnn.add_argument(
         "--resume",
         action="store_true",
-        help="resume task-GNN seeds from their last complete PPO epoch state",
+        help=(
+            f"resume {TRISCHED_GNN_PPO_DISPLAY_NAME} runs from their last "
+            "complete PPO epoch state"
+        ),
     )
     generate = subparsers.add_parser(
         "generate", help="materialize deterministic scenario JSON files"
@@ -592,7 +613,10 @@ def build_parser() -> argparse.ArgumentParser:
     claim_gate.add_argument("--receipt", required=True)
     build_report = subparsers.add_parser(
         "build-report",
-        help="validate a frozen multi-seed evidence package and aggregate it",
+        help=(
+            "validate and aggregate an evidence package from multiple "
+            "independent random initializations"
+        ),
     )
     build_report.add_argument(
         "--contract",
@@ -669,8 +693,15 @@ def main(argv: list[str] | None = None) -> int:
             run_bc_pipeline(args.config, args.output)
         elif args.command == "train-ppo":
             run_ppo_pipeline(args.config, args.output, resume=args.resume)
-        elif args.command == "train-task-gnn":
-            run_task_gnn_pipeline(args.config, args.output, resume=args.resume)
+        elif args.command in {
+            TRISCHED_GNN_PPO_CLI_COMMAND,
+            LEGACY_TASK_GNN_CLI_COMMAND,
+        }:
+            run_trisched_gnn_ppo_pipeline(
+                args.config,
+                args.output,
+                resume=args.resume,
+            )
         elif args.command == "generate":
             generate_scenarios(args.config, args.output)
         elif args.command == "evaluate":

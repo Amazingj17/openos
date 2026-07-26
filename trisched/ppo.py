@@ -35,6 +35,11 @@ from .bc import (
     train_bc_baseline,
 )
 from .benchmark import load_benchmark_manifest, load_frozen_split
+from .branding import (
+    MASKED_MLP_DISPLAY_NAME,
+    MASKED_MLP_PAPER_ROLE,
+    TRISCHED_GNN_PPO_DISPLAY_NAME,
+)
 from .env import HeterogeneousDagEnv, validate_schedule
 from .gnn import (
     TASK_GNN_FEATURE_NAMES,
@@ -377,7 +382,7 @@ def load_ppo_config(path: str | Path) -> dict[str, Any]:
 
 
 def load_task_gnn_config(path: str | Path) -> dict[str, Any]:
-    """Load the P1-A03 task-GNN contract without changing masked-MLP PPO."""
+    """Load the P1-A03 TriSched-GNN-PPO contract without changing masked-MLP PPO."""
 
     source = Path(path)
     base = load_ppo_config(source)
@@ -447,7 +452,7 @@ def load_task_gnn_config(path: str | Path) -> dict[str, Any]:
             _fail(
                 "task_gnn_config_variable",
                 object_path,
-                "task-GNN v1 rejects unreviewed experiment variables",
+                f"{TRISCHED_GNN_PPO_DISPLAY_NAME} rejects unreviewed experiment variables",
                 details={"unknown": unknown_keys},
             )
     task_gnn = payload.get("task_gnn")
@@ -464,7 +469,8 @@ def load_task_gnn_config(path: str | Path) -> dict[str, Any]:
         _fail(
             "task_gnn_feature_schema",
             "$.features.exclude",
-            "task-GNN v1 requires the canonical 14-D teacher-free schema",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} requires the canonical "
+            "14-D teacher-free schema",
             details={
                 "expected": list(TASK_GNN_FEATURE_NAMES),
                 "actual": base["features"]["selected"],
@@ -1158,7 +1164,7 @@ def _load_task_gnn_ppo_resume_state(
         _fail(
             "ppo_resume_state_version",
             "$.resume.format_version",
-            "expected task-GNN resume state format version 1",
+            f"expected {TRISCHED_GNN_PPO_DISPLAY_NAME} resume state format version 1",
         )
     stored_payload_sha256 = metadata.get("payload_sha256")
     metadata_without_hash = dict(metadata)
@@ -1175,7 +1181,8 @@ def _load_task_gnn_ppo_resume_state(
         _fail(
             "ppo_resume_state_hash",
             "$.resume.payload_sha256",
-            "task-GNN training state payload hash does not match its contents",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} training state payload hash "
+            "does not match its contents",
         )
     expected_identity = {
         "algorithm": "task_gnn_masked_ppo_epoch_boundary_resume",
@@ -1201,7 +1208,8 @@ def _load_task_gnn_ppo_resume_state(
         _fail(
             "ppo_resume_state_mismatch",
             "$.resume",
-            "task-GNN resume state does not match the current contract",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} resume state does not match "
+            "the current contract",
             details={"mismatches": mismatches},
         )
     completed_epoch = metadata.get("completed_epoch")
@@ -1225,7 +1233,7 @@ def _load_task_gnn_ppo_resume_state(
         _fail(
             "ppo_resume_state_mismatch",
             "$.resume.completed_epoch",
-            "task-GNN resume epoch is outside the training range",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} resume epoch is outside the training range",
         )
     history = metadata.get("history")
     if (
@@ -1239,7 +1247,8 @@ def _load_task_gnn_ppo_resume_state(
         _fail(
             "ppo_resume_state_corrupt",
             "$.resume.history",
-            "task-GNN history does not match the completed epoch boundary",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} history does not match "
+            "the completed epoch boundary",
         )
     raw_best_key = metadata.get("best_key")
     if (
@@ -1255,7 +1264,7 @@ def _load_task_gnn_ppo_resume_state(
         _fail(
             "ppo_resume_state_corrupt",
             "$.resume.best_key",
-            "task-GNN best selection key is invalid",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} best selection key is invalid",
         )
     try:
         expected_adam_step = sum(
@@ -1272,7 +1281,7 @@ def _load_task_gnn_ppo_resume_state(
         _fail(
             "ppo_resume_state_corrupt",
             "$.resume.actor_adam_step",
-            "task-GNN Adam counters do not match update history",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} Adam counters do not match update history",
             details={
                 "expected": expected_adam_step,
                 "actor": actor_step,
@@ -1308,7 +1317,8 @@ def _load_task_gnn_ppo_resume_state(
         _fail(
             "ppo_resume_state_corrupt",
             "$.resume.arrays",
-            "task-GNN state array schema does not match the architecture",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} state array schema does not "
+            "match the architecture",
             details={
                 "missing": sorted(expected_array_names - set(numeric_arrays)),
                 "unexpected": sorted(set(numeric_arrays) - expected_array_names),
@@ -1644,7 +1654,8 @@ def _collect_task_gnn_episode(
     reward_error = abs(float(np.sum(rewards)) + ratio)
     if reward_error > 1e-9:
         raise RuntimeError(
-            "incremental task-GNN PPO rewards do not sum to negative ratio"
+            f"incremental {TRISCHED_GNN_PPO_DISPLAY_NAME} rewards do not "
+            "sum to negative makespan ratio"
         )
     advantages, returns = compute_gae(
         rewards,
@@ -1674,7 +1685,9 @@ def _update_task_gnn_ppo(
     rng: np.random.Generator,
 ) -> dict[str, Any]:
     if not transitions:
-        raise ValueError("task-GNN PPO update requires transitions")
+        raise ValueError(
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} PPO update requires transitions"
+        )
     raw_advantages = np.asarray(
         [transition.advantage for transition in transitions],
         dtype=np.float64,
@@ -1808,13 +1821,15 @@ def train_task_gnn_ppo(
         _fail(
             "ppo_seed_mismatch",
             "$.seed",
-            "task-GNN warm-start seed does not match the PPO seed",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} warm-start seed does not "
+            "match the PPO seed",
         )
     if abs(float(config["gamma"]) - 1.0) > 1e-12:
         _fail(
             "ppo_reward_contract",
             "$.ppo.gamma",
-            "gamma must remain 1.0 for task-GNN reward identity",
+            f"gamma must remain 1.0 for {TRISCHED_GNN_PPO_DISPLAY_NAME} "
+            "reward identity",
         )
     if int(config["episodes_per_epoch"]) > len(train_scenarios):
         _fail(
@@ -1848,16 +1863,20 @@ def train_task_gnn_ppo(
         _fail(
             "validation_reference",
             "$.entries",
-            "frozen task-GNN validation states do not match scenarios",
+            f"frozen {TRISCHED_GNN_PPO_DISPLAY_NAME} validation states do "
+            "not match scenarios",
         )
     state_path = Path(resume_state_path) if resume_state_path is not None else None
     if state_path is not None and resume_contract is None:
-        raise ValueError("resume_contract is required when saving task-GNN PPO state")
+        raise ValueError(
+            "resume_contract is required when saving "
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} state"
+        )
     if resume and state_path is None:
         _fail(
             "ppo_resume_state_missing",
             "$.resume",
-            "task-GNN resume requires a training state path",
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} resume requires a training state path",
         )
     contract_sha256 = (
         _canonical_sha256(resume_contract) if resume_contract is not None else ""
@@ -1869,7 +1888,8 @@ def train_task_gnn_ppo(
             _fail(
                 "ppo_resume_state_missing",
                 "$.resume",
-                f"task-GNN training state does not exist: {state_path}",
+                f"{TRISCHED_GNN_PPO_DISPLAY_NAME} training state does not "
+                f"exist: {state_path}",
             )
         restored = _load_task_gnn_ppo_resume_state(
             state_path,
@@ -1891,7 +1911,8 @@ def train_task_gnn_ppo(
             _fail(
                 "ppo_resume_state_exists",
                 "$.resume",
-                f"refusing to overwrite task-GNN state: {state_path}",
+                f"refusing to overwrite {TRISCHED_GNN_PPO_DISPLAY_NAME} "
+                f"state: {state_path}",
             )
         actor = warm_start.clone(include_optimizer=False)
         critic = ValueNetwork(
@@ -2011,7 +2032,11 @@ def train_task_gnn_ppo(
         critic.clone(),
         {
             "format_version": 1,
-            "algorithm": "task-GNN masked PPO with GAE and BC warm start",
+            "algorithm": (
+                f"{TRISCHED_GNN_PPO_DISPLAY_NAME} with clipped PPO, GAE, "
+                "and HEFT behavior-cloning warm start"
+            ),
+            "display_name": TRISCHED_GNN_PPO_DISPLAY_NAME,
             "architecture": actor.architecture,
             "seed": seed,
             "feature_names": list(actor.feature_names),
@@ -2022,7 +2047,10 @@ def train_task_gnn_ppo(
                 "split": "validation",
                 "test_accessed": False,
                 "metric": "validation_mean_ratio",
-                "candidates": "task-GNN BC warm start plus every PPO epoch",
+                "candidates": (
+                    f"{TRISCHED_GNN_PPO_DISPLAY_NAME} BC warm start plus "
+                    "every PPO epoch"
+                ),
                 "tie_break": [
                     "zero_failures",
                     "lower_mean_ratio",
@@ -2289,7 +2317,11 @@ def train_masked_ppo(
         critic.clone(),
         {
             "format_version": 1,
-            "algorithm": "masked PPO with GAE and BC warm start",
+            "algorithm": (
+                f"{MASKED_MLP_PAPER_ROLE} with clipped PPO, GAE, and "
+                "HEFT behavior-cloning warm start"
+            ),
+            "display_name": MASKED_MLP_DISPLAY_NAME,
             "seed": seed,
             "feature_names": list(actor.feature_names),
             "reward": "negative incremental makespan divided by HEFT makespan",
@@ -3104,6 +3136,8 @@ def _run_ppo_pipeline_in_directory(
     summary = {
         "format_version": 1,
         "mode": "stg_masked_ppo",
+        "display_name": MASKED_MLP_DISPLAY_NAME,
+        "method_role": "graph_encoder_ablation_baseline",
         "benchmark_id": benchmark_manifest["benchmark_id"],
         "data_access": {
             "loaded_splits": ["train", "validation"],
@@ -3206,6 +3240,8 @@ def _run_ppo_pipeline_in_directory(
     run_manifest = {
         "format_version": 1,
         "mode": "stg_masked_ppo",
+        "display_name": MASKED_MLP_DISPLAY_NAME,
+        "method_role": "graph_encoder_ablation_baseline",
         "created_at_utc": datetime.now(timezone.utc)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),
@@ -3257,7 +3293,7 @@ def _run_ppo_pipeline_in_directory(
     }
     _write_json(output_dir / "ppo_run_manifest.json", run_manifest)
     print(
-        "done: seed mean ratios="
+        f"done: {MASKED_MLP_DISPLAY_NAME} random-initialization mean ratios="
         + ", ".join(f"{ratio:.6f}" for ratio in seed_ratios)
         + f", validation_gate_passed={validation_gate_passed}"
     )
@@ -3437,7 +3473,10 @@ def _run_task_gnn_pipeline_in_directory(
         output_dir.mkdir(parents=True, exist_ok=True)
         _write_json(output_dir / "resolved_config.json", config)
 
-    print("[1/6] loading verified task-GNN train and validation splits")
+    print(
+        f"[1/6] loading verified {TRISCHED_GNN_PPO_DISPLAY_NAME} "
+        "train and validation splits"
+    )
     benchmark_manifest = load_benchmark_manifest(manifest_path)
     manifest_sha256 = _file_hash(manifest_path)
     train_scenarios = load_frozen_split(
@@ -3533,7 +3572,10 @@ def _run_task_gnn_pipeline_in_directory(
             _write_json(output_dir / name, value)
         _write_jsonl(output_dir / "teacher_failures.jsonl", [])
 
-    print("[3/6] freezing the canonical 14-D task-GNN states")
+    print(
+        f"[3/6] freezing the canonical 14-D "
+        f"{TRISCHED_GNN_PPO_DISPLAY_NAME} states"
+    )
     train_states = freeze_task_gnn_teacher_dataset(
         train_scenarios,
         train_teacher,
@@ -3552,7 +3594,10 @@ def _run_task_gnn_pipeline_in_directory(
         "failure_penalty_ratio": config["selection"]["failure_penalty_ratio"],
     }
 
-    print("[4/6] training task-GNN BC warm starts plus PPO across seeds")
+    print(
+        f"[4/6] training {TRISCHED_GNN_PPO_DISPLAY_NAME} BC warm starts "
+        "plus PPO across independent random initializations"
+    )
     artifact_names = [
         "resolved_config.json",
         "train_teacher_manifest.json",
@@ -3603,7 +3648,8 @@ def _run_task_gnn_pipeline_in_directory(
             _fail(
                 "ppo_resume_state_missing",
                 "$.resume",
-                f"seed {seed} has task-GNN PPO outputs but no training state",
+                f"seed {seed} has {TRISCHED_GNN_PPO_DISPLAY_NAME} outputs "
+                "but no training state",
             )
         resume_contract = {
             "format_version": 1,
@@ -3769,7 +3815,10 @@ def _run_task_gnn_pipeline_in_directory(
         )
     assert architecture_metadata is not None
 
-    print("[5/6] aggregating the task-GNN validation gate")
+    print(
+        f"[5/6] aggregating the "
+        f"{TRISCHED_GNN_PPO_DISPLAY_NAME} validation gate"
+    )
     seed_ratios = [
         float(result["best_validation"]["mean_ratio"]) for result in seed_results
     ]
@@ -3783,6 +3832,8 @@ def _run_task_gnn_pipeline_in_directory(
     summary = {
         "format_version": 1,
         "mode": "stg_task_gnn_ppo",
+        "display_name": TRISCHED_GNN_PPO_DISPLAY_NAME,
+        "method_role": "graph_enhanced_actor_critic_candidate",
         "benchmark_id": benchmark_manifest["benchmark_id"],
         "data_access": {
             "loaded_splits": ["train", "validation"],
@@ -3848,7 +3899,10 @@ def _run_task_gnn_pipeline_in_directory(
     _write_json(summary_path, summary)
     artifact_names.append(summary_path.name)
 
-    print("[6/6] writing the task-GNN reproducibility manifest")
+    print(
+        f"[6/6] writing the "
+        f"{TRISCHED_GNN_PPO_DISPLAY_NAME} reproducibility manifest"
+    )
     artifacts = {
         name: {
             "bytes": (output_dir / name).stat().st_size,
@@ -3860,6 +3914,7 @@ def _run_task_gnn_pipeline_in_directory(
     run_manifest = {
         "format_version": 1,
         "mode": "stg_task_gnn_ppo",
+        "display_name": TRISCHED_GNN_PPO_DISPLAY_NAME,
         "created_at_utc": datetime.now(timezone.utc)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),
@@ -3915,7 +3970,8 @@ def _run_task_gnn_pipeline_in_directory(
     }
     _write_json(output_dir / "task_gnn_run_manifest.json", run_manifest)
     print(
-        "done: task-GNN seed mean ratios="
+        f"done: {TRISCHED_GNN_PPO_DISPLAY_NAME} random-initialization "
+        "mean ratios="
         + ", ".join(f"{ratio:.6f}" for ratio in seed_ratios)
         + f", validation_gate_passed={validation_gate_passed}"
     )
@@ -3986,7 +4042,7 @@ def run_task_gnn_pipeline(
     *,
     resume: bool = False,
 ) -> Path:
-    """Run the no-test multi-seed task-GNN pipeline with transactional resume."""
+    """Run the no-test TriSched-GNN-PPO pipeline with transactional resume."""
 
     if not resume:
         return _run_task_gnn_pipeline_in_directory(
@@ -4038,3 +4094,9 @@ def run_task_gnn_pipeline(
 
     _publish_task_gnn_resume_staging(staging_dir, output_dir)
     return output_dir / staged_summary.name
+
+
+# Paper-aligned public API aliases. Legacy function names remain available for
+# frozen experiment scripts and third-party callers.
+train_trisched_gnn_ppo = train_task_gnn_ppo
+run_trisched_gnn_ppo_pipeline = run_task_gnn_pipeline

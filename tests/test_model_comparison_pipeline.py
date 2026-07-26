@@ -180,7 +180,7 @@ def test_one_click_model_comparison_trains_validates_and_visualizes(
 
     ET.parse(output / "results" / "comparison.svg")
     html_text = (output / "results" / "comparison.html").read_text(encoding="utf-8")
-    assert "Masked MLP 与 Task-GNN 性能比较" in html_text
+    assert "Masked MLP 与 TriSched-GNN-PPO 性能比较" in html_text
     assert "comparison.svg" in html_text
     assert "公开 test 未访问" in html_text
 

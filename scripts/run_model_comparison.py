@@ -14,11 +14,16 @@ if str(REPOSITORY) not in sys.path:
     sys.path.insert(0, str(REPOSITORY))
 
 from scripts.compare_task_gnn_mlp import compare
+from trisched.branding import (
+    MASKED_MLP_DISPLAY_NAME,
+    MASKED_MLP_PAPER_ROLE,
+    TRISCHED_GNN_PPO_DISPLAY_NAME,
+)
 from trisched.ppo import (
     load_ppo_config,
     load_task_gnn_config,
     run_ppo_pipeline,
-    run_task_gnn_pipeline,
+    run_trisched_gnn_ppo_pipeline,
 )
 
 
@@ -150,7 +155,9 @@ def _validate_model_contracts(
     mismatched = [name for name, (left, right) in comparisons.items() if left != right]
     if mismatched:
         raise ValueError(
-            "Masked MLP and Task-GNN must use the same comparison contract; "
+            f"{MASKED_MLP_DISPLAY_NAME} and "
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} must use the same comparison "
+            "contract; "
             f"mismatched: {mismatched}"
         )
     mlp_manifest = _resolved_data_path(
@@ -170,7 +177,10 @@ def _validate_model_contracts(
         task_gnn["benchmark"]["raw_root"],
     )
     if mlp_manifest != gnn_manifest or mlp_raw_root != gnn_raw_root:
-        raise ValueError("Masked MLP and Task-GNN must use the same benchmark bytes")
+        raise ValueError(
+            f"{MASKED_MLP_DISPLAY_NAME} and "
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} must use the same benchmark bytes"
+        )
     return mlp, task_gnn, mlp_manifest, mlp_raw_root
 
 
@@ -185,6 +195,11 @@ def _resolved_run_payload(
     return {
         "format_version": 1,
         "mode": "masked_mlp_task_gnn_comparison",
+        "display_names": {
+            "masked_mlp": MASKED_MLP_DISPLAY_NAME,
+            "masked_mlp_role": MASKED_MLP_PAPER_ROLE,
+            "task_gnn": TRISCHED_GNN_PPO_DISPLAY_NAME,
+        },
         "config_source": {
             "name": config["config_source"].name,
             "sha256": _file_hash(config["config_source"]),
@@ -280,7 +295,7 @@ def run_model_comparison(
     results_dir = output_dir / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    print("[1/4] training and validating Masked MLP")
+    print(f"[1/4] training and validating {MASKED_MLP_DISPLAY_NAME}")
     started = time.perf_counter()
     mlp_summary = run_ppo_pipeline(
         config["masked_mlp_config"],
@@ -289,9 +304,9 @@ def run_model_comparison(
     )
     mlp_wall_seconds = time.perf_counter() - started
 
-    print("[2/4] training and validating Task-GNN")
+    print(f"[2/4] training and validating {TRISCHED_GNN_PPO_DISPLAY_NAME}")
     started = time.perf_counter()
-    task_gnn_summary = run_task_gnn_pipeline(
+    task_gnn_summary = run_trisched_gnn_ppo_pipeline(
         config["task_gnn_config"],
         task_gnn_output,
         resume=_model_resume_requested(task_gnn_output, resume),
@@ -319,6 +334,11 @@ def run_model_comparison(
     pipeline_summary = {
         "format_version": 1,
         "mode": "masked_mlp_task_gnn_train_validate_compare",
+        "display_names": {
+            "masked_mlp": MASKED_MLP_DISPLAY_NAME,
+            "masked_mlp_role": MASKED_MLP_PAPER_ROLE,
+            "task_gnn": TRISCHED_GNN_PPO_DISPLAY_NAME,
+        },
         "test_accessed": False,
         "models": {
             "masked_mlp": {
@@ -383,7 +403,8 @@ def run_model_comparison(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Train Masked MLP and Task-GNN, validate both, compare paired "
+            f"Train {MASKED_MLP_DISPLAY_NAME} and "
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME}, validate both, compare paired "
             "performance, and render result files"
         )
     )

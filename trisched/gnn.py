@@ -9,6 +9,11 @@ from typing import Any
 
 import numpy as np
 
+from .branding import (
+    LEGACY_TASK_GNN_ARCHITECTURE,
+    LEGACY_TASK_GNN_ID,
+    TRISCHED_GNN_PPO_DISPLAY_NAME,
+)
 from .env import HeterogeneousDagEnv
 from .learning import (
     FEATURE_NAMES,
@@ -177,10 +182,15 @@ def freeze_task_gnn_state(
 
 
 class TaskGNNPolicy:
-    """A masked task-resource scorer with one DAG message-passing layer."""
+    """TriSched-GNN-PPO Actor with one task-DAG message-passing layer.
 
-    name = "task_gnn"
-    architecture = "task_gnn_v1"
+    ``TaskGNNPolicy`` remains the checkpoint-compatible Python class name.
+    User-facing reports use :attr:`display_name`.
+    """
+
+    name = LEGACY_TASK_GNN_ID
+    architecture = LEGACY_TASK_GNN_ARCHITECTURE
+    display_name = TRISCHED_GNN_PPO_DISPLAY_NAME
 
     def __init__(
         self,
@@ -197,7 +207,8 @@ class TaskGNNPolicy:
         selected_features = tuple(feature_names)
         if selected_features != TASK_GNN_FEATURE_NAMES:
             raise ValueError(
-                "task-GNN requires the canonical 14-D teacher-free feature schema"
+                f"{TRISCHED_GNN_PPO_DISPLAY_NAME} requires the canonical "
+                "14-D teacher-free feature schema"
             )
         self.hidden_dim = hidden_dim
         self.message_dim = message_dim
@@ -287,7 +298,8 @@ class TaskGNNPolicy:
         if values.shape[1] == len(FEATURE_NAMES):
             return values[:, self.feature_indices]
         raise ValueError(
-            "candidate feature width does not match the full or task-GNN schema"
+            f"candidate feature width does not match the full or "
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} schema"
         )
 
     def _encode_tasks(
@@ -321,7 +333,9 @@ class TaskGNNPolicy:
         temperature: float = 1.0,
     ) -> TaskGNNDistributionCache:
         if self._graph is None:
-            raise RuntimeError("task-GNN must be reset with a scenario before use")
+            raise RuntimeError(
+                f"{TRISCHED_GNN_PPO_DISPLAY_NAME} must be reset with a scenario before use"
+            )
         return self._distribution_with_graph(
             features,
             actions=actions,
@@ -542,7 +556,9 @@ class TaskGNNPolicy:
         if learning_rate <= 0:
             raise ValueError("learning_rate must be positive")
         if set(gradients) != set(self.params):
-            raise ValueError("gradients do not match task-GNN parameters")
+            raise ValueError(
+                f"gradients do not match {TRISCHED_GNN_PPO_DISPLAY_NAME} parameters"
+            )
         checked: dict[str, np.ndarray] = {}
         for name, parameter in self.params.items():
             gradient = np.asarray(gradients[name], dtype=np.float64)
@@ -623,7 +639,10 @@ class TaskGNNPolicy:
         with np.load(path, allow_pickle=False) as data:
             architecture = str(data["architecture"].item())
             if architecture != cls.architecture:
-                raise ValueError(f"unsupported task-GNN architecture: {architecture}")
+                raise ValueError(
+                    f"unsupported {TRISCHED_GNN_PPO_DISPLAY_NAME} "
+                    f"compatibility architecture: {architecture}"
+                )
             stored_features = tuple(
                 str(item) for item in data["feature_names"].tolist()
             )
@@ -631,7 +650,9 @@ class TaskGNNPolicy:
                 str(item) for item in data["node_feature_names"].tolist()
             )
             if stored_node_features != TASK_NODE_FEATURE_NAMES:
-                raise ValueError("task-GNN node feature schema changed")
+                raise ValueError(
+                    f"{TRISCHED_GNN_PPO_DISPLAY_NAME} node feature schema changed"
+                )
             policy = cls(
                 hidden_dim=int(data["hidden_dim"][0]),
                 message_dim=int(data["message_dim"][0]),
@@ -643,7 +664,8 @@ class TaskGNNPolicy:
                 values = np.asarray(data[name], dtype=np.float64)
                 if values.shape != expected.shape or not np.all(np.isfinite(values)):
                     raise ValueError(
-                        f"task-GNN parameter {name!r} has an invalid value"
+                        f"{TRISCHED_GNN_PPO_DISPLAY_NAME} parameter {name!r} "
+                        "has an invalid value"
                     )
                 policy.params[name] = values.copy()
         return policy
@@ -651,6 +673,11 @@ class TaskGNNPolicy:
 
 def task_gnn_metadata(policy: TaskGNNPolicy) -> dict[str, Any]:
     return {
+        "display_name": policy.display_name,
+        "policy_family": "actor_critic_reinforcement_learning",
+        "policy_optimization": "clipped_ppo_with_gae",
+        "actor_graph_encoder": "one_layer_bidirectional_task_dag_message_passing",
+        "compatibility_id": policy.name,
         "architecture": policy.architecture,
         "base_feature_count": len(policy.feature_names),
         "base_feature_names": list(policy.feature_names),
@@ -661,6 +688,11 @@ def task_gnn_metadata(policy: TaskGNNPolicy) -> dict[str, Any]:
         "message_dim": policy.message_dim,
         "parameter_count": policy.parameter_count,
     }
+
+
+# Paper-aligned public alias. The legacy class name remains loadable so old
+# NPZ checkpoints and Python imports continue to work.
+TriSchedGNNPPOPolicy = TaskGNNPolicy
 
 
 def task_gnn_parameter_hash(policy: TaskGNNPolicy) -> str:

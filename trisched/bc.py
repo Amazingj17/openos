@@ -16,6 +16,7 @@ import numpy as np
 
 from . import __version__
 from .benchmark import load_benchmark_manifest, load_frozen_split
+from .branding import TRISCHED_GNN_PPO_DISPLAY_NAME
 from .env import HeterogeneousDagEnv, ScheduleResult, validate_schedule
 from .gnn import (
     FrozenTaskGNNState,
@@ -615,7 +616,7 @@ def _freeze_task_gnn_teacher_states(
             _fail(
                 "teacher_illegal_action",
                 f"$.entries.{scenario.id}.actions[{step}]",
-                "frozen action is not legal while materializing task-GNN state",
+                f"frozen action is not legal while materializing {TRISCHED_GNN_PPO_DISPLAY_NAME} state",
             )
         states.append((state, state.actions.index(action)))
         env.step(*action)
@@ -626,7 +627,7 @@ def _freeze_task_gnn_teacher_states(
         _fail(
             "teacher_replay_mismatch",
             f"$.entries.{scenario.id}.makespan",
-            "materialized task-GNN teacher makespan changed",
+            f"materialized {TRISCHED_GNN_PPO_DISPLAY_NAME} teacher makespan changed",
         )
     return tuple(states)
 
@@ -818,7 +819,10 @@ def evaluate_bc_policy(
         policy,
         TaskGNNPolicy,
     ):
-        raise TypeError("task-GNN frozen states require TaskGNNPolicy")
+        raise TypeError(
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} frozen states require "
+            "a graph-encoded actor policy"
+        )
     records = _record_map(reference_manifest)
     teacher_loss = 0.0
     teacher_correct = 0
@@ -843,7 +847,7 @@ def evaluate_bc_policy(
                 _fail(
                     "validation_reference",
                     f"$.entries.{scenario.id}",
-                    "missing frozen task-GNN validation teacher states",
+                    f"missing frozen {TRISCHED_GNN_PPO_DISPLAY_NAME} validation teacher states",
                 )
             assert isinstance(policy, TaskGNNPolicy)
             loss, correct, count = _frozen_task_gnn_state_diagnostics(
@@ -1173,7 +1177,7 @@ def train_task_gnn_bc_baseline(
         _fail(
             "training_teacher",
             "$.entries",
-            "frozen task-GNN train states do not match train scenarios",
+            f"frozen {TRISCHED_GNN_PPO_DISPLAY_NAME} train states do not match train scenarios",
         )
     if set(validation_states) != {
         scenario.id for scenario in validation_scenarios
@@ -1181,7 +1185,7 @@ def train_task_gnn_bc_baseline(
         _fail(
             "validation_reference",
             "$.entries",
-            "frozen task-GNN validation states do not match validation scenarios",
+            f"frozen {TRISCHED_GNN_PPO_DISPLAY_NAME} validation states do not match validation scenarios",
         )
     history: list[dict[str, Any]] = []
     best_key: tuple[float, ...] | None = None
@@ -1236,7 +1240,11 @@ def train_task_gnn_bc_baseline(
     assert best_policy is not None
     return best_policy, policy.clone(include_optimizer=False), {
         "format_version": 1,
-        "algorithm": "frozen HEFT task-GNN behavior cloning",
+        "algorithm": (
+            f"frozen HEFT behavior cloning warm start for "
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME}"
+        ),
+        "display_name": TRISCHED_GNN_PPO_DISPLAY_NAME,
         "architecture": policy.architecture,
         "feature_names": list(policy.feature_names),
         "seed": seed,

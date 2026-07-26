@@ -16,6 +16,11 @@ if str(REPOSITORY) not in sys.path:
     sys.path.insert(0, str(REPOSITORY))
 
 from trisched.benchmark import load_frozen_split
+from trisched.branding import (
+    MASKED_MLP_DISPLAY_NAME,
+    MASKED_MLP_PAPER_ROLE,
+    TRISCHED_GNN_PPO_DISPLAY_NAME,
+)
 from trisched.env import run_policy
 from trisched.gnn import TaskGNNPolicy, task_gnn_parameter_hash
 from trisched.learning import MaskedMLPPolicy
@@ -121,7 +126,8 @@ def _paired_statistics(
             "seed": bootstrap_seed,
             "resampling": (
                 "sample seeds and shared scenario ids with replacement; "
-                "average task-GNN minus MLP ratio"
+                f"average {TRISCHED_GNN_PPO_DISPLAY_NAME} minus "
+                f"{MASKED_MLP_DISPLAY_NAME} ratio"
             ),
             "confidence_level": 0.95,
             "lower": float(lower),
@@ -256,12 +262,14 @@ def compare(args: argparse.Namespace) -> Path:
     if mlp_summary.get("mode") != "stg_masked_ppo":
         raise ValueError("MLP summary has the wrong mode")
     if task_gnn_summary.get("mode") != "stg_task_gnn_ppo":
-        raise ValueError("task-GNN summary has the wrong mode")
+        raise ValueError(
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} summary has the wrong mode"
+        )
     for name, value in {
         "MLP summary": mlp_summary,
-        "task-GNN summary": task_gnn_summary,
+        f"{TRISCHED_GNN_PPO_DISPLAY_NAME} summary": task_gnn_summary,
         "MLP manifest": mlp_manifest,
-        "task-GNN manifest": task_gnn_manifest,
+        f"{TRISCHED_GNN_PPO_DISPLAY_NAME} manifest": task_gnn_manifest,
     }.items():
         if (
             value.get("data_access", value.get("inputs", {})).get("test_accessed")
@@ -272,7 +280,11 @@ def compare(args: argparse.Namespace) -> Path:
     mlp_seeds = _summary_seed_map(mlp_summary)
     task_gnn_seeds = _summary_seed_map(task_gnn_summary)
     if set(mlp_seeds) != set(task_gnn_seeds) or len(mlp_seeds) < 3:
-        raise ValueError("MLP and task-GNN must have the same three or more seeds")
+        raise ValueError(
+            f"{MASKED_MLP_DISPLAY_NAME} and "
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} must have the same three or "
+            "more independent random initializations"
+        )
 
     seed_ids = sorted(mlp_seeds)
     per_seed: list[dict[str, Any]] = []
@@ -465,6 +477,11 @@ def compare(args: argparse.Namespace) -> Path:
     report = {
         "format_version": 1,
         "mode": "paired_validation_development_comparison",
+        "display_names": {
+            "masked_mlp": MASKED_MLP_DISPLAY_NAME,
+            "masked_mlp_role": MASKED_MLP_PAPER_ROLE,
+            "task_gnn": TRISCHED_GNN_PPO_DISPLAY_NAME,
+        },
         "inputs": {
             "mlp_summary": {
                 "name": mlp_summary_path.name,
@@ -585,7 +602,10 @@ def compare(args: argparse.Namespace) -> Path:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Compare frozen MLP and task-GNN validation evidence"
+        description=(
+            f"Compare frozen {MASKED_MLP_DISPLAY_NAME} and "
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME} validation evidence"
+        )
     )
     parser.add_argument("--mlp-root", required=True)
     parser.add_argument("--task-gnn-root", required=True)

@@ -13,6 +13,7 @@ if str(REPOSITORY) not in sys.path:
     sys.path.insert(0, str(REPOSITORY))
 
 from trisched.bc import policy_parameter_hash
+from trisched.branding import TRISCHED_GNN_PPO_DISPLAY_NAME
 from trisched.gnn import (
     TASK_GNN_FEATURE_NAMES,
     TaskGNNPolicy,
@@ -136,9 +137,13 @@ def build_runner_bundle(
         path = task_gnn_dir / f"seed_{seed}_task_gnn_ppo_best_policy.npz"
         policy = TaskGNNPolicy.load(path)
         if policy.seed != seed:
-            raise ValueError(f"task-GNN checkpoint seed mismatch: {seed}")
+            raise ValueError(
+                f"{TRISCHED_GNN_PPO_DISPLAY_NAME} checkpoint seed mismatch: {seed}"
+            )
         if tuple(policy.feature_names) != TASK_GNN_FEATURE_NAMES:
-            raise ValueError(f"task-GNN feature schema mismatch: {seed}")
+            raise ValueError(
+                f"{TRISCHED_GNN_PPO_DISPLAY_NAME} feature schema mismatch: {seed}"
+            )
         runners[("task_gnn", seed)] = PolicySchedulerRunner(
             "task_gnn",
             lambda policy=policy: policy,

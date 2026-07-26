@@ -8,6 +8,7 @@ from trisched.gnn import (
     TASK_GNN_FEATURE_NAMES,
     TASK_NODE_FEATURE_NAMES,
     TaskGNNPolicy,
+    TriSchedGNNPPOPolicy,
     freeze_task_gnn_state,
     freeze_task_graph,
     task_gnn_metadata,
@@ -45,6 +46,8 @@ def test_task_gnn_preserves_14d_input_and_legal_action_mask() -> None:
     scenario = _scenario()
     env = HeterogeneousDagEnv(scenario)
     policy = TaskGNNPolicy(hidden_dim=8, message_dim=4, seed=11)
+    assert TriSchedGNNPPOPolicy is TaskGNNPolicy
+    assert policy.display_name == "TriSched-GNN-PPO"
     cache = policy.distribution(env)
 
     assert len(TASK_GNN_FEATURE_NAMES) == 14
@@ -118,6 +121,11 @@ def test_task_gnn_checkpoint_and_parameter_metadata_round_trip(tmp_path) -> None
     )
     assert task_gnn_metadata(loaded) == {
         "architecture": "task_gnn_v1",
+        "compatibility_id": "task_gnn",
+        "display_name": "TriSched-GNN-PPO",
+        "policy_family": "actor_critic_reinforcement_learning",
+        "policy_optimization": "clipped_ppo_with_gae",
+        "actor_graph_encoder": "one_layer_bidirectional_task_dag_message_passing",
         "base_feature_count": 14,
         "base_feature_names": list(TASK_GNN_FEATURE_NAMES),
         "node_feature_names": list(TASK_NODE_FEATURE_NAMES),

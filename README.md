@@ -1,11 +1,11 @@
-# TriSched MVP
+# TriSched：面向云—边—端异构计算资源管理调度
 
 [![CI](https://github.com/Amazingj17/openos/actions/workflows/ci.yml/badge.svg)](https://github.com/Amazingj17/openos/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 新用户可先阅读[详细使用说明](doc/使用说明.md)，其中集中介绍安装、CLI、配置、Scenario、Python API、外部调度器、公开 STG 训练、输出指标和常见故障。
 
-赛题十五“基于深度强化学习的云-边-端异构计算资源管理调度方法”的最小可执行实现。
+赛题十五“基于深度强化学习的云-边-端异构计算资源管理调度方法”的可复现开源实现。
 
 它已经形成一个完整闭环：
 
@@ -17,11 +17,11 @@
 - 用小图精确分支定界 solver 冻结 optimum/bound，量化启发式最优性 gap；
 - 保留 HEFT 行为克隆 + episodic REINFORCE 作为 legacy smoke，并在公开 STG 路径实现 clipped PPO + GAE；
 - 在公开 STG 冻结 split 上生成生产/独立 HEFT 双签 teacher，并只用 validation 选择 BC best checkpoint；
-- 在 PPO 主路径删除直接暴露 HEFT 决策的两项二值特征，使用 3 个 seed 和 BC warm-start 回退做 validation 选模；
-- 用机器可读契约冻结 ID/OOD、5-seed、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
-- 一条命令完成训练、验证、测试并产出 `summary.json`。
+- 在 PPO 主路径删除直接暴露 HEFT 决策的两项二值特征，使用 3 次独立随机初始化和 BC warm-start 回退做 validation 选模；
+- 用机器可读契约冻结 ID/OOD、五次独立随机初始化、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
+- `run_all.py` 一条命令完成正式训练、validation 配对评估和可视化报告；公开 test 在最终授权前保持隔离。
 
-这是用于验证赛题接口、环境正确性和实验流程的 MVP，不是最终获奖模型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 task-GNN 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，masked MLP 五 seed 包也已由 B 在物理无 test 根正式预算复跑通过。P1-A05 又在不可变候选 `7d5cab6...` 上完成唯一一次五 seed 正式训练和唯一一次含 2040 条记录的 Development；候选的 ID/size/CCR/system mean ratio 为 `0.703718/1.553568/0.419796/0.999317`，size 仍未优于 HEFT，且相对 P1-A04 的配对 CI 上界未小于 0。成员 B 已独立重算 artifact、配对 bootstrap 和停止决定；项目按预注册规则保留 P1-A04、关闭 P1-A05，不启动 G3，P1-06 正式产包不适用。public test 从未加载，正式 `claim-test-gate` 从未运行。
+当前仓库已经实现从场景合同、约束安全调度环境、Actor-Critic决策到实验复核的完整原型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 TriSched-GNN-PPO 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，Masked MLP 五次独立随机初始化包也已由 B 在物理无 test 根正式预算复跑通过。P1-A05 又在不可变候选 `7d5cab6...` 上完成唯一一次五次独立随机初始化正式训练和唯一一次含 2040 条记录的 Development；候选的 ID/size/CCR/system mean ratio 为 `0.703718/1.553568/0.419796/0.999317`，size 仍未优于 HEFT，且相对 P1-A04 的配对 CI 上界未小于 0。成员 B 已独立重算 artifact、配对 bootstrap 和停止决定；项目按预注册规则保留 P1-A04、关闭 P1-A05，不启动 G3，P1-06 正式产包不适用。public test 从未加载，正式 `claim-test-gate` 从未运行。
 
 ## 快速运行
 
@@ -91,20 +91,31 @@ python scripts/fetch_stg_benchmark.py --offline
 
 脚本先校验 125,500 字节 archive 的 SHA-256，再安全解包并逐个重算 source/Scenario hash；任何源文件、projection 或 split 变动都会失败。当前投影只保留 STG topology、duration 和 predecessor output data，不保留上游 GPU/core/memory capability，不能表述为完整 GrapheonRL 系统复现。许可证决策与固定 hash 见 [P1-B01 公开基准、许可证与冻结划分](doc/P1-B01公开基准与许可证.md)，远端 CI、10 实例抽查和故障注入见 [A 的独立复核记录](doc/P1-B01独立复核记录.md)。
 
-## 一键训练并比较 Masked MLP 与 Task-GNN
+## 一键训练并比较 Masked MLP 与 TriSched-GNN-PPO
 
 获取公开 STG 数据后，一条命令会用相同 seed、train/validation split、BC、PPO 和选模口径依次训练两种模型，完成配对 validation 评测，并生成 JSON、CSV、SVG 和 HTML 可视化结果：
 
 ```powershell
-python scripts/run_model_comparison.py `
-  --config configs/stg_model_comparison.json
+python run_all.py
 ```
+
+若默认目录已有一套完整实验，`run_all.py` 会先按 manifest 校验其
+SHA-256，再直接复用真实结果并生成论文命名一致的演示报告，因而不会
+覆盖旧实验或重复等待训练。若默认目录为空，则执行完整训练。
+
+`run_all.py` 默认读取 `configs/stg_model_comparison.json`。需要覆盖配置或输出目录时可使用：
+
+```powershell
+python run_all.py --config configs/stg_model_comparison.json --output outputs/my-run
+```
+
+首次运行会自动下载并校验固定版本的公开 STG 数据；后续运行直接复用本地缓存。若网络不可用，命令会明确报错并在训练开始前退出。
 
 默认输出到 `outputs/stg-model-comparison/`：
 
 ```text
 masked_mlp/                         Masked MLP checkpoint、曲线和 validation 诊断
-task_gnn/                           Task-GNN checkpoint、曲线和 validation 诊断
+task_gnn/                           TriSched-GNN-PPO checkpoint、曲线和 validation 诊断（兼容目录名）
 results/comparison.json             配对统计、bootstrap、参数量和时延
 results/comparison_per_instance.csv 同 seed×同场景明细
 results/comparison_per_seed.csv     逐 seed mean/P50/P95 与胜平负
@@ -116,7 +127,13 @@ comparison_pipeline_summary.json    一键流水线总摘要
 comparison_pipeline_manifest.json   训练摘要、报告与图表的统一清单
 ```
 
-异常中断后使用相同配置和输出目录执行 `python scripts/run_model_comparison.py --config configs/stg_model_comparison.json --resume`。两种模型的 seed、数据、特征、BC/PPO 超参数或 validation 口径不一致时会在训练前拒绝比较；公开 test 不会被加载。
+异常中断后使用相同配置和输出目录执行 `python run_all.py --resume`。如果首次运行指定了 `--config` 或 `--output`，恢复时必须传入相同参数。两种模型的 seed、数据、特征、BC/PPO 超参数或 validation 口径不一致时会在训练前拒绝比较；公开 test 不会被加载。原入口 `python scripts/run_model_comparison.py` 继续兼容。
+
+### 论文名称与代码兼容标识
+
+- 完整方法和论文展示名称统一为 **TriSched-GNN-PPO**：任务 DAG 图编码 Actor、Critic、GAE 与 clipped PPO 共同构成强化学习调度方法；
+- **Masked MLP** 是去掉 DAG 图消息传递、保留相同 PPO/GAE 训练流程的 `TriSched-MLP-PPO` 消融基线；
+- `task_gnn`、`TaskGNNPolicy`、`task_gnn_v1` 和旧命令 `train-task-gnn` 仅作为历史 checkpoint、冻结实验结果与脚本参数的兼容标识，不再作为论文或新报告中的模型名称。
 
 ## 训练公开 STG 行为克隆基线
 
@@ -131,7 +148,7 @@ python -m trisched train-bc --config configs/stg_bc.json
 
 ## 训练公开 STG masked PPO
 
-P1-A02 主策略删除 `is_heft_task` 和 `is_heft_pair`，从 14 维 BC warm start 开始，用增量 makespan shaping、GAE 和 clipped PPO 训练 3 个 seed：
+P1-A02 主策略删除 `is_heft_task` 和 `is_heft_pair`，从 14 维 BC warm start 开始，用增量 makespan shaping、GAE 和 clipped PPO 完成三次独立随机初始化实验：
 
 ```powershell
 python scripts/fetch_stg_benchmark.py --offline
@@ -146,7 +163,7 @@ python -m trisched train-ppo --config configs/stg_ppo.json --resume
 
 如果首次运行指定了 `--output <dir>`，恢复时也必须指定同一目录。配置、代码、数据、teacher/reference、warm start 或状态 hash 任一变化都会以结构化错误拒绝恢复；普通 best/last 推理 checkpoint 不能冒充训练状态。恢复先复制到同盘隐藏 staging 目录，所有 seed、summary 和 manifest 成功后才替换正式输出；任一校验或训练异常都会清理 staging 并保持正式目录逐字节不变。run manifest 记录 `publication_mode=staging_directory_swap`。该修复已由 B [第二轮独立复核通过](doc/P1-03第二轮独立复核记录.md)。
 
-正式 validation 的 3 个 best seed ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 个 seed，另 1 个按冻结规则回退 BC warm start。seed-level mean 为 `0.723193`，但 population std 为 `0.075948`，每个 seed 仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。B 已在物理删除 test JSON 和 archive 的数据根上复跑正式配置，并完成 checkpoint、manifest、数学分支与配置注入复核。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。详见 [P1-A02 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)、其[独立复核记录](doc/P1-A02独立复核记录.md)和 [P1-03 断点续训契约](doc/P1-03PPO断点续训设计与验收.md)。
+正式 validation 的三次独立随机初始化 best ratio 为 `0.807240 / 0.623254 / 0.739086`，均为 30/30 合法、零失败、零非法动作；其中 PPO 改善 2 次，另 1 次按冻结规则回退 BC warm start。初始化级 mean 为 `0.723193`，但 population std 为 `0.075948`，每次初始化仍有劣于 HEFT 的实例且 P95 ratio 全部大于 1。B 已在物理删除 test JSON 和 archive 的数据根上复跑正式配置，并完成 checkpoint、manifest、数学分支与配置注入复核。公开 test 完全未访问，因此当前只能表述为“validation 开发门禁通过”，不能宣称稳定优于 HEFT。详见 [P1-A02 设计与验收契约](doc/P1-A02MaskedPPO设计与验收.md)、其[独立复核记录](doc/P1-A02独立复核记录.md)和 [P1-03 断点续训契约](doc/P1-03PPO断点续训设计与验收.md)。
 
 P1-A04 使用显式 `seed_extension` 绑定上述三 seed 来源 manifest，只训练 `20260720/20260721`：
 
@@ -154,26 +171,26 @@ P1-A04 使用显式 `seed_extension` 绑定上述三 seed 来源 manifest，只�
 python -m trisched train-ppo --config configs/stg_ppo_5seed.json
 ```
 
-五个 best validation ratio 为 `0.807240 / 0.623254 / 0.739086 / 0.658398 / 0.717970`，mean/std 为 `0.709190/0.064109`，150 个调度零失败、零非法动作。旧三 seed 的 24 个必需 artifact 与来源逐字节一致；50 个目标 artifact 全部可按 manifest 重算；两个新 checkpoint 复评与记录值一致。正式 run 绑定干净提交 `a38c530...`。B 又从 detached `8692b61...` 在 120 train、30 validation、0 test 的隔离根正式预算复跑，核心 artifact 和归一化 summary 与 A 包一致。完整合同、hash 与限制见 [P1-A04 五种子扩展设计与正式结果](doc/P1-A04五种子扩展设计与正式结果.md)及其[独立复核记录](doc/P1-A04五种子扩展独立复核记录.md)。这仍不能证明 OOD 或 public test 领先。
+五次独立随机初始化的 best validation ratio 为 `0.807240 / 0.623254 / 0.739086 / 0.658398 / 0.717970`，mean/std 为 `0.709190/0.064109`，150 个调度零失败、零非法动作。前三次初始化的 24 个必需 artifact 与来源逐字节一致；50 个目标 artifact 全部可按 manifest 重算；两个新增 checkpoint 复评与记录值一致。正式 run 绑定干净提交 `a38c530...`。B 又从 detached `8692b61...` 在 120 train、30 validation、0 test 的隔离根正式预算复跑，核心 artifact 和归一化 summary 与 A 包一致。完整合同、hash 与限制见 [P1-A04 五种子扩展设计与正式结果](doc/P1-A04五种子扩展设计与正式结果.md)及其[独立复核记录](doc/P1-A04五种子扩展独立复核记录.md)。这仍不能证明 OOD 或 public test 领先。
 
-## P1-A03 task-GNN（已关闭）
+## P1-A03 TriSched-GNN-PPO 图编码强化学习策略（已关闭）
 
-当前已实现 task-GNN 的前向、完整解析梯度、裁剪 Adam、合法动作接口、只读 frozen graph state 和无 pickle checkpoint。它继续使用相同 14 维 teacher-free 候选特征，仅从其中复用 workload、upward-rank、入度和出度构造任务节点，沿 DAG 分别做一次前驱/后继均值消息传递，再与原候选表示融合打分。该接口已有同 seed 确定性、图结构敏感性、动作 mask、中心有限差分、冻结重放、参数量和 checkpoint 往返测试。
+TriSched-GNN-PPO 已实现图编码 Actor 的前向、完整解析梯度、裁剪 Adam、合法动作接口、只读 frozen graph state 和无 pickle checkpoint。Actor 继续使用相同 14 维 teacher-free 候选特征，仅从其中复用 workload、upward-rank、入度和出度构造任务节点，沿 DAG 分别做一次前驱/后继均值消息传递，再与原候选表示融合打分；Critic 估计状态价值，GAE 计算优势，clipped PPO 联合更新 Actor、图编码器和 Critic。该接口已有同随机初始化确定性、图结构敏感性、动作 mask、中心有限差分、冻结重放、参数量和 checkpoint 往返测试。
 
-task-GNN 已通过专用函数完成合成 4/2/0 数据的微型 BC/PPO：零失败、零非法动作，PPO 无改善时正确回退 BC warm start。完整 epoch 状态覆盖 actor/value、两套 Adam、双 RNG、history 和 best，微型连续/中断/恢复逐字段一致。独立 CLI 现已生成 resolved config、teacher/reference、BC warm start、actor/value best/last、training state、curve、逐实例诊断、summary 和可重算 run manifest：
+TriSched-GNN-PPO 已通过专用函数完成合成 4/2/0 数据的微型 BC/PPO：零失败、零非法动作，PPO 无改善时正确回退 BC warm start。完整 epoch 状态覆盖 actor/value、两套 Adam、双 RNG、history 和 best，微型连续/中断/恢复逐字段一致。独立 CLI 现已生成 resolved config、teacher/reference、BC warm start、actor/value best/last、training state、curve、逐实例诊断、summary 和可重算 run manifest：
 
 ```powershell
-python -m trisched train-task-gnn --config configs/stg_task_gnn.json
-python -m trisched train-task-gnn --config configs/stg_task_gnn.json --resume
+python -m trisched train-trisched-gnn-ppo --config configs/stg_trisched_gnn_ppo.json
+python -m trisched train-trisched-gnn-ppo --config configs/stg_trisched_gnn_ppo.json --resume
 ```
 
-恢复沿用同盘 staging 目录交换；微型测试已证明连续/恢复的 summary、曲线和全部模型/状态数组一致，后置 seed 写出失败时正式目录逐字节不变。成员 B 已从远端不可变提交独立复跑 32-artifact、15 对 NPZ、后置失败目录快照和 MLP 旧入口并[复核通过](doc/P1-A03独立复核记录.md)。正式参数量 GNN/MLP 为 `1008/512`；120 个 train 场景的 frozen state 峰值 RSS 增量约 53.42 MiB，graph 按 Scenario 共享。
+恢复沿用同盘 staging 目录交换；微型测试已证明连续/恢复的 summary、曲线和全部模型/状态数组一致，单次初始化结果写出失败时正式目录逐字节不变。成员 B 已从远端不可变提交独立复跑 32-artifact、15 对 NPZ、后置失败目录快照和 MLP 旧入口并[复核通过](doc/P1-A03独立复核记录.md)。正式参数量 TriSched-GNN-PPO/Masked MLP 为 `1008/512`；120 个 train 场景的 frozen state 峰值 RSS 增量约 53.42 MiB，graph 按 Scenario 共享。
 
-正式 task-GNN 3-seed validation ratio 为 `0.754139 / 0.633578 / 0.683664`，mean `0.690460`，低于 MLP 的 `0.723193`；90 对逐实例为 `50/19/21`，场景跨 seed 均值为 `20/2/8`，全部合法且零非法动作。但分层配对 bootstrap 的 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，且三个 seed 的 P95 均大于 1。按预先停止规则，主模型继续保留 MLP，task-GNN 只记为方向性改善、未证实，不追加新变量补救。B 已重算 artifact、状态、配对 CI，并用六个 best checkpoint 复评 180 次 validation 调度，makespan 最大误差为 0。公开 test 仍未访问；完整证据见[正式对照报告](doc/P1-A03正式对照报告.md)和[正式结果独立复核](doc/P1-A03正式结果独立复核记录.md)。
+TriSched-GNN-PPO 在三次独立随机初始化下的 validation ratio 为 `0.754139 / 0.633578 / 0.683664`，mean `0.690460`，点估计低于消融基线 Masked MLP 的 `0.723193`；90 对逐实例为 `50/19/21`，场景跨初始化均值为 `20/2/8`，全部合法且零非法动作。但分层配对 bootstrap 的 95% CI 为 `[-0.083063, 0.007113]`，仍跨 0，且三次初始化的 P95 均大于 1。因此该实验属于图编码模块消融与随机初始化敏感性分析：能够说明加入 DAG 消息传递后点估计方向改善，但不能证明改善具有统计稳健性。按预先停止规则，冻结实验选择继续保留 MLP checkpoint，TriSched-GNN-PPO 只记为方向性改善、未证实，不追加新变量补救。B 已重算 artifact、状态、配对 CI，并用六个 best checkpoint 复评 180 次 validation 调度，makespan 最大误差为 0。公开 test 仍未访问；完整证据见[正式对照报告](doc/P1-A03正式对照报告.md)和[正式结果独立复核](doc/P1-A03正式结果独立复核记录.md)。
 
 ## P1-B02 评测契约与自动报告（development/OOD 已双签，性能门禁未过）
 
-机器可读契约 [`configs/p1_b02_evaluation_contract.json`](configs/p1_b02_evaluation_contract.json) 已冻结 masked MLP 的 5 seeds、HEFT 参考、全部 baseline/ablation seed 数、ID + 三类 OOD 切片、失败惩罚 `10.0`、scheduler-only wall-clock 时延、10,000 次 seed→scenario bootstrap 和一次性公开 test gate。报告器严格检查 `seed × scenario` 笛卡尔积、场景 ID/hash、HEFT=1、失败计分、evidence hash 和 gate receipt，并输出 JSON、策略切片 CSV、逐 seed CSV、主策略配对 CSV 和 artifact manifest。JSON 的 `seed_mean_ratios` 按 seed 稳定排序；manifest 对四份声明产物记录字节数与 SHA-256。
+机器可读契约 [`configs/p1_b02_evaluation_contract.json`](configs/p1_b02_evaluation_contract.json) 已冻结 Masked MLP 的五次独立随机初始化、HEFT 参考、全部基线/消融实验的初始化次数、ID + 三类 OOD 切片、失败惩罚 `10.0`、scheduler-only wall-clock 时延、10,000 次“随机初始化→场景”分层 bootstrap 和一次性公开 test gate。报告器严格检查“随机初始化 × 场景”笛卡尔积、场景 ID/hash、HEFT=1、失败计分、evidence hash 和 gate receipt，并输出 JSON、策略切片 CSV、逐初始化 CSV、主策略配对 CSV 和 artifact manifest。JSON 的内部兼容字段 `seed_mean_ratios` 按随机初始化标识稳定排序；manifest 对四份声明产物记录字节数与 SHA-256。
 
 ```powershell
 python -m trisched build-report `
@@ -206,9 +223,9 @@ python scripts/run_p1_b02_development.py
 
 ## P1-A05 size-OOD 单一候选（正式负结果已双人复核关闭）
 
-只读诊断确认 masked MLP 的 150/150 条 size 记录、task-GNN 的 90/90 条 size 记录均劣于 HEFT；一个按 ID 规则保留 BC warm start、没有接受 PPO epoch 的 seed 仍为 `1.462686`。训练轨迹固定为 50 tasks，而 size 切片为 100 tasks；该切片还同时改变生成器、根节点结构、关键路径、带宽和时延，因此不能把失败简化为纯 size 因果。
+只读诊断确认 Masked MLP 的 150/150 条 size 记录、TriSched-GNN-PPO 的 90/90 条 size 记录均劣于 HEFT；一次按 ID 规则保留 BC warm start、没有接受 PPO epoch 的随机初始化结果仍为 `1.462686`。训练轨迹固定为 50 tasks，而 size 切片为 100 tasks；该切片还同时改变生成器、根节点结构、关键路径、带宽和时延，因此不能把失败简化为纯 size 因果。
 
-A 只预注册一个候选：保持五 seed、14-D MLP、warm start、奖励、优化器、两 epoch、每 epoch 6000 transitions 和 ID checkpoint selection 不变，把 PPO rollout 的 transition 改为 50% STG-50 + 50% 独立 synthetic-100。B 已在不导入 checkpoint 的 detached worktree 重建报告并[通过设计复核](doc/P1-A05Size-OOD设计独立复核记录.md)。实现物化了 120 train、30 validation、60 个 synthetic-100 和 5 个已绑定 warm-start；四类 ID/content-hash 交集、public-test 文件、archive 和禁用文件名均为 0，两轮 dry-run 均为 `90 episodes/6000 transitions`，且 `checkpoint_loaded/optimizer_created/training_started=false`。
+A 只预注册一个候选：保持五次独立随机初始化、14-D MLP、warm start、奖励、优化器、两 epoch、每 epoch 6000 transitions 和 ID checkpoint selection 不变，把 PPO rollout 的 transition 改为 50% STG-50 + 50% 独立 synthetic-100。B 已在不导入 checkpoint 的 detached worktree 重建报告并[通过设计复核](doc/P1-A05Size-OOD设计独立复核记录.md)。实现物化了 120 train、30 validation、60 个 synthetic-100 和 5 个已绑定 warm-start；四类 ID/content-hash 交集、public-test 文件、archive 和禁用文件名均为 0，两轮 dry-run 均为 `90 episodes/6000 transitions`，且 `checkpoint_loaded/optimizer_created/training_started=false`。
 
 ```powershell
 python -m trisched prepare-p1-a05 --config configs/p1_a05_size_robustness.json
@@ -216,7 +233,7 @@ python -m trisched dry-run-p1-a05 --config configs/p1_a05_size_robustness.json
 python -m trisched train-p1-a05 --config configs/p1_a05_size_robustness.json
 ```
 
-上述序列已按冻结规程执行：远端 receipt、`HEAD==origin/main`、干净 tracked 工作树和输出不存在门禁全部通过；第三条命令只运行一次，未使用 `--resume`，没有第二候选或调参重跑。五 seed×两 epoch 共 60,000 transitions，50 个训练 artifact 均可重算，validation failure/illegal 均为 0。完整设计、实现和训练身份见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)、[训练前门禁实现记录](doc/P1-A05Size-OOD实现与训练前门禁.md)、[实现独立复核](doc/P1-A05Size-OOD实现独立复核记录.md)和[正式负结果记录](doc/P1-A05正式负结果与停止记录.md)。
+上述序列已按冻结规程执行：远端 receipt、`HEAD==origin/main`、干净 tracked 工作树和输出不存在门禁全部通过；第三条命令只运行一次，未使用 `--resume`，没有第二候选或调参重跑。五次独立随机初始化×两 epoch 共 60,000 transitions，50 个训练 artifact 均可重算，validation failure/illegal 均为 0。完整设计、实现和训练身份见[P1-A05 设计与预注册](doc/P1-A05Size-OOD稳健性设计与预注册.md)、[训练前门禁实现记录](doc/P1-A05Size-OOD实现与训练前门禁.md)、[实现独立复核](doc/P1-A05Size-OOD实现独立复核记录.md)和[正式负结果记录](doc/P1-A05正式负结果与停止记录.md)。
 
 唯一四切片 evidence 复用了冻结 P1-B02 producer，2040/2040 条记录全部成功。P1-A05 的 ID/size/CCR/system mean ratio 为 `0.703718/1.553568/0.419796/0.999317`；size mean 仍大于 1，P1-A05−P1-A04 的 size 95% paired CI 为 `[-0.045177, 0.000027]`，上界未小于 0。机器决定为 `retain_p1_a04_publish_negative_result_and_stop_p1_a05`。精确命令、事务边界和停止规则见[P1-A05 正式运行与 G3 收口规程](doc/P1-A05正式运行与G3收口规程.md)。
 
@@ -296,11 +313,12 @@ python -m trisched evaluate `
 ```text
 configs/smoke.json       最小训练与评测配置
 configs/stg_bc.json      公开 STG teacher/BC 冻结配置
-configs/stg_ppo.json     公开 STG 3-seed masked PPO 配置
-configs/stg_ppo_5seed.json 绑定旧证据、只补两 seed 的 5-seed 配置
-configs/stg_task_gnn.json 公开 STG 3-seed task-GNN 单变量配置
-configs/stg_model_comparison.json MLP/GNN 一键训练、验证、比较配置
-configs/p1_b02_evaluation_contract.json ID/OOD、5-seed 与 test gate 契约
+configs/stg_ppo.json     公开 STG 三次随机初始化 Masked MLP PPO 配置
+configs/stg_ppo_5seed.json 绑定旧证据、只补两次初始化的五次随机初始化配置
+configs/stg_trisched_gnn_ppo.json 公开 STG TriSched-GNN-PPO 配置
+configs/stg_task_gnn.json TriSched-GNN-PPO 历史兼容配置
+configs/stg_model_comparison.json Masked MLP/TriSched-GNN-PPO 一键训练、验证、比较配置
+configs/p1_b02_evaluation_contract.json ID/OOD、五次随机初始化与 test gate 契约
 configs/p1_a05_size_robustness.json P1-A05 唯一正式候选与训练前门禁
 schemas/                 Scenario JSON Schema
 trisched/scenario.py     场景 schema、校验、生成和 hash
@@ -310,19 +328,19 @@ trisched/exact.py        小图精确分支定界 solver 与解析下界
 trisched/policies.py     统一策略接口与 HEFT/CPOP/Greedy/Random
 trisched/schedulers.py   scheduler registry、外部进程 adapter 和稳定诊断
 trisched/learning.py     可变特征 Masked MLP、HEFT 模仿和 legacy REINFORCE
-trisched/gnn.py          14 维输入 task-GNN、DAG 消息传递和 checkpoint
-trisched/bc.py           MLP/task-GNN 冻结 teacher、BC best/last 和防 test 泄漏流程
-trisched/ppo.py          MLP/task-GNN 增量奖励、GAE/PPO、epoch 状态与 run 事务
+trisched/gnn.py          TriSched-GNN-PPO 图编码 Actor、DAG 消息传递和 checkpoint
+trisched/bc.py           MLP/TriSched-GNN-PPO 冻结 teacher、BC best/last 和防 test 泄漏流程
+trisched/ppo.py          两类 Actor 的增量奖励、Critic、GAE/PPO、epoch 状态与 run 事务
 trisched/evaluation.py   逐实例评测、统计与标准结果文件
 trisched/reporting.py    P1-B02 evidence 校验、配对统计与自动报告
 trisched/ood.py          P1-B02 development ID/OOD 物化与只读 evidence producer
-trisched/visualization.py MLP/GNN 对比 SVG 与独立 HTML 报告生成
+trisched/visualization.py Masked MLP/TriSched-GNN-PPO 对比 SVG 与独立 HTML 报告生成
 trisched/hashing.py      原始字节、normalized-LF 与 canonical JSON hash
 trisched/p1_a05.py       P1-A05 隔离输入、dry-run、复核门禁与正式训练事务
 trisched/cli.py          pipeline、各训练命令和 P1-A05 门禁命令
 trisched/benchmark.py    公开 STG loader、冻结 split 与来源校验
 scripts/build_release_bundle.py 确定性 source zip、secret/raw-data fail-closed
-scripts/run_model_comparison.py Masked MLP/Task-GNN 一键训练与可视化比较
+scripts/run_model_comparison.py Masked MLP/TriSched-GNN-PPO 一键训练与可视化比较
 scripts/compare_task_gnn_mlp.py 同 seed×同场景配对统计与结果文件生成
 scripts/run_demo.ps1     五分钟 synthetic smoke、故障注入与 checkpoint 恢复
 data/benchmarks/         第三方来源/许可证元数据和冻结 manifest
@@ -335,15 +353,15 @@ tests/                   单元与集成测试
 - 每次评测一个静态 DAG，资源和链路在单个 episode 内不变化；
 - 目标函数仅为 makespan；
 - 精确 solver 具有指数复杂度，仅用于不超过 8 个任务的小图，不参与常规训练或全量评测；
-- task-GNN 已使用一层任务 DAG 消息传递，但资源关系仍只由手工候选特征表达；
-- legacy `pipeline` 仍使用 REINFORCE；公开 STG 已有独立 masked PPO，task-GNN 已完成正式 validation 单变量对照但未通过稳健替换门禁，尚无课程学习；
-- P1-B02 已冻结 ID/OOD、5-seed、自动报告口径和 development 场景 manifest；正式 development 候选已由 A 独立复跑通过，public test 继续禁止；
+- TriSched-GNN-PPO 的 Actor 已使用一层任务 DAG 消息传递，但资源关系仍只由手工候选特征表达；
+- legacy `pipeline` 仍使用 REINFORCE；公开 STG 主路径使用 Actor-Critic、GAE 与 clipped PPO，TriSched-GNN-PPO 已完成正式 validation 图编码模块消融，但未通过稳健替换门禁，尚无课程学习；
+- P1-B02 已冻结 ID/OOD、五次独立随机初始化、自动报告口径和 development 场景 manifest；正式 development 候选已由 A 独立复跑通过，public test 继续禁止；
 - 正式 development 显示 MLP 在 ID/CCR-OOD 上有明确优势，在 system-OOD 上不确定，在 size-OOD 上退化到 `1.568302`；自动门禁不允许发布；
 - P1-B03 raw/normalized-LF 双 hash、固定 LF 属性、历史 evidence 不改写和 source bundle 互操作已由 A 从独立 worktree 复核关闭；
 - P1-A05 已完成唯一正式训练和唯一 Development，50 个训练 artifact 与 2040 条评测记录可重算，failure/illegal 均为 0；
 - P1-A05 的 size 绝对门禁和相对 P1-A04 的显著改善门禁均失败，B 已独立复核负结果；保留 P1-A04，P1-A05/G3/P1-06 正式分支关闭；
 - P0-09/P0-11/P0-12/P0-13 已完成交叉复核与 A/B 双人实跑；当前交付是功能完整的源码、复现工具和真实 Development 负结果，不包含 public-test 结论；
-- task-GNN 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
+- TriSched-GNN-PPO 的 epoch 与目录级断点续训、正式 artifact 和 checkpoint 复评均已由 B 从不可变提交复核；当前不支持 minibatch 内恢复或跨代码/配置迁移。
 
 ## 开源许可证
 

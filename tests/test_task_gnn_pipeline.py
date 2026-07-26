@@ -162,7 +162,7 @@ def test_task_gnn_cli_writes_complete_test_free_evidence(tmp_path: Path) -> None
     assert (
         main(
             [
-                "train-task-gnn",
+                "train-trisched-gnn-ppo",
                 "--config",
                 str(config_path),
                 "--output",
@@ -174,6 +174,7 @@ def test_task_gnn_cli_writes_complete_test_free_evidence(tmp_path: Path) -> None
 
     summary = json.loads((output / "task_gnn_summary.json").read_text(encoding="utf-8"))
     assert summary["mode"] == "stg_task_gnn_ppo"
+    assert summary["display_name"] == "TriSched-GNN-PPO"
     assert summary["data_access"]["loaded_splits"] == ["train", "validation"]
     assert summary["data_access"]["test_accessed"] is False
     assert summary["architecture"]["architecture"] == "task_gnn_v1"

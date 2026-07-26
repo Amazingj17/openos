@@ -532,7 +532,8 @@ def _collect_review_inputs(
         or set(manifest_checkpoints) != set(expected_seeds)
     ):
         raise P106BundleError(
-            "final checkpoint seed inventory is not exactly five seeds"
+            "final checkpoint inventory does not contain exactly five "
+            "independent random initializations"
         )
     checkpoint_artifacts: list[Artifact] = []
     for seed in expected_seeds:

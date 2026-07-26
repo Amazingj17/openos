@@ -7,6 +7,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from .branding import (
+    MASKED_MLP_DISPLAY_NAME,
+    MASKED_MLP_PAPER_ROLE,
+    TRISCHED_GNN_PPO_DISPLAY_NAME,
+)
 
 _MLP_COLOR = "#2563eb"
 _GNN_COLOR = "#f97316"
@@ -187,8 +192,17 @@ def _chart_svg(data: Mapping[str, Any]) -> str:
     chunks = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
         'role="img" aria-labelledby="chart-title chart-desc">',
-        '<title id="chart-title">Masked MLP 与 Task-GNN validation 性能比较</title>',
-        '<desc id="chart-desc">上图比较各随机种子的平均 makespan ratio；下图展示每个场景的 Task-GNN 减 Masked MLP ratio，负数代表 Task-GNN 更好。</desc>',
+        (
+            f'<title id="chart-title">{MASKED_MLP_DISPLAY_NAME} 与 '
+            f'{TRISCHED_GNN_PPO_DISPLAY_NAME} validation 性能比较</title>'
+        ),
+        (
+            '<desc id="chart-desc">上图比较各次独立随机初始化的平均 '
+            f'makespan ratio；下图展示每个场景的 '
+            f'{TRISCHED_GNN_PPO_DISPLAY_NAME} 减 '
+            f'{MASKED_MLP_DISPLAY_NAME} ratio，负数代表'
+            f'{TRISCHED_GNN_PPO_DISPLAY_NAME}更好。</desc>'
+        ),
         "<style>",
         ":root{color-scheme:light dark}",
         ".bg{fill:#ffffff}.fg{fill:#171717}.muted{fill:#525252}.grid{stroke:#d4d4d4;stroke-width:1}.axis{stroke:#737373;stroke-width:1.2}.baseline{stroke:#737373;stroke-width:1.5;stroke-dasharray:6 5}.zero{stroke:#171717;stroke-width:1.5}.label{font:14px system-ui,sans-serif;fill:#171717}.small{font:12px system-ui,sans-serif;fill:#525252}.heading{font:500 18px system-ui,sans-serif;fill:#171717}.mlp{fill:#2563eb}.gnn{fill:#f97316}.win{fill:#16a34a}.loss{fill:#dc2626}.tie{fill:#737373}",
@@ -196,7 +210,10 @@ def _chart_svg(data: Mapping[str, Any]) -> str:
         "</style>",
         f'<rect class="bg" width="{width}" height="{height}"/>',
         _svg_text(
-            plot_left, 38, "各 seed 的 validation 平均 ratio（越低越好）", css_class="heading"
+            plot_left,
+            38,
+            "随机初始化敏感性：validation 平均 ratio（越低越好）",
+            css_class="heading",
         ),
     ]
 
@@ -262,10 +279,20 @@ def _chart_svg(data: Mapping[str, Any]) -> str:
     legend_y = 66
     chunks.extend(
         [
-            f'<rect class="mlp" x="{plot_right - 245}" y="{legend_y - 12}" width="14" height="14"/>',
-            _svg_text(plot_right - 224, legend_y, "Masked MLP", css_class="small"),
-            f'<rect class="gnn" x="{plot_right - 115}" y="{legend_y - 12}" width="14" height="14"/>',
-            _svg_text(plot_right - 94, legend_y, "Task-GNN", css_class="small"),
+            f'<rect class="mlp" x="{plot_right - 380}" y="{legend_y - 12}" width="14" height="14"/>',
+            _svg_text(
+                plot_right - 359,
+                legend_y,
+                MASKED_MLP_DISPLAY_NAME,
+                css_class="small",
+            ),
+            f'<rect class="gnn" x="{plot_right - 225}" y="{legend_y - 12}" width="14" height="14"/>',
+            _svg_text(
+                plot_right - 204,
+                legend_y,
+                TRISCHED_GNN_PPO_DISPLAY_NAME,
+                css_class="small",
+            ),
         ]
     )
 
@@ -280,13 +307,20 @@ def _chart_svg(data: Mapping[str, Any]) -> str:
             _svg_text(
                 plot_left,
                 414,
-                "逐场景 seed 均值差：Task-GNN − Masked MLP",
+                (
+                    f"逐场景随机初始化均值差："
+                    f"{TRISCHED_GNN_PPO_DISPLAY_NAME} − "
+                    f"{MASKED_MLP_DISPLAY_NAME}"
+                ),
                 css_class="heading",
             ),
             _svg_text(
                 plot_left,
                 437,
-                "负值（绿色）表示 Task-GNN 更好；正值（红色）表示 Masked MLP 更好",
+                (
+                    f"负值（绿色）表示{TRISCHED_GNN_PPO_DISPLAY_NAME}更好；"
+                    f"正值（红色）表示{MASKED_MLP_DISPLAY_NAME}更好"
+                ),
                 css_class="small",
             ),
             f'<line class="zero" x1="{plot_left}" y1="{zero_y:.2f}" x2="{plot_right}" y2="{zero_y:.2f}"/>',
@@ -397,9 +431,12 @@ def _html_report(
     ci_status = "区间排除 0" if data["ci_excludes_zero"] else "区间跨 0"
     gate_status = "通过" if data["gate_passed"] else "未通过"
     conclusion = (
-        "Task-GNN 的配对改善通过当前 validation 门禁。"
+        f"{TRISCHED_GNN_PPO_DISPLAY_NAME}的配对改善通过当前validation门禁。"
         if data["gate_passed"]
-        else "Task-GNN 的点估计可改善，但当前配对证据不足以替换 Masked MLP。"
+        else (
+            f"{TRISCHED_GNN_PPO_DISPLAY_NAME}的点估计可改善，但当前配对"
+            f"证据不足以替换{MASKED_MLP_DISPLAY_NAME}。"
+        )
     )
     seed_rows = []
     for item in data["per_seed"]:
@@ -425,8 +462,8 @@ def _html_report(
     )
     escaped_files = [
         (json_name, "完整 JSON"),
-        (per_instance_name, "逐 seed × 场景 CSV"),
-        (per_seed_name, "逐 seed CSV"),
+        (per_instance_name, "逐随机初始化 × 场景 CSV"),
+        (per_seed_name, "逐随机初始化 CSV"),
         (per_scenario_name, "逐场景 CSV"),
         (svg_name, "独立 SVG 图"),
     ]
@@ -439,7 +476,7 @@ def _html_report(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Masked MLP 与 Task-GNN 性能比较</title>
+  <title>{MASKED_MLP_DISPLAY_NAME} 与 {TRISCHED_GNN_PPO_DISPLAY_NAME} 性能比较</title>
   <style>
     :root {{ color-scheme: light dark; --bg:#f7f7f8; --fg:#171717; --muted:#5f5f66; --card:#ffffff; --border:#d9d9df; --mlp:{_MLP_COLOR}; --gnn:{_GNN_COLOR}; }}
     @media (prefers-color-scheme: dark) {{ :root {{ --bg:#111113; --fg:#f5f5f5; --muted:#b8b8c0; --card:#1b1b1f; --border:#3b3b43; --mlp:#60a5fa; --gnn:#fb923c; }} }}
@@ -468,26 +505,27 @@ def _html_report(
 </head>
 <body>
 <main>
-  <h1>Masked MLP 与 Task-GNN 性能比较</h1>
+  <h1>{MASKED_MLP_DISPLAY_NAME} 与 {TRISCHED_GNN_PPO_DISPLAY_NAME} 性能比较</h1>
+  <div class="muted">{MASKED_MLP_DISPLAY_NAME} 为{MASKED_MLP_PAPER_ROLE}；内部兼容标识仍保留 task_gnn。</div>
   <div class="muted">validation-only；ratio = model makespan / HEFT makespan，越低越好。</div>
   <section class="summary" aria-label="性能摘要">
-    <div class="card"><div class="muted">Masked MLP 平均 ratio</div><div class="value mlp">{_fmt(float(data['mlp_mean']))}</div></div>
-    <div class="card"><div class="muted">Task-GNN 平均 ratio</div><div class="value gnn">{_fmt(float(data['gnn_mean']))}</div></div>
-    <div class="card"><div class="muted">Task-GNN − MLP</div><div class="value">{float(data['delta']):+.4f}</div><div class="muted">95% CI [{float(data['ci_low']):+.4f}, {float(data['ci_high']):+.4f}]，{ci_status}</div></div>
+    <div class="card"><div class="muted">{MASKED_MLP_DISPLAY_NAME}平均 ratio</div><div class="value mlp">{_fmt(float(data['mlp_mean']))}</div></div>
+    <div class="card"><div class="muted">{TRISCHED_GNN_PPO_DISPLAY_NAME}平均 ratio</div><div class="value gnn">{_fmt(float(data['gnn_mean']))}</div></div>
+    <div class="card"><div class="muted">{TRISCHED_GNN_PPO_DISPLAY_NAME} − {MASKED_MLP_DISPLAY_NAME}</div><div class="value">{float(data['delta']):+.4f}</div><div class="muted">95% CI [{float(data['ci_low']):+.4f}, {float(data['ci_high']):+.4f}]，{ci_status}</div></div>
   </section>
   <p><strong>门禁：{gate_status}。</strong> {html.escape(conclusion)} 相对均值变化为 {float(data['relative_change']) * 100:+.2f}%。</p>
   <figure>
-    <img src="{html.escape(svg_name)}" alt="各 seed 平均 ratio 柱状图和逐场景配对差值图">
-    <figcaption>横向虚线为 HEFT=1.0；逐场景差值为 Task-GNN 减 Masked MLP。</figcaption>
+    <img src="{html.escape(svg_name)}" alt="随机初始化敏感性柱状图和逐场景配对差值图">
+    <figcaption>横向虚线为 HEFT=1.0；逐场景差值为{TRISCHED_GNN_PPO_DISPLAY_NAME}减{MASKED_MLP_DISPLAY_NAME}。</figcaption>
   </figure>
-  <h2>逐 seed 结果</h2>
+  <h2>随机初始化敏感性结果</h2>
   <div class="table-wrap"><table>
-    <thead><tr><th>seed</th><th>MLP mean</th><th>GNN mean</th><th>差值</th><th>MLP P95</th><th>GNN P95</th><th>GNN 胜/平/负</th></tr></thead>
+    <thead><tr><th>随机初始化标识</th><th>MLP mean</th><th>TriSched-GNN-PPO mean</th><th>差值</th><th>MLP P95</th><th>TriSched-GNN-PPO P95</th><th>TriSched-GNN-PPO 胜/平/负</th></tr></thead>
     <tbody>{''.join(seed_rows)}</tbody>
   </table></div>
   <h2>计算开销</h2>
   <div class="table-wrap"><table>
-    <thead><tr><th>指标</th><th>Masked MLP</th><th>Task-GNN</th><th>口径</th></tr></thead>
+    <thead><tr><th>指标</th><th>{MASKED_MLP_DISPLAY_NAME}</th><th>{TRISCHED_GNN_PPO_DISPLAY_NAME}</th><th>口径</th></tr></thead>
     <tbody>{efficiency_rows}</tbody>
   </table></div>
   <h2>结果文件</h2>
