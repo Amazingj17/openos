@@ -23,15 +23,17 @@ python3 --version
 python3 -m ensurepip --version
 if ! command -v git >/dev/null 2>&1; then
   if command -v dnf >/dev/null 2>&1; then
-    dnf install -y git
+    dnf install -y --setopt=install_weak_deps=False git-core
   elif command -v yum >/dev/null 2>&1; then
-    yum install -y git
+    yum install -y --setopt=install_weak_deps=False git-core
   else
     echo "openEuler smoke requires git, but neither dnf nor yum is available" >&2
     exit 1
   fi
 fi
 git --version
+git config --global --add safe.directory "${REPOSITORY}"
+git -C "${REPOSITORY}" rev-parse --verify HEAD
 
 echo "[3/8] creating a clean virtual environment"
 python3 -m venv "${VENV}"
