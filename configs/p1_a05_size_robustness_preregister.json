@@ -1,0 +1,182 @@
+{
+  "format_version": 1,
+  "task_id": "P1-A05-SIZE-ROBUSTNESS-DESIGN",
+  "status": "design_candidate_pending_b_review",
+  "primary_hypothesis": "The frozen 14-D masked MLP fails on the 100-task synthetic development slice because its PPO rollouts contain only fixed 50-task STG trajectories; doubling the horizon while changing the generator/domain makes per-decision errors compound. Replacing half of the fixed transition budget with disjoint 100-task synthetic rollouts should improve size robustness without changing the policy, reward, optimizer, or checkpoint-selection rule.",
+  "evidence_bindings": {
+    "base_training_config": {
+      "path": "configs/stg_ppo_5seed.json",
+      "canonical_sha256": "fb4a8dd6f304a24c45ce5ad014e7d489aa22d041a7bdb74fadf611c4439f5d04"
+    },
+    "evaluation_contract": {
+      "path": "configs/p1_b02_evaluation_contract.json",
+      "canonical_sha256": "a46986f5695d59612ad9bf2c3379393620418b3f324a1003b5b5772b110c639e"
+    },
+    "base_training_summary": {
+      "path": "outputs/p1-a04-stg-ppo-5seed/ppo_summary.json",
+      "sha256": "3d06ecd6e211fb5a5731c9138ba15cd672ad18b06f3fadb9d1ad4bc6420e3178"
+    },
+    "accepted_development_evidence": {
+      "path": "outputs/p1-b02-development-evidence/development-evidence.json",
+      "sha256": "40d781cad7dff39553ba0c027b686e5710d19ceed62fa3bf7f0471a133feb744",
+      "records_sha256": "0cf814874381d2ad392b3ae193fe11726949eefed72500a1f45433953fa8f8dd"
+    },
+    "root_cause_script": {
+      "path": "scripts/analyze_p1_a05_size_robustness.py",
+      "normalized_lf_sha256": "9ca6f0f029d3e947c2be5a17dda1627273c29db72713d753e5eef523b4e354cf"
+    },
+    "root_cause_report": {
+      "path": "outputs/p1-a05-size-robustness-design/root_cause_analysis.json",
+      "sha256": "987b312d73e0e35e124b34bd917f29aa4a97b762e6bdb1c2c0ae2f07c245f41d"
+    }
+  },
+  "single_intervention": {
+    "name": "transition-budget-matched 50/100-task PPO rollout mixture",
+    "only_changed_component": "PPO rollout scenario source plan",
+    "behavior_cloning": {
+      "change": "none",
+      "rule": "Reuse each seed's exact P1-A04 14-D BC warm-start actor bytes; do not retrain or select a different warm start."
+    },
+    "ppo_rollout_plan": [
+      {
+        "epoch": 1,
+        "stg_train_split_indices": {
+          "start_inclusive": 0,
+          "end_inclusive": 59,
+          "scenario_count": 60,
+          "task_count": 50,
+          "transition_count": 3000
+        },
+        "synthetic": {
+          "index_start_inclusive": 0,
+          "index_end_inclusive": 29,
+          "seed_start_inclusive": 20261001,
+          "seed_end_inclusive": 20261030,
+          "scenario_count": 30,
+          "task_count": 100,
+          "transition_count": 3000
+        },
+        "episode_count": 90,
+        "transition_count": 6000
+      },
+      {
+        "epoch": 2,
+        "stg_train_split_indices": {
+          "start_inclusive": 60,
+          "end_inclusive": 119,
+          "scenario_count": 60,
+          "task_count": 50,
+          "transition_count": 3000
+        },
+        "synthetic": {
+          "index_start_inclusive": 30,
+          "index_end_inclusive": 59,
+          "seed_start_inclusive": 20261031,
+          "seed_end_inclusive": 20261060,
+          "scenario_count": 30,
+          "task_count": 100,
+          "transition_count": 3000
+        },
+        "episode_count": 90,
+        "transition_count": 6000
+      }
+    ],
+    "synthetic_generator": {
+      "callable": "trisched.scenario.generate_scenario",
+      "scenario_id_template": "p1-a05-train-size-{index:04d}",
+      "task_count": 100,
+      "resource_count": 3,
+      "edge_probability": 0.12,
+      "manifest_before_training": true,
+      "required_disjoint_from": [
+        "benchmark train",
+        "benchmark validation",
+        "frozen P1-B02 development slices"
+      ]
+    },
+    "budget": {
+      "training_seeds": [20260717, 20260718, 20260719, 20260720, 20260721],
+      "ppo_epochs_per_seed": 2,
+      "transitions_per_epoch_per_seed": 6000,
+      "total_transitions_per_seed": 12000,
+      "formal_total_transitions": 60000,
+      "comparison_to_base": "exactly equal transition count"
+    }
+  },
+  "frozen_invariants": {
+    "policy_class": "trisched.learning.MaskedMLPPolicy",
+    "hidden_dim": 32,
+    "feature_schema": [
+      "task_workload",
+      "execution_time",
+      "resource_speed",
+      "earliest_start",
+      "earliest_finish",
+      "resource_ready",
+      "communication_delay",
+      "upward_rank",
+      "indegree",
+      "outdegree",
+      "progress",
+      "is_device",
+      "is_edge",
+      "is_cloud"
+    ],
+    "excluded_features": ["is_heft_task", "is_heft_pair"],
+    "reward": "negative incremental makespan divided by HEFT makespan",
+    "gamma": 1.0,
+    "gae_lambda": 0.95,
+    "clip_ratio": 0.2,
+    "entropy_coefficient": 0.001,
+    "target_kl": 0.03,
+    "actor_learning_rate": 0.0003,
+    "value_learning_rate": 0.001,
+    "value_hidden_dim": 32,
+    "update_epochs": 2,
+    "minibatch_size": 256,
+    "gradient_clip": 5.0,
+    "checkpoint_candidates": ["BC warm start", "PPO epoch 1", "PPO epoch 2"],
+    "checkpoint_selection": {
+      "split": "frozen 30-scenario ID validation only",
+      "metric": "validation_mean_ratio",
+      "tie_break": ["zero_failures", "lower_mean_ratio", "earlier_epoch"]
+    }
+  },
+  "implementation_gates_before_training": [
+    "Member B approves this design and its machine-readable hash from an immutable remote commit.",
+    "The 60 synthetic scenarios and their manifest are materialized before any policy run.",
+    "Synthetic scenario ids and content hashes have zero overlap with benchmark train/validation and all frozen P1-B02 development slices.",
+    "A dry-run proves exactly 90 episodes and 6000 transitions for each epoch without loading a checkpoint or starting optimization.",
+    "Config injection tests reject any change outside the rollout source plan and its coupled episode count.",
+    "Public-test JSON/archive bytes are physically absent from the training root."
+  ],
+  "formal_execution": {
+    "run_count": 1,
+    "rerun_policy": "No seed, scenario, coefficient, epoch, or checkpoint-selection change after the first successful formal run. Exact transactional resume after an interruption is allowed under the existing P1-03 contract.",
+    "development_evaluation": "After all five checkpoints are frozen, run the unchanged P1-B02 four-slice development contract exactly once.",
+    "public_test": "forbidden",
+    "independent_review": "Member B must reproduce the implementation gates, checkpoint hashes, five-seed training artifacts, and development report from the immutable commit."
+  },
+  "success_criteria": {
+    "required_release_gates": {
+      "primary_zero_failures_and_illegal_actions": true,
+      "primary_mean_ratio_below_reference_on_every_reported_slice": true,
+      "release_publishable": true
+    },
+    "size_effect": "New masked-MLP ood_size mean_ratio < 1.0 and paired bootstrap 95% CI for new-minus-P1-A04 masked MLP has upper bound < 0.",
+    "id_guardrail": "New ID mean_ratio < 1.0 and no more than 0.02 above the accepted P1-A04 value 0.709190.",
+    "other_slices": "ood_ccr and ood_system mean_ratio must each remain < 1.0; the unchanged contract remains authoritative."
+  },
+  "stop_rules": [
+    "If B rejects the design or any pre-training gate fails, do not train; repair only the design/implementation defect and request a new review.",
+    "If the one formal run completes and any success criterion fails, retain the accepted P1-A04 model, publish the negative result, and close this candidate without parameter tuning.",
+    "A different sampler, coefficient, architecture, reward, feature, epoch count, or checkpoint rule requires a new ADR and a new task id.",
+    "Do not claim pure size causality: the frozen ood_size slice also changes generator, topology, bandwidth, and latency."
+  ],
+  "prohibitions": [
+    "Do not use the 30 frozen ood_size scenarios for gradients or checkpoint selection.",
+    "Do not replace or cherry-pick P1-B02 scenario seeds.",
+    "Do not run claim-test-gate or load public-test bytes.",
+    "Do not start training before member B signs the design."
+  ]
+}

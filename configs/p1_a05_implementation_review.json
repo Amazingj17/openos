@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "task": "P1-A05-IMPLEMENT-REVIEW",
+  "approved": true,
+  "reviewer": "B",
+  "approved_source_commit": "2ab2c66f1317637d41adb4f28426ee3c726fbc5c",
+  "config_canonical_sha256": "62afb332f73cd790f77c0b9ec0e228c712bb101ad10904ab47abe390a70d3d34",
+  "preregister_canonical_sha256": "9ab60842d87e6d906ab18ad135cda2a372be569ad39b28ce6f17c60f1ff64647",
+  "prepared_manifest_sha256": "3fe388b38325d575198f913c83ed58e63f52389d632eb23dde5de96cde1a96fa",
+  "dry_run_sha256": "b81fde389e73a45449f8caf190af23bd15cd43387b56f2dc0bf8f02551887b2a",
+  "gates": {
+    "synthetic_manifest_and_content_disjoint": true,
+    "rollout_dry_run_90_episodes_6000_transitions": true,
+    "strict_config_rejector": true,
+    "public_test_bytes_absent": true,
+    "warm_start_bytes_bound": true,
+    "full_regression_passed": true
+  },
+  "public_test": "forbidden"
+}

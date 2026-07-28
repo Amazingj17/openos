@@ -1,0 +1,168 @@
+{
+  "format_version": 1,
+  "description": "Frozen CPOP decisions and exact small-graph optima for P0-B03",
+  "source_fixture": "heft_cases.json",
+  "tolerance": 1e-9,
+  "cases": [
+    {
+      "id": "G01_chain_same_resource",
+      "analytical_lower_bound": 3.0,
+      "optimal_makespan": 3.0,
+      "cpop": {
+        "downward_ranks": [0.0, 4.0],
+        "priorities": [5.5, 5.5],
+        "critical_path": [0, 1],
+        "critical_resource": 1,
+        "decision_order": [0, 1],
+        "resources": [1, 1],
+        "starts": [0.0, 2.0],
+        "finishes": [2.0, 3.0],
+        "makespan": 3.0
+      }
+    },
+    {
+      "id": "G02_fork_tie_break",
+      "analytical_lower_bound": 3.3333333333333335,
+      "optimal_makespan": 5.0,
+      "cpop": {
+        "downward_ranks": [0.0, 1.5, 1.5],
+        "priorities": [4.5, 4.5, 4.5],
+        "critical_path": [0, 1],
+        "critical_resource": 1,
+        "decision_order": [0, 1, 2],
+        "resources": [1, 1, 0],
+        "starts": [0.0, 1.0, 1.0],
+        "finishes": [1.0, 3.0, 5.0],
+        "makespan": 5.0
+      }
+    },
+    {
+      "id": "G03_diamond_heft_myopia",
+      "analytical_lower_bound": 3.5,
+      "optimal_makespan": 4.5,
+      "cpop": {
+        "downward_ranks": [0.0, 2.625, 3.375, 7.5],
+        "priorities": [8.25, 6.0, 8.25, 8.25],
+        "critical_path": [0, 2, 3],
+        "critical_resource": 1,
+        "decision_order": [0, 2, 1, 3],
+        "resources": [1, 1, 0, 1],
+        "starts": [0.0, 1.0, 1.75, 5.25],
+        "finishes": [1.0, 3.0, 3.75, 5.75],
+        "makespan": 5.75
+      }
+    },
+    {
+      "id": "G04_single_resource_chain",
+      "analytical_lower_bound": 5.0,
+      "optimal_makespan": 5.0,
+      "cpop": {
+        "downward_ranks": [0.0, 1.5, 2.5],
+        "priorities": [5.0, 5.0, 5.0],
+        "critical_path": [0, 1, 2],
+        "critical_resource": 0,
+        "decision_order": [0, 1, 2],
+        "resources": [0, 0, 0],
+        "starts": [0.0, 1.5, 2.5],
+        "finishes": [1.5, 2.5, 5.0],
+        "makespan": 5.0
+      }
+    },
+    {
+      "id": "G05_insertion_gap",
+      "analytical_lower_bound": 6.454545454545454,
+      "optimal_makespan": 7.1,
+      "cpop": {
+        "downward_ranks": [0.0, 0.0, 10.55, 0.0],
+        "priorities": [22.0, 21.55, 21.55, 5.5],
+        "critical_path": [0],
+        "critical_resource": 1,
+        "decision_order": [0, 1, 2, 3],
+        "resources": [1, 0, 1, 1],
+        "starts": [0.0, 0.0, 11.0, 4.0],
+        "finishes": [4.0, 1.0, 13.0, 5.0],
+        "makespan": 13.0
+      }
+    },
+    {
+      "id": "G06_asymmetric_fast_download",
+      "analytical_lower_bound": 5.0,
+      "optimal_makespan": 6.5,
+      "cpop": {
+        "downward_ranks": [0.0, 0.0, 7.25],
+        "priorities": [8.75, 5.75, 8.75],
+        "critical_path": [0, 2],
+        "critical_resource": 1,
+        "decision_order": [0, 1, 2],
+        "resources": [1, 0, 1],
+        "starts": [0.0, 0.0, 6.0],
+        "finishes": [4.0, 4.0, 7.0],
+        "makespan": 7.0
+      }
+    },
+    {
+      "id": "G07_asymmetric_fast_upload",
+      "analytical_lower_bound": 5.0,
+      "optimal_makespan": 5.5,
+      "cpop": {
+        "downward_ranks": [0.0, 0.0, 7.25],
+        "priorities": [8.75, 5.75, 8.75],
+        "critical_path": [0, 2],
+        "critical_resource": 1,
+        "decision_order": [0, 1, 2],
+        "resources": [1, 0, 1],
+        "starts": [0.0, 0.0, 4.5],
+        "finishes": [4.0, 4.0, 5.5],
+        "makespan": 5.5
+      }
+    },
+    {
+      "id": "G08_identical_resources_ties",
+      "analytical_lower_bound": 2.0,
+      "optimal_makespan": 2.0,
+      "cpop": {
+        "downward_ranks": [0.0, 0.0],
+        "priorities": [2.0, 2.0],
+        "critical_path": [0],
+        "critical_resource": 0,
+        "decision_order": [0, 1],
+        "resources": [0, 1],
+        "starts": [0.0, 0.0],
+        "finishes": [2.0, 2.0],
+        "makespan": 2.0
+      }
+    },
+    {
+      "id": "G09_zero_data_with_latency",
+      "analytical_lower_bound": 5.0,
+      "optimal_makespan": 6.0,
+      "cpop": {
+        "downward_ranks": [0.0, 0.0, 7.0],
+        "priorities": [8.5, 5.5, 8.5],
+        "critical_path": [0, 2],
+        "critical_resource": 1,
+        "decision_order": [0, 1, 2],
+        "resources": [1, 0, 1],
+        "starts": [0.0, 0.0, 5.0],
+        "finishes": [4.0, 4.0, 6.0],
+        "makespan": 6.0
+      }
+    },
+    {
+      "id": "G10_disconnected_components",
+      "analytical_lower_bound": 4.0,
+      "optimal_makespan": 5.0,
+      "cpop": {
+        "downward_ranks": [0.0, 0.0, 3.0],
+        "priorities": [4.5, 4.5, 4.5],
+        "critical_path": [0, 2],
+        "critical_resource": 1,
+        "decision_order": [0, 1, 2],
+        "resources": [1, 1, 1],
+        "starts": [0.0, 2.0, 5.0],
+        "finishes": [2.0, 5.0, 6.0],
+        "makespan": 6.0
+      }
+    }
+  ]
+}

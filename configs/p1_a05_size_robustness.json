@@ -1,0 +1,137 @@
+{
+  "format_version": 1,
+  "task_id": "P1-A05-SIZE-ROBUSTNESS",
+  "preregister": {
+    "path": "p1_a05_size_robustness_preregister.json",
+    "canonical_sha256": "9ab60842d87e6d906ab18ad135cda2a372be569ad39b28ce6f17c60f1ff64647"
+  },
+  "output_dir": "../outputs/p1-a05-size-robustness",
+  "prepared_input_dir": "../outputs/p1-a05-training-input",
+  "implementation_review": "p1_a05_implementation_review.json",
+  "benchmark": {
+    "manifest": "../data/benchmarks/stg-rnc50-hetero-v1.json",
+    "raw_root": "../outputs/benchmarks/stg-rnc50-hetero-v1/raw"
+  },
+  "development": {
+    "contract": "p1_b02_evaluation_contract.json",
+    "materialization_root": "../outputs/p1-b02-development-slices-v2",
+    "manifest": "../outputs/p1-b02-development-slices-v2/development_slices_manifest.json"
+  },
+  "warm_start": {
+    "directory": "../outputs/p1-a04-stg-ppo-5seed",
+    "summary_sha256": "3d06ecd6e211fb5a5731c9138ba15cd672ad18b06f3fadb9d1ad4bc6420e3178",
+    "checkpoints": [
+      {
+        "seed": 20260717,
+        "name": "seed_20260717_bc_warm_start.npz",
+        "sha256": "e2d14cd67c1d0ac18bfd6692541596fabf5063a486e0bc4a12f4eb9bfafccc61",
+        "parameter_sha256": "f199cfc50c2bfe36fb9e817e12e1c2b890357ea4728122a2102c6c3b210089c4"
+      },
+      {
+        "seed": 20260718,
+        "name": "seed_20260718_bc_warm_start.npz",
+        "sha256": "12a9e312a1b76705690ce5810b128575dd732a4e512f1fd1381d38fab176412e",
+        "parameter_sha256": "fe2f9bcb80f177eabbd90e63085a25ab9338435802b493e9c5229e0e56173659"
+      },
+      {
+        "seed": 20260719,
+        "name": "seed_20260719_bc_warm_start.npz",
+        "sha256": "bbbe244b8bd18bc726cf8875dc444a632986477ea266b3dc3e41c4e4bb6b999a",
+        "parameter_sha256": "d216b02af620e9a4bfddfbb0cf7d064ab4e5354a5919fb72a6e63653ebc6ef10"
+      },
+      {
+        "seed": 20260720,
+        "name": "seed_20260720_bc_warm_start.npz",
+        "sha256": "c9adbdd7eec3873f319197b662b50b7343bc2ae68788e7e7c6d1984a8fc26b6b",
+        "parameter_sha256": "25bb4160da98ccfa0e269f073ec9bff5b3fb54beff4dc5204faf678bd77d443c"
+      },
+      {
+        "seed": 20260721,
+        "name": "seed_20260721_bc_warm_start.npz",
+        "sha256": "5598e11d9ff8658beb9ec60df753f767d1f30cc2d2a379fd38c1d3dd603f30c9",
+        "parameter_sha256": "4d9a30cdafc7b64c6b0a8f3467ef5f860d345701262b2c43b006f4835ebb32b5"
+      }
+    ]
+  },
+  "model": {
+    "policy_class": "trisched.learning.MaskedMLPPolicy",
+    "hidden_dim": 32
+  },
+  "seeds": [20260717, 20260718, 20260719, 20260720, 20260721],
+  "features": {
+    "exclude": ["is_heft_task", "is_heft_pair"]
+  },
+  "ppo": {
+    "epochs": 2,
+    "episodes_per_epoch": 90,
+    "update_epochs": 2,
+    "minibatch_size": 256,
+    "actor_learning_rate": 0.0003,
+    "value_learning_rate": 0.001,
+    "value_hidden_dim": 32,
+    "gamma": 1.0,
+    "gae_lambda": 0.95,
+    "clip_ratio": 0.2,
+    "entropy_coefficient": 0.001,
+    "target_kl": 0.03,
+    "gradient_clip": 5.0,
+    "shuffle_seed_offset": 303
+  },
+  "selection": {
+    "metric": "validation_mean_ratio",
+    "failure_penalty_ratio": 10.0,
+    "target_ratio": 1.0
+  },
+  "synthetic_generator": {
+    "callable": "trisched.scenario.generate_scenario",
+    "scenario_id_template": "p1-a05-train-size-{index:04d}",
+    "task_count": 100,
+    "resource_count": 3,
+    "edge_probability": 0.12
+  },
+  "rollout_plan": [
+    {
+      "epoch": 1,
+      "stg_train_split_indices": {
+        "start_inclusive": 0,
+        "end_inclusive": 59,
+        "scenario_count": 60,
+        "task_count": 50,
+        "transition_count": 3000
+      },
+      "synthetic": {
+        "index_start_inclusive": 0,
+        "index_end_inclusive": 29,
+        "seed_start_inclusive": 20261001,
+        "seed_end_inclusive": 20261030,
+        "scenario_count": 30,
+        "task_count": 100,
+        "transition_count": 3000
+      },
+      "episode_count": 90,
+      "transition_count": 6000
+    },
+    {
+      "epoch": 2,
+      "stg_train_split_indices": {
+        "start_inclusive": 60,
+        "end_inclusive": 119,
+        "scenario_count": 60,
+        "task_count": 50,
+        "transition_count": 3000
+      },
+      "synthetic": {
+        "index_start_inclusive": 30,
+        "index_end_inclusive": 59,
+        "seed_start_inclusive": 20261031,
+        "seed_end_inclusive": 20261060,
+        "scenario_count": 30,
+        "task_count": 100,
+        "transition_count": 3000
+      },
+      "episode_count": 90,
+      "transition_count": 6000
+    }
+  ],
+  "public_test": "forbidden"
+}

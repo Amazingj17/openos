@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "variant": "heterogeneous",
+    "stg_info": {
+      "random_seed": 41
+    }
+  },
+  "tasks": {
+    "T1": {
+      "cores": 2,
+      "memory_required": 1024,
+      "features": ["cpu"],
+      "data": 6.0,
+      "duration": 4.0,
+      "dependencies": [],
+      "tags": []
+    },
+    "T2": {
+      "cores": 1,
+      "memory_required": 1024,
+      "features": ["gpu"],
+      "data": 3.0,
+      "duration": 2.0,
+      "dependencies": ["T1"],
+      "tags": []
+    },
+    "T3": {
+      "cores": 1,
+      "memory_required": 1024,
+      "features": ["cpu"],
+      "data": 1.0,
+      "duration": 5.0,
+      "dependencies": ["T1", "T2"],
+      "tags": []
+    }
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "format_version": 1,
+  "description": "Fixed invalid Scenario inputs and stable diagnostics for P0-03",
+  "cases": [
+    {
+      "id": "missing_tasks",
+      "expected": {"code": "missing_field", "path": "$.tasks"},
+      "payload": {
+        "id": "invalid-missing-tasks",
+        "seed": 0,
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1.0}],
+        "edges": [],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]]
+      }
+    },
+    {
+      "id": "unknown_top_level_field",
+      "expected": {"code": "unknown_field", "path": "$.unexpected"},
+      "payload": {
+        "id": "invalid-unknown-field",
+        "seed": 0,
+        "tasks": [{"id": 0, "workload": 1.0}],
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1.0}],
+        "edges": [],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]],
+        "unexpected": true
+      }
+    },
+    {
+      "id": "wrong_workload_type",
+      "expected": {"code": "type_error", "path": "$.tasks[0].workload"},
+      "payload": {
+        "id": "invalid-workload-type",
+        "tasks": [{"id": 0, "workload": "fast"}],
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1.0}],
+        "edges": [],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]]
+      }
+    },
+    {
+      "id": "non_finite_speed",
+      "expected": {"code": "non_finite", "path": "$.resources[0].speed"},
+      "payload": {
+        "id": "invalid-infinite-speed",
+        "tasks": [{"id": 0, "workload": 1.0}],
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1e309}],
+        "edges": [],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]]
+      }
+    },
+    {
+      "id": "non_contiguous_task_ids",
+      "expected": {"code": "id_sequence", "path": "$.tasks"},
+      "payload": {
+        "id": "invalid-task-ids",
+        "tasks": [{"id": 1, "workload": 1.0}],
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1.0}],
+        "edges": [],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]]
+      }
+    },
+    {
+      "id": "empty_resources",
+      "expected": {"code": "value_error", "path": "$.resources"},
+      "payload": {
+        "id": "invalid-empty-resources",
+        "tasks": [{"id": 0, "workload": 1.0}],
+        "resources": [],
+        "edges": [],
+        "bandwidth": [],
+        "latency": []
+      }
+    },
+    {
+      "id": "bandwidth_matrix_shape",
+      "expected": {"code": "matrix_shape", "path": "$.bandwidth"},
+      "payload": {
+        "id": "invalid-bandwidth-shape",
+        "tasks": [{"id": 0, "workload": 1.0}],
+        "resources": [
+          {"id": 0, "name": "edge-0", "kind": "edge", "speed": 1.0},
+          {"id": 1, "name": "cloud-0", "kind": "cloud", "speed": 2.0}
+        ],
+        "edges": [],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0, 1.0], [1.0, 0.0]]
+      }
+    },
+    {
+      "id": "edge_endpoint_outside_tasks",
+      "expected": {"code": "value_error", "path": "$.edges[0].target"},
+      "payload": {
+        "id": "invalid-edge-target",
+        "tasks": [{"id": 0, "workload": 1.0}],
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1.0}],
+        "edges": [{"source": 0, "target": 1, "data": 1.0}],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]]
+      }
+    },
+    {
+      "id": "duplicate_edge",
+      "expected": {"code": "duplicate_edge", "path": "$.edges[1]"},
+      "payload": {
+        "id": "invalid-duplicate-edge",
+        "tasks": [{"id": 0, "workload": 1.0}, {"id": 1, "workload": 1.0}],
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1.0}],
+        "edges": [
+          {"source": 0, "target": 1, "data": 1.0},
+          {"source": 0, "target": 1, "data": 2.0}
+        ],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]]
+      }
+    },
+    {
+      "id": "cycle",
+      "expected": {"code": "cycle", "path": "$.edges"},
+      "payload": {
+        "id": "invalid-cycle",
+        "tasks": [{"id": 0, "workload": 1.0}, {"id": 1, "workload": 1.0}],
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1.0}],
+        "edges": [
+          {"source": 0, "target": 1, "data": 1.0},
+          {"source": 1, "target": 0, "data": 1.0}
+        ],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]]
+      }
+    },
+    {
+      "id": "negative_latency",
+      "expected": {"code": "value_error", "path": "$.latency[0][0]"},
+      "payload": {
+        "id": "invalid-negative-latency",
+        "tasks": [{"id": 0, "workload": 1.0}],
+        "resources": [{"id": 0, "name": "cloud-0", "kind": "cloud", "speed": 1.0}],
+        "edges": [],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[-1.0]]
+      }
+    },
+    {
+      "id": "unknown_resource_kind",
+      "expected": {"code": "value_error", "path": "$.resources[0].kind"},
+      "payload": {
+        "id": "invalid-resource-kind",
+        "tasks": [{"id": 0, "workload": 1.0}],
+        "resources": [{"id": 0, "name": "gpu-0", "kind": "gpu", "speed": 1.0}],
+        "edges": [],
+        "bandwidth": [[1000000000.0]],
+        "latency": [[0.0]]
+      }
+    }
+  ]
+}

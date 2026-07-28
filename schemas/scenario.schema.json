@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amazingj17.github.io/openos/schemas/scenario.schema.json",
+  "title": "TriSched heterogeneous DAG scenario",
+  "description": "Static task DAG, heterogeneous resources, and directed communication matrices.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "tasks", "resources", "edges", "bandwidth", "latency"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "seed": {
+      "type": "integer",
+      "default": 0
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    },
+    "resources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    },
+    "bandwidth": {
+      "$ref": "#/$defs/bandwidthMatrix"
+    },
+    "latency": {
+      "$ref": "#/$defs/latencyMatrix"
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workload"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "workload": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind", "speed"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": ["device", "edge", "cloud"]
+        },
+        "speed": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "target", "data"],
+      "properties": {
+        "source": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "target": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "data": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "bandwidthMatrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "latencyMatrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$comment": "Runtime validation additionally enforces contiguous IDs, matrix dimensions equal to resource count, finite numbers, valid edge endpoints, unique edges, and acyclicity."
+}
