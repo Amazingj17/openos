@@ -1,0 +1,244 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:mec.video_analytics",
+  "source": "dagbench",
+  "family": "mec",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/mec_offloading/video_analytics/graph.json",
+    "raw_sha256": "3a9532176f8a4d8e3429d2f437c89e0c0fa99a0288d6d3fe973a60b1fd6e20c3"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "MEC1",
+      "kind": "edge",
+      "speed": 40.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "UE3",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "UE2",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "UE0",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "UE1",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "MEC0",
+      "kind": "edge",
+      "speed": 40.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Cloud",
+      "kind": "cloud",
+      "speed": 500.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      15000.0,
+      15000.0
+    ],
+    [
+      5000.0,
+      1000000000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      5000.0
+    ],
+    [
+      5000.0,
+      5000.0,
+      1000000000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      5000.0
+    ],
+    [
+      5000.0,
+      5000.0,
+      5000.0,
+      1000000000.0,
+      5000.0,
+      5000.0,
+      5000.0
+    ],
+    [
+      5000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      1000000000.0,
+      5000.0,
+      5000.0
+    ],
+    [
+      15000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      1000000000.0,
+      15000.0
+    ],
+    [
+      15000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      5000.0,
+      15000.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

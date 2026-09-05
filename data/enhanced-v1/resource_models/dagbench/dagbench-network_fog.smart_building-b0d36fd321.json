@@ -1,0 +1,295 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:fog.smart_building",
+  "source": "dagbench",
+  "family": "fog",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/fog_computing/smart_building/graph.json",
+    "raw_sha256": "f8a99ebdf06a3f9352bb31c343bcd2bd73bb7a63852058890d017693303b5f2e"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "E2",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "F0",
+      "kind": "cloud",
+      "speed": 80.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "C0",
+      "kind": "cloud",
+      "speed": 500.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "E3",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "E1",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "E0",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "E4",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "F1",
+      "kind": "cloud",
+      "speed": 80.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0
+    ],
+    [
+      7500.0,
+      1000000000.0,
+      12500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      12500.0
+    ],
+    [
+      7500.0,
+      12500.0,
+      1000000000.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      12500.0
+    ],
+    [
+      7500.0,
+      7500.0,
+      7500.0,
+      1000000000.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0
+    ],
+    [
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      1000000000.0,
+      7500.0,
+      7500.0,
+      7500.0
+    ],
+    [
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      1000000000.0,
+      7500.0,
+      7500.0
+    ],
+    [
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      1000000000.0,
+      7500.0
+    ],
+    [
+      7500.0,
+      12500.0,
+      12500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      7500.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

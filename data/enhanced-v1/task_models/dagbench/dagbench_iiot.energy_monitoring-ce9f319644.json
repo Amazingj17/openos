@@ -1,0 +1,209 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:iiot.energy_monitoring",
+  "source": "dagbench",
+  "family": "iiot",
+  "seed": 713678457,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/industrial_iot/energy_monitoring/graph.json",
+    "raw_sha256": "0ca92ee3beedec2463e8ddba80f639c376a40a613b98c7f472b99f5a11d233f1"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 1.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 1,
+      "workload": 3.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 2,
+      "workload": 1.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 3,
+      "workload": 1.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 4,
+      "workload": 1.0,
+      "cpu_cores_required": 8,
+      "memory_required": 16384.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 5,
+      "workload": 4.0,
+      "cpu_cores_required": 8,
+      "memory_required": 16384.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 6,
+      "workload": 6.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 7,
+      "workload": 3.0,
+      "cpu_cores_required": 1,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 8,
+      "workload": 1.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 9,
+      "workload": 1.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 10,
+      "workload": 1.0,
+      "cpu_cores_required": 8,
+      "memory_required": 8192.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 11,
+      "workload": 1.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 12,
+      "workload": 5.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 4,
+      "target": 1,
+      "data": 0.5
+    },
+    {
+      "source": 1,
+      "target": 6,
+      "data": 2.0
+    },
+    {
+      "source": 1,
+      "target": 12,
+      "data": 2.0
+    },
+    {
+      "source": 11,
+      "target": 1,
+      "data": 0.5
+    },
+    {
+      "source": 9,
+      "target": 1,
+      "data": 0.5
+    },
+    {
+      "source": 5,
+      "target": 7,
+      "data": 1.0
+    },
+    {
+      "source": 12,
+      "target": 7,
+      "data": 1.0
+    },
+    {
+      "source": 1,
+      "target": 5,
+      "data": 2.0
+    },
+    {
+      "source": 10,
+      "target": 1,
+      "data": 0.5
+    },
+    {
+      "source": 0,
+      "target": 1,
+      "data": 0.5
+    },
+    {
+      "source": 8,
+      "target": 1,
+      "data": 0.5
+    },
+    {
+      "source": 3,
+      "target": 1,
+      "data": 0.5
+    },
+    {
+      "source": 2,
+      "target": 1,
+      "data": 0.5
+    },
+    {
+      "source": 6,
+      "target": 7,
+      "data": 1.0
+    }
+  ]
+}

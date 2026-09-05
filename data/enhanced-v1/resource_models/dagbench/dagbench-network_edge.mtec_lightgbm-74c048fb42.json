@@ -1,0 +1,125 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:edge.mtec_lightgbm",
+  "source": "dagbench",
+  "family": "edge",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/edge_computing/mtec_lightgbm/graph.json",
+    "raw_sha256": "1ffa828c44d503aa3279127b4ca92daa0058d3bbd3e836556ecd0514c3170451"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "Desktop",
+      "kind": "cloud",
+      "speed": 100.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "AGXXavier",
+      "kind": "edge",
+      "speed": 20.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "XavierNX",
+      "kind": "device",
+      "speed": 3.5,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "JetsonTX2",
+      "kind": "device",
+      "speed": 2.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      5000.0,
+      5000.0,
+      5000.0
+    ],
+    [
+      5000.0,
+      1000000000.0,
+      5000.0,
+      5000.0
+    ],
+    [
+      5000.0,
+      5000.0,
+      1000000000.0,
+      5000.0
+    ],
+    [
+      5000.0,
+      5000.0,
+      5000.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

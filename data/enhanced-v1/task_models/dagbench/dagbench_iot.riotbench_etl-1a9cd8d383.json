@@ -1,0 +1,178 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:iot.riotbench_etl",
+  "source": "dagbench",
+  "family": "iot",
+  "seed": 620053277,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/iot_sensor_networks/riotbench_etl/graph.json",
+    "raw_sha256": "24380cb5770db4f3ecaca50f098044cd7815c26edabb72110e5e55e534d2b963"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 38.23162280982855,
+      "cpu_cores_required": 1,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 1,
+      "workload": 50.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 2,
+      "workload": 50.0,
+      "cpu_cores_required": 1,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 3,
+      "workload": 37.92712315446232,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 4,
+      "workload": 27.237441333247528,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 5,
+      "workload": 35.8949467553067,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 6,
+      "workload": 29.88793403846174,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 7,
+      "workload": 46.072749140472624,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 8,
+      "workload": 35.346514279466604,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 9,
+      "workload": 34.162486457671086,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 10,
+      "workload": 24.32245334297607,
+      "cpu_cores_required": 8,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 0,
+      "target": 1,
+      "data": 15000.0
+    },
+    {
+      "source": 6,
+      "target": 7,
+      "data": 1500.0
+    },
+    {
+      "source": 2,
+      "target": 8,
+      "data": 15000.0
+    },
+    {
+      "source": 4,
+      "target": 3,
+      "data": 15000.0
+    },
+    {
+      "source": 9,
+      "target": 2,
+      "data": 15000.0
+    },
+    {
+      "source": 5,
+      "target": 0,
+      "data": 1500.0
+    },
+    {
+      "source": 1,
+      "target": 4,
+      "data": 15000.0
+    },
+    {
+      "source": 10,
+      "target": 9,
+      "data": 1500.0
+    },
+    {
+      "source": 7,
+      "target": 8,
+      "data": 1500.0
+    },
+    {
+      "source": 3,
+      "target": 10,
+      "data": 15000.0
+    },
+    {
+      "source": 9,
+      "target": 6,
+      "data": 1500.0
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:agri.flockfocus_feeder",
+  "source": "dagbench",
+  "family": "agri",
+  "seed": 178764246,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/agriculture_iot/flockfocus_feeder/graph.json",
+    "raw_sha256": "bd75b0380db5a3446430deec98a63c85f930b0d95de29b738da1bf39e10938ef"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 20.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 1,
+      "workload": 15.0,
+      "cpu_cores_required": 8,
+      "memory_required": 8192.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 2,
+      "workload": 50.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 3,
+      "workload": 220.0,
+      "cpu_cores_required": 4,
+      "memory_required": 8192.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 4,
+      "workload": 10.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 0,
+      "target": 2,
+      "data": 30.0
+    },
+    {
+      "source": 1,
+      "target": 2,
+      "data": 20.0
+    },
+    {
+      "source": 2,
+      "target": 3,
+      "data": 50.0
+    },
+    {
+      "source": 3,
+      "target": 4,
+      "data": 10.0
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:agri.flockfocus_feeder",
+  "source": "dagbench",
+  "family": "agri",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/agriculture_iot/flockfocus_feeder/graph.json",
+    "raw_sha256": "bd75b0380db5a3446430deec98a63c85f930b0d95de29b738da1bf39e10938ef"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "T4Server",
+      "kind": "cloud",
+      "speed": 100.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "EdgeNode1",
+      "kind": "edge",
+      "speed": 12.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "EdgeNode2",
+      "kind": "edge",
+      "speed": 12.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      2000.0,
+      2000.0
+    ],
+    [
+      2000.0,
+      1000000000.0,
+      2000.0
+    ],
+    [
+      2000.0,
+      2000.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:edge.mtec_video_analytics",
+  "source": "dagbench",
+  "family": "edge",
+  "seed": 1376618133,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/edge_computing/mtec_video_analytics/graph.json",
+    "raw_sha256": "2cb2e6f998726f6c237e4d7ac2c63062883d3d1baabb19818c5ebb60539a04f5"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 5.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 1,
+      "workload": 15.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 2,
+      "workload": 20.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 3,
+      "workload": 20.0,
+      "cpu_cores_required": 4,
+      "memory_required": 8192.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 4,
+      "workload": 40.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 5,
+      "workload": 40.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 6,
+      "workload": 5.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 0,
+      "target": 1,
+      "data": 100.0
+    },
+    {
+      "source": 1,
+      "target": 2,
+      "data": 40.0
+    },
+    {
+      "source": 1,
+      "target": 3,
+      "data": 40.0
+    },
+    {
+      "source": 2,
+      "target": 4,
+      "data": 10.0
+    },
+    {
+      "source": 3,
+      "target": 5,
+      "data": 10.0
+    },
+    {
+      "source": 4,
+      "target": 6,
+      "data": 5.0
+    },
+    {
+      "source": 5,
+      "target": 6,
+      "data": 5.0
+    },
+    {
+      "source": 1,
+      "target": 6,
+      "data": 10.0
+    }
+  ]
+}

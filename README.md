@@ -21,6 +21,54 @@
 - 用机器可读契约冻结 ID/OOD、五次独立随机初始化、失败/时延、配对 bootstrap 和一次性公开 test 工作流；
 - `run_all.py` 一条命令完成正式训练、validation 配对评估和可视化报告；公开 test 在最终授权前保持隔离。
 
+## 复杂云—边—端双图版本（V2）
+
+在保留原有冻结实验和旧 checkpoint 兼容性的基础上，项目新增了一个面向赛题复杂场景的 V2 路径：资源类型仍然只有 `device / edge / cloud`，但每类可以有多个性能和能力不同的实例。
+
+- 任务增加 CPU 核数、内存、GPU/加速器、能力标签和任务类型；
+- 资源增加 CPU 核数、内存容量、加速器和能力标签；
+- 可选的 `execution_times[task][resource]` 表达任务对不同资源的亲和性；
+- 合法动作同时满足“任务已就绪”和“资源能力兼容”；
+- Actor 同时编码带数据量权重的任务 DAG 与带宽/时延权重的资源图；
+- 先用合法 HEFT 示范做行为克隆预热，再由 Critic、GAE、clipped PPO 完成强化学习训练；
+- 用 validation 在 BC 保底模型和各 PPO epoch 之间选择 checkpoint，避免导出退化轮次；
+- STG v2、DAGBench `graph.json` 和 Topology Zoo GraphML 可通过独立适配器接入。
+
+一条命令可生成复杂训练/验证集、训练双图 PPO、统一运行 HEFT/CPOP/Greedy-EFT 对照，并输出 checkpoint、逐实例 CSV 与 `summary.json`：
+
+```powershell
+python -m trisched train-dual-graph --config configs/complex_dual_graph.json
+```
+
+`complex_dual_graph.json` 现使用可审计的混合数据模式。仓库已包含任务图与
+资源图分开存放的[增强数据集](data/enhanced-v1/README.md)，克隆后可以直接生成
+固定训练/验证场景并训练：
+
+```powershell
+python -m trisched materialize-mixed-dataset --config configs/complex_dual_graph.json
+python -m trisched train-dual-graph --config configs/complex_dual_graph.json
+```
+
+只有需要从原始第三方数据重新生成全部增强文件时，才执行：
+
+```powershell
+.\scripts\fetch_mixed_datasets.ps1
+python -m trisched export-enhanced-datasets --config configs/complex_dual_graph.json
+```
+
+任务侧按配置从增强 STG、增强 DAGBench 和复杂合成 DAG 中抽样；资源侧从
+合成云边端网络、Topology Zoo 真实连接结构和 DAGBench 自带网络中抽样。
+原始第三方文件不改写，增强场景写入输出缓存。`dataset_manifest.json` 逐场景记录
+原文件 SHA-256、任务/网络来源、增强种子和固定提交号。训练之外固定输出
+ID validation、DAG-OOD、Network-OOD 和 Joint-OOD 四类评测，所有进入环境的
+场景都使用同一套完整字段，不能把未增强的原始文件当验证集。
+清单路径均相对于项目根目录并统一使用 `/`，可直接随 GitHub 项目迁移。
+
+完整字段映射、单位、划分与防泄漏规则见
+[`doc/混合数据集增强与OOD评测.md`](doc/混合数据集增强与OOD评测.md)。
+
+默认配置是约数秒到数十秒的工程 smoke，用于检查“训练 + 验证 + 结果文件”闭环，不是论文性能预算。正式实验应复制配置，增加场景、epoch 和随机种子，并按冻结 validation 合同选模。设计边界、数据映射、模块职责、实验建议与组内介绍话术见[复杂云边端双图优化方案](doc/复杂云边端双图优化方案.md)。
+
 当前仓库已经实现从场景合同、约束安全调度环境、Actor-Critic决策到实验复核的完整原型。P1-A02 masked PPO 已由成员 B 在无 test 字节的数据根上独立复跑并复核通过；P1-03 首轮发现的失败恢复 manifest 破坏已由 staging 目录事务修复，并通过 B 的第二轮独立复核。P1-A03 TriSched-GNN-PPO 正式 validation 的点估计改善但配对 bootstrap CI 跨 0，B 已从远端不可变提交独立复核并确认按冻结规则保留 MLP，P1-A03 已关闭。P1-B02 的契约/聚合器、OOD materializer、失败语义和 producer/report hash 互操作均已通过双人复核，Masked MLP 五次独立随机初始化包也已由 B 在物理无 test 根正式预算复跑通过。P1-A05 又在不可变候选 `7d5cab6...` 上完成唯一一次五次独立随机初始化正式训练和唯一一次含 2040 条记录的 Development；候选的 ID/size/CCR/system mean ratio 为 `0.703718/1.553568/0.419796/0.999317`，size 仍未优于 HEFT，且相对 P1-A04 的配对 CI 上界未小于 0。成员 B 已独立重算 artifact、配对 bootstrap 和停止决定；项目按预注册规则保留 P1-A04、关闭 P1-A05，不启动 G3，P1-06 正式产包不适用。public test 从未加载，正式 `claim-test-gate` 从未运行。
 
 ## 快速运行

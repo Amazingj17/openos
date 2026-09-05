@@ -1,0 +1,191 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:iot.riotbench_predict",
+  "source": "dagbench",
+  "family": "iot",
+  "seed": 150083248,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/iot_sensor_networks/riotbench_predict/graph.json",
+    "raw_sha256": "63d620213280c987e3bc69284a601ecf8a0137e4b34c24ef48cd0f88f3fc4511"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 30.81756485573326,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 1,
+      "workload": 10.0,
+      "cpu_cores_required": 8,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 2,
+      "workload": 1e-06,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 3,
+      "workload": 18.660477676293596,
+      "cpu_cores_required": 8,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 4,
+      "workload": 50.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 5,
+      "workload": 23.331231743425228,
+      "cpu_cores_required": 1,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 6,
+      "workload": 30.143924581400604,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 7,
+      "workload": 50.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 8,
+      "workload": 10.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 9,
+      "workload": 38.215294668448536,
+      "cpu_cores_required": 1,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 10,
+      "workload": 32.44794511151125,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 10,
+      "target": 1,
+      "data": 1084.3412398803107
+    },
+    {
+      "source": 10,
+      "target": 9,
+      "data": 1084.3412398803107
+    },
+    {
+      "source": 2,
+      "target": 4,
+      "data": 1e-09
+    },
+    {
+      "source": 4,
+      "target": 0,
+      "data": 1084.3412398803107
+    },
+    {
+      "source": 0,
+      "target": 1,
+      "data": 1084.3412398803107
+    },
+    {
+      "source": 9,
+      "target": 6,
+      "data": 2168.6824797606214
+    },
+    {
+      "source": 0,
+      "target": 9,
+      "data": 1084.3412398803107
+    },
+    {
+      "source": 3,
+      "target": 10,
+      "data": 1084.3412398803107
+    },
+    {
+      "source": 2,
+      "target": 3,
+      "data": 1e-09
+    },
+    {
+      "source": 5,
+      "target": 7,
+      "data": 2168.6824797606214
+    },
+    {
+      "source": 1,
+      "target": 5,
+      "data": 2168.6824797606214
+    },
+    {
+      "source": 10,
+      "target": 8,
+      "data": 10843.412398803106
+    },
+    {
+      "source": 8,
+      "target": 6,
+      "data": 2168.6824797606214
+    },
+    {
+      "source": 6,
+      "target": 5,
+      "data": 2168.6824797606214
+    }
+  ]
+}

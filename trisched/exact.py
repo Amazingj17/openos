@@ -63,9 +63,12 @@ def analytical_makespan_lower_bound(scenario: Scenario) -> float:
     """Return a communication-free workload/critical-chain lower bound."""
 
     predecessors, successors = _graph_maps(scenario)
-    fastest_speed = max(float(resource.speed) for resource in scenario.resources)
     fastest_durations = [
-        float(task.workload) / fastest_speed for task in scenario.tasks
+        min(
+            scenario.execution_time(task.id, resource_id)
+            for resource_id in scenario.compatible_resources(task.id)
+        )
+        for task in scenario.tasks
     ]
     chain_finish = [0.0] * len(scenario.tasks)
     for task_id in _topological_order(predecessors, successors):
@@ -74,13 +77,23 @@ def analytical_makespan_lower_bound(scenario: Scenario) -> float:
             default=0.0,
         )
     critical_chain_bound = max(chain_finish)
-    capacity_bound = sum(float(task.workload) for task in scenario.tasks) / sum(
-        float(resource.speed) for resource in scenario.resources
-    )
+    if scenario.execution_times is None and all(
+        len(scenario.compatible_resources(task.id)) == scenario.resource_count
+        for task in scenario.tasks
+    ):
+        # Preserve the tighter related-machine bound and frozen v1 evidence.
+        capacity_bound = sum(float(task.workload) for task in scenario.tasks) / sum(
+            float(resource.speed) for resource in scenario.resources
+        )
+    else:
+        # A conservative bound for unrelated machines and capability masks.
+        capacity_bound = sum(fastest_durations) / scenario.resource_count
     return max(critical_chain_bound, capacity_bound)
 
 
 def _execution_time(scenario: Scenario, task_id: int, resource_id: int) -> float:
+    if scenario.execution_times is not None:
+        return float(scenario.execution_times[task_id][resource_id])
     return (
         float(scenario.tasks[task_id].workload)
         / float(scenario.resources[resource_id].speed)
@@ -210,6 +223,8 @@ def solve_exact_schedule(
         candidates: list[tuple[float, int, int, float]] = []
         for task_id in ready:
             for resource in scenario.resources:
+                if not scenario.resource_is_compatible(task_id, resource.id):
+                    continue
                 start, finish = _earliest_slot(
                     scenario,
                     edge_data,

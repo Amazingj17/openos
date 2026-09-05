@@ -42,9 +42,23 @@ class IndependentValidationReport:
 
 def _execution_time(scenario: Scenario, task_id: int, resource_id: int) -> float:
     # Intentionally do not call Scenario.execution_time().
+    if scenario.execution_times is not None:
+        return float(scenario.execution_times[task_id][resource_id])
     return (
         float(scenario.tasks[task_id].workload)
         / float(scenario.resources[resource_id].speed)
+    )
+
+
+def _compatible(scenario: Scenario, task_id: int, resource_id: int) -> bool:
+    # Intentionally do not call Scenario.resource_is_compatible().
+    task = scenario.tasks[task_id]
+    resource = scenario.resources[resource_id]
+    return (
+        int(task.cpu_cores_required) <= int(resource.cpu_cores)
+        and float(task.memory_required) <= float(resource.memory_capacity)
+        and (not task.accelerator_required or resource.has_accelerator)
+        and set(task.required_features).issubset(resource.features)
     )
 
 
@@ -113,10 +127,15 @@ def independent_upward_ranks(scenario: Scenario) -> np.ndarray:
     ranks = np.zeros(len(scenario.tasks), dtype=np.float64)
     resource_count = len(scenario.resources)
     for task_id in reversed(_topological_order(successors)):
+        compatible_resources = [
+            resource_id
+            for resource_id in range(resource_count)
+            if _compatible(scenario, task_id, resource_id)
+        ]
         average_execution = sum(
             _execution_time(scenario, task_id, resource_id)
-            for resource_id in range(resource_count)
-        ) / resource_count
+            for resource_id in compatible_resources
+        ) / len(compatible_resources)
         downstream = 0.0
         if successors[task_id]:
             candidates: list[float] = []
@@ -134,10 +153,16 @@ def independent_upward_ranks(scenario: Scenario) -> np.ndarray:
                             target_resource,
                         )
                         for source_resource in range(resource_count)
+                        if _compatible(scenario, task_id, source_resource)
                         for target_resource in range(resource_count)
+                        if _compatible(scenario, child, target_resource)
                         if source_resource != target_resource
                     ]
-                    average_communication = sum(cross_costs) / len(cross_costs)
+                    average_communication = (
+                        sum(cross_costs) / len(cross_costs)
+                        if cross_costs
+                        else 0.0
+                    )
                 candidates.append(average_communication + float(ranks[child]))
             downstream = max(candidates)
         ranks[task_id] = average_execution + downstream
@@ -215,6 +240,7 @@ def independent_heft_schedule(scenario: Scenario) -> OracleScheduleResult:
                 resource.id,
             )
             for resource in scenario.resources
+            if _compatible(scenario, task_id, resource.id)
         ]
         start, finish, resource_id = min(
             candidates, key=lambda item: (item[1], item[2])
@@ -257,6 +283,10 @@ def validate_schedule_independent(
             raise IndependentValidationError("schedule contains an unknown task")
         if not 0 <= entry.resource_id < len(scenario.resources):
             raise IndependentValidationError("schedule contains an unknown resource")
+        if not _compatible(scenario, entry.task_id, entry.resource_id):
+            raise IndependentValidationError(
+                f"resource {entry.resource_id} is incompatible with task {entry.task_id}"
+            )
         if not isfinite(entry.start) or not isfinite(entry.finish):
             raise IndependentValidationError("schedule contains a non-finite timestamp")
         if entry.start < -tolerance or entry.finish <= entry.start:

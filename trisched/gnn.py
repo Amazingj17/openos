@@ -36,7 +36,6 @@ TASK_NODE_FEATURE_NAMES = (
     "outdegree",
 )
 
-
 @dataclass(frozen=True)
 class FrozenTaskGraph:
     scenario_id: str

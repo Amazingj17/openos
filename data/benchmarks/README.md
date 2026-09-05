@@ -49,3 +49,18 @@ ten-instance projection and fault-injection review is recorded in
 [`doc/P1-B01独立复核记录.md`](../../doc/P1-B01独立复核记录.md).
 The teacher, checkpoint-selection and anti-test-leakage contract is recorded in
 [`doc/P1-A01HEFT教师与BC基线.md`](../../doc/P1-A01HEFT教师与BC基线.md).
+
+## Mixed STG + DAGBench + Topology Zoo training
+
+The constraint-preserving v2 path is separate from the frozen STG projection
+v1 above. It downloads third-party raw data into Git-ignored `outputs/`, keeps
+the originals read-only, and materializes complete cloud-edge-device scenarios:
+
+```powershell
+.\scripts\fetch_mixed_datasets.ps1
+python -m trisched materialize-mixed-dataset --config configs/complex_dual_graph.json
+```
+
+The mixed manifest records pinned revisions, raw SHA-256 values, augmentation
+seeds, source roles, units and the ID/OOD leakage audit. See
+[`doc/混合数据集增强与OOD评测.md`](../../doc/混合数据集增强与OOD评测.md).

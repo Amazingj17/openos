@@ -1,0 +1,94 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:edge.loki_traffic_pipeline",
+  "source": "dagbench",
+  "family": "edge",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/edge_computing/loki_traffic_pipeline/graph.json",
+    "raw_sha256": "a313ace9205cbe41d6931a2d376e967ecc90b49d8c40ccc607dc6ac3fa95ce70"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "GPU1",
+      "kind": "device",
+      "speed": 5.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "GPU2",
+      "kind": "edge",
+      "speed": 20.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "GPU3",
+      "kind": "cloud",
+      "speed": 50.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      5000.0,
+      5000.0
+    ],
+    [
+      5000.0,
+      1000000000.0,
+      5000.0
+    ],
+    [
+      5000.0,
+      5000.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

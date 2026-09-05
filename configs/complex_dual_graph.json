@@ -1,0 +1,87 @@
+{
+  "seed": 20260904,
+  "output_dir": "outputs/complex-dual-graph",
+  "dataset": {
+    "mode": "mixed_v1",
+    "train_count": 8,
+    "validation_count": 4,
+    "task_range": [24, 40],
+    "resource_count": 6,
+    "max_resource_nodes": 12,
+    "edge_probability": 0.05,
+    "synthetic_catalog_size": 32,
+    "require_external_sources": true,
+    "sources": {
+      "enhanced": {
+        "prefer": true,
+        "manifest": "data/enhanced-v1/manifest.json"
+      },
+      "stg": {
+        "patterns": [
+          "outputs/benchmarks/stg-rnc50-hetero-v1/raw/**/*.json"
+        ],
+        "raw_root": "outputs/benchmarks/stg-rnc50-hetero-v1/raw",
+        "manifest": "data/benchmarks/stg-rnc50-hetero-v1.json"
+      },
+      "dagbench": {
+        "patterns": [
+          "outputs/datasets/dagbench/workflows/**/graph.json"
+        ]
+      },
+      "topology_zoo": {
+        "patterns": [
+          "outputs/datasets/topology-zoo-graphs/*.graph",
+          "outputs/datasets/topology-zoo-graphs/*.graphml"
+        ]
+      }
+    },
+    "task_source_weights": {
+      "stg": 0.4,
+      "dagbench": 0.4,
+      "synthetic": 0.2
+    },
+    "network_source_weights": {
+      "synthetic": 0.5,
+      "topology_zoo": 0.3,
+      "dagbench": 0.2
+    },
+    "heldout_dag_families": [
+      "scientific",
+      "ml",
+      "uav",
+      "v2x"
+    ],
+    "heldout_topologies": [
+      "gambia",
+      "oxford",
+      "sago",
+      "zamren"
+    ],
+    "split_counts": {
+      "train": 8,
+      "id_validation": 4,
+      "dag_ood": 3,
+      "network_ood": 3,
+      "joint_ood": 3
+    },
+    "cache_dir": "outputs/mixed-dataset"
+  },
+  "training": {
+    "epochs": 2,
+    "episodes_per_epoch": 4,
+    "hidden_dim": 32,
+    "task_message_dim": 12,
+    "resource_message_dim": 12,
+    "value_hidden_dim": 32,
+    "imitation_epochs": 2,
+    "imitation_learning_rate": 0.003,
+    "actor_learning_rate": 0.0003,
+    "value_learning_rate": 0.001,
+    "gae_lambda": 0.95,
+    "clip_ratio": 0.2,
+    "entropy_coefficient": 0.01,
+    "update_epochs": 4,
+    "minibatch_size": 64,
+    "gradient_clip": 0.5
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:classic.mapreduce_4m_2r",
+  "source": "dagbench",
+  "family": "classic",
+  "seed": 1198296727,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/classic_benchmarks/mapreduce_4m_2r/graph.json",
+    "raw_sha256": "17f9339c616eeda2b4ba096f7c1ca62ce55e07509cc11a4a097c8c89c214d55f"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 2.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 1,
+      "workload": 10.0,
+      "cpu_cores_required": 1,
+      "memory_required": 512.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 2,
+      "workload": 2.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 3,
+      "workload": 5.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 4,
+      "workload": 20.0,
+      "cpu_cores_required": 1,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 5,
+      "workload": 10.0,
+      "cpu_cores_required": 2,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 6,
+      "workload": 10.0,
+      "cpu_cores_required": 1,
+      "memory_required": 512.0,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 7,
+      "workload": 10.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 8,
+      "workload": 20.0,
+      "cpu_cores_required": 1,
+      "memory_required": 512.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 2,
+      "target": 7,
+      "data": 1.0
+    },
+    {
+      "source": 2,
+      "target": 5,
+      "data": 1.0
+    },
+    {
+      "source": 3,
+      "target": 8,
+      "data": 2.0
+    },
+    {
+      "source": 6,
+      "target": 3,
+      "data": 2.0
+    },
+    {
+      "source": 7,
+      "target": 3,
+      "data": 2.0
+    },
+    {
+      "source": 4,
+      "target": 0,
+      "data": 1.0
+    },
+    {
+      "source": 2,
+      "target": 1,
+      "data": 1.0
+    },
+    {
+      "source": 5,
+      "target": 3,
+      "data": 2.0
+    },
+    {
+      "source": 1,
+      "target": 3,
+      "data": 2.0
+    },
+    {
+      "source": 2,
+      "target": 6,
+      "data": 1.0
+    },
+    {
+      "source": 3,
+      "target": 4,
+      "data": 2.0
+    },
+    {
+      "source": 8,
+      "target": 0,
+      "data": 1.0
+    }
+  ]
+}

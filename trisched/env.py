@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -87,6 +86,7 @@ class HeterogeneousDagEnv:
             (task_id, resource.id)
             for task_id in self.ready_tasks()
             for resource in self.scenario.resources
+            if self.scenario.resource_is_compatible(task_id, resource.id)
         )
 
     def resource_ready_time(self, resource_id: int) -> float:
@@ -113,6 +113,10 @@ class HeterogeneousDagEnv:
             raise ValueError(f"task {task_id} is not ready")
         if not 0 <= resource_id < self.scenario.resource_count:
             raise ValueError(f"resource {resource_id} does not exist")
+        if not self.scenario.resource_is_compatible(task_id, resource_id):
+            raise ValueError(
+                f"resource {resource_id} is incompatible with task {task_id}"
+            )
         duration = self.scenario.execution_time(task_id, resource_id)
         start = self.dependency_ready_time(task_id, resource_id)
         # step() keeps every resource timeline sorted.

@@ -4,14 +4,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
 import numpy as np
 
 from .env import HeterogeneousDagEnv, ScheduleResult, run_policy, validate_schedule
 from .policies import HeftPolicy, compute_upward_ranks
 from .scenario import Scenario
 
-
+"14维度特征"
 FEATURE_NAMES = (
     "task_workload",
     "execution_time",
@@ -51,7 +50,7 @@ def candidate_features(
     ready_tasks = env.ready_tasks()
     heft_task = min(ready_tasks, key=lambda item: (-ranks[item], item))
     heft_resource = min(
-        range(scenario.resource_count),
+        scenario.compatible_resources(heft_task),
         key=lambda item: (env.earliest_slot(heft_task, item)[1], item),
     )
     resource_ready = tuple(
@@ -124,15 +123,27 @@ def build_candidate_feature_context(
 ) -> CandidateFeatureContext:
     max_workload = max(task.workload for task in scenario.tasks)
     max_speed = max(resource.speed for resource in scenario.resources)
-    min_speed = min(resource.speed for resource in scenario.resources)
+    max_execution = max(
+        scenario.execution_time(task.id, resource.id)
+        for task in scenario.tasks
+        for resource in scenario.resources
+        if scenario.resource_is_compatible(task.id, resource.id)
+    )
     predecessors = scenario.predecessors()
     successors = scenario.successors()
     return CandidateFeatureContext(
         max_workload=max_workload,
         max_speed=max_speed,
-        max_execution=max_workload / min_speed,
+        max_execution=max_execution,
         time_scale=max(
-            sum(task.workload for task in scenario.tasks) / min_speed,
+            sum(
+                max(
+                    scenario.execution_time(task.id, resource.id)
+                    for resource in scenario.resources
+                    if scenario.resource_is_compatible(task.id, resource.id)
+                )
+                for task in scenario.tasks
+            ),
             1.0,
         ),
         max_rank=max(float(np.max(ranks)), 1.0),

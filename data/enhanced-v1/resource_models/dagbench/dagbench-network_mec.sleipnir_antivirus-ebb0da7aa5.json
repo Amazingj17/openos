@@ -1,0 +1,96 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:mec.sleipnir_antivirus",
+  "source": "dagbench",
+  "family": "mec",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/mec/sleipnir_antivirus/graph.json",
+    "raw_sha256": "d0e680e9b32ca5cf10c2a8feaa57e707b494f2a119eccdfc64bd046294b2aaf8"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "MobileDevice",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "EdgeServer1",
+      "kind": "cloud",
+      "speed": 50.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "EdgeServer2",
+      "kind": "cloud",
+      "speed": 50.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      1000.0,
+      1000.0
+    ],
+    [
+      1000.0,
+      1000000000.0,
+      1000.0
+    ],
+    [
+      1000.0,
+      1000.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}
