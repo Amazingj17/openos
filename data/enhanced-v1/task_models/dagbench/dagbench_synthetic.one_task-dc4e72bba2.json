@@ -1,0 +1,30 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:synthetic.one_task",
+  "source": "dagbench",
+  "family": "synthetic",
+  "seed": 2130018839,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/synthetic/one_task/graph.json",
+    "raw_sha256": "28519793f7c108922f31369655d107ff5553da7b9738cc2bc2f7f1aac7131882"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 10.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    }
+  ],
+  "edges": []
+}

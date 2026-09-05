@@ -37,15 +37,13 @@ def topological_order(scenario: Scenario) -> tuple[int, ...]:
 
 
 def average_communication_cost(scenario: Scenario, source: int, target: int) -> float:
-    if scenario.resource_count == 1:
-        return 0.0
     costs = [
         scenario.communication_time(source, target, source_resource, target_resource)
-        for source_resource in range(scenario.resource_count)
-        for target_resource in range(scenario.resource_count)
+        for source_resource in scenario.compatible_resources(source)
+        for target_resource in scenario.compatible_resources(target)
         if source_resource != target_resource
     ]
-    return float(np.mean(costs))
+    return float(np.mean(costs)) if costs else 0.0
 
 
 def average_execution_cost(scenario: Scenario, task_id: int) -> float:
@@ -53,7 +51,7 @@ def average_execution_cost(scenario: Scenario, task_id: int) -> float:
         np.mean(
             [
                 scenario.execution_time(task_id, resource_id)
-                for resource_id in range(scenario.resource_count)
+                for resource_id in scenario.compatible_resources(task_id)
             ]
         )
     )
@@ -131,8 +129,19 @@ def analyze_cpop(scenario: Scenario) -> CpopAnalysis:
         )
         critical_path.append(current)
 
+    jointly_compatible = tuple(
+        resource_id
+        for resource_id in range(scenario.resource_count)
+        if all(
+            scenario.resource_is_compatible(task_id, resource_id)
+            for task_id in critical_path
+        )
+    )
+    candidate_resources = jointly_compatible or tuple(
+        range(scenario.resource_count)
+    )
     critical_resource = min(
-        range(scenario.resource_count),
+        candidate_resources,
         key=lambda resource_id: (
             sum(
                 scenario.execution_time(task_id, resource_id)
@@ -166,7 +175,7 @@ class HeftPolicy:
         ready = env.ready_tasks()
         task_id = min(ready, key=lambda item: (-self.ranks[item], item))
         resource_id = min(
-            range(env.scenario.resource_count),
+            env.scenario.compatible_resources(task_id),
             key=lambda item: (env.earliest_slot(task_id, item)[1], item),
         )
         return task_id, resource_id
@@ -194,11 +203,16 @@ class CpopPolicy:
             ready,
             key=lambda item: (-float(self.analysis.priorities[item]), item),
         )
-        if task_id in self._critical_tasks:
+        if (
+            task_id in self._critical_tasks
+            and env.scenario.resource_is_compatible(
+                task_id, self.analysis.critical_resource
+            )
+        ):
             resource_id = self.analysis.critical_resource
         else:
             resource_id = min(
-                range(env.scenario.resource_count),
+                env.scenario.compatible_resources(task_id),
                 key=lambda item: (env.earliest_slot(task_id, item)[1], item),
             )
         return task_id, resource_id

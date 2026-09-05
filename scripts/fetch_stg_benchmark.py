@@ -83,14 +83,20 @@ def main(argv: list[str] | None = None) -> int:
         expected_files = [entry["source"] for entry in manifest["entries"]]
         extract_verified_archive(archive_path, raw_root, expected_files)
     splits = verify_frozen_splits(raw_root, args.manifest)
+    def portable(path: Path) -> str:
+        try:
+            return path.resolve().relative_to(REPOSITORY.resolve()).as_posix()
+        except ValueError:
+            return path.name
+
     result = {
         "ok": True,
         "archive": {
-            "path": str(archive_path.resolve()),
+            "path": portable(archive_path),
             "bytes": SOURCE_ARCHIVE_BYTES,
             "sha256": SOURCE_ARCHIVE_SHA256,
         },
-        "raw_root": str(raw_root.resolve()),
+        "raw_root": portable(raw_root),
         "splits": {
             name: {
                 "count": len(values),

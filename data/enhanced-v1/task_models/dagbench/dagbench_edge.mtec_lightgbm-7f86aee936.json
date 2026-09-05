@@ -1,0 +1,118 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:edge.mtec_lightgbm",
+  "source": "dagbench",
+  "family": "edge",
+  "seed": 2082151692,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/edge_computing/mtec_lightgbm/graph.json",
+    "raw_sha256": "1ffa828c44d503aa3279127b4ca92daa0058d3bbd3e836556ecd0514c3170451"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 5.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 1,
+      "workload": 30.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 2,
+      "workload": 50.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 3,
+      "workload": 50.0,
+      "cpu_cores_required": 1,
+      "memory_required": 512.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 4,
+      "workload": 50.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 5,
+      "workload": 20.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 0,
+      "target": 1,
+      "data": 100.0
+    },
+    {
+      "source": 1,
+      "target": 2,
+      "data": 30.0
+    },
+    {
+      "source": 1,
+      "target": 3,
+      "data": 30.0
+    },
+    {
+      "source": 1,
+      "target": 4,
+      "data": 30.0
+    },
+    {
+      "source": 1,
+      "target": 5,
+      "data": 20.0
+    },
+    {
+      "source": 2,
+      "target": 5,
+      "data": 10.0
+    },
+    {
+      "source": 3,
+      "target": 5,
+      "data": 10.0
+    },
+    {
+      "source": 4,
+      "target": 5,
+      "data": 10.0
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:edge.face_analysis_pipeline",
+  "source": "dagbench",
+  "family": "edge",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/edge_computing/face_analysis_pipeline/graph.json",
+    "raw_sha256": "a4e0c47b399c926f25cca9eceaa164c26328cf61a6cd909e0f07f7081a1d73b8"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "EdgeServer",
+      "kind": "cloud",
+      "speed": 100.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "RPiEdge1",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "RPiEdge2",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "RPiEdge3",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

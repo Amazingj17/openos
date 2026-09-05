@@ -1,0 +1,1533 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph_collection",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "count": 152,
+  "sources": {
+    "dagbench": 84,
+    "synthetic": 32,
+    "topology_zoo": 36
+  },
+  "entries": [
+    {
+      "id": "dagbench-network:agri.crop_disease",
+      "source": "dagbench",
+      "family": "agri",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_agri.crop_disease-2dc4c6ab78.json",
+      "enhanced_sha256": "fb17c26890a312ec6536e2589c34304bf637ad89d9602425a17ba5cc7a00d9ee",
+      "raw_sha256": "30c0dcaaca349307ed592dc33ba72627964e836bbc36c92a9fa11630bbc18638",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:agri.flockfocus_feeder",
+      "source": "dagbench",
+      "family": "agri",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_agri.flockfocus_feeder-9c67f05331.json",
+      "enhanced_sha256": "0f4dded3ccbe7847c7ddc3f13eb428a5354e23178fe0be640b465320167f2a82",
+      "raw_sha256": "bd75b0380db5a3446430deec98a63c85f930b0d95de29b738da1bf39e10938ef",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:agri.greenhouse_control",
+      "source": "dagbench",
+      "family": "agri",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_agri.greenhouse_control-7f0456a10d.json",
+      "enhanced_sha256": "319585bf3b2f2559a16e219a30080f91c1388b8ec557fb62ddf1acf9acf2be2a",
+      "raw_sha256": "68c7906c5e501b1f238eef911234dfe44cfb343128efe9c8de152fc7e5d1ae67",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:agri.livestock_monitoring",
+      "source": "dagbench",
+      "family": "agri",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_agri.livestock_monitoring-1634195b49.json",
+      "enhanced_sha256": "284790c835e4772c1e9a20f66526f17b1d0d2590f836991f933d0e4581d1c3b0",
+      "raw_sha256": "d29242d93fcfdfb94abb267f42bea43be3d670a016ae36d26e8ff1e32219f1df",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:agri.precision_irrigation",
+      "source": "dagbench",
+      "family": "agri",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_agri.precision_irrigation-691ef30847.json",
+      "enhanced_sha256": "8c8cc90ee539a7fd017e09b60bb94056530bc752da7c44e6334801ceb9a5b800",
+      "raw_sha256": "4307a50ccd9a706ba8353aea8f7da56091c201706d1e58f6ea82202c90f6bd63",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:classic.cholesky_4",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.cholesky_4-2a7c40f1ea.json",
+      "enhanced_sha256": "0776c520f3a92ddedfafc600bc24a4c6beb10ee26ceaae4fc625599a22fbcaf1",
+      "raw_sha256": "88309bb26b616a23aabc70f3c86680387dec20c2b29218a35d19597b5854760a",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:classic.cholesky_5",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.cholesky_5-01d85c52f3.json",
+      "enhanced_sha256": "684c3d3b308b33302b50a23ea8ef3b836f1b699a76434d8ced5a4dc782b012af",
+      "raw_sha256": "4c6f198d36f1cba16d442baca5598a992e65322c32712111831495980f2737da",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:classic.cholesky_6",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.cholesky_6-65a117bbcc.json",
+      "enhanced_sha256": "9f5993bc116905feccfaab74d6358a0c9b21cebb79f64f98bc4847ef170a8282",
+      "raw_sha256": "bd3daad5ee74cafe45b4c389dc4381eeefcf085db8f54197a86adef151efab99",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:classic.fft_16",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.fft_16-3b68c445d3.json",
+      "enhanced_sha256": "3a6112e725dc870296dfd3bffadfe52fc1b673c2790d86e3485258dc91a70143",
+      "raw_sha256": "43c07c3bc18e2db802545643d27bc13dfb21a8c2fa10d17762c7a88636ab9a1d",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:classic.fft_32",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.fft_32-3ca496ea89.json",
+      "enhanced_sha256": "326cee3d8095d01af850b00a528ecd45d0b9a08d473504f35dfa83067dbf7160",
+      "raw_sha256": "274c9e081d64e1bc59fafa695de48f3f0693b9a47e2b5c32655426d245d53f0d",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:classic.fft_8",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.fft_8-2c7769ad2a.json",
+      "enhanced_sha256": "32a7b5d3a9f31c0d5897707f824bb1012f16739813c65af57f8ea3030d1c9684",
+      "raw_sha256": "300869f28e421d620163fa5cec1530c74e6bc2859d74f46288f913808cbdd6d1",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:classic.gauss_elim_10",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.gauss_elim_10-fa917a06bd.json",
+      "enhanced_sha256": "86eb0cabf26e3f9dacfd4b7ae340a8d6577fb236fbb8da493805c687d0e4bae6",
+      "raw_sha256": "60de0788c2aa6aab8b5f36e00e8a5a98efc69906a3fc13a49d73e10e0957e15b",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:classic.gauss_elim_5",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.gauss_elim_5-5f0375df07.json",
+      "enhanced_sha256": "e523a5a3ce486084786831e8c44f98e22830b52c6560a470e3ad25357ce559d4",
+      "raw_sha256": "9dc9d5f311c1532a9f36f94ed3be8ef579b1e605cfa758602dfd6633b60aacc3",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:classic.gauss_elim_7",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.gauss_elim_7-22fd031a40.json",
+      "enhanced_sha256": "e47bad47cbaa9517db3e09de07150aa1a3b9958573bc26305970965fd05aa7f7",
+      "raw_sha256": "c4cf3b55ad958c36bd5df6cef6bd641bef64baf795cd84d7a8e6aa9bd51e60da",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:classic.lu_decomp_4",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.lu_decomp_4-3ea7ecb497.json",
+      "enhanced_sha256": "ddfa51c21f475533a6724bb4e592c7267fd1e85afceca4bfc1ea6f49bd750fa8",
+      "raw_sha256": "d565e49ef4005ada9ce1d94a0da022f30b6e6057fb05709ce4587e0934885208",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:classic.mapreduce_16m_8r",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.mapreduce_16m_8r-bdb89342b9.json",
+      "enhanced_sha256": "a3e2c38c8404baceddbad2cfc48071867802f271e4e6dfd403af26a76872c57f",
+      "raw_sha256": "c2f63a9f1a0b08eb723410dd40664c9a3a5c7c18a49feda3781c00d204131baf",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:classic.mapreduce_4m_2r",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.mapreduce_4m_2r-ae116bc41c.json",
+      "enhanced_sha256": "6d49e5e7311807e4bc8118bcf27b505411b42a410010019c6d785f6ed868600f",
+      "raw_sha256": "17f9339c616eeda2b4ba096f7c1ca62ce55e07509cc11a4a097c8c89c214d55f",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:classic.mapreduce_8m_4r",
+      "source": "dagbench",
+      "family": "classic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_classic.mapreduce_8m_4r-8b5d024ad8.json",
+      "enhanced_sha256": "60b2bdc4226895e8ee4dd4e5b9d17388434fdf06f0c0bf367a125ed3c9b4da28",
+      "raw_sha256": "e7fccb60015480269c4716ff2856cd9148391ed024018ac51b7a76e1de65200b",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:edge.autonomous_driving",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.autonomous_driving-ba7bedb75c.json",
+      "enhanced_sha256": "aae2bedd0f08a41e4729c482a0c7b4dc6c104fa555bf7a8f4d3e629d0ebd73a1",
+      "raw_sha256": "fab4dd56ae3982385a877ac9636a975bb4a581c15107e462df3f751d82a52589",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:edge.face_analysis_pipeline",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.face_analysis_pipeline-7e94a86d96.json",
+      "enhanced_sha256": "5e5923ebcf8dd9e63623e9f88d74a51b539f07c8fb77e63b60e7c9ff2283d0d7",
+      "raw_sha256": "a4e0c47b399c926f25cca9eceaa164c26328cf61a6cd909e0f07f7081a1d73b8",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:edge.loki_traffic_pipeline",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.loki_traffic_pipeline-e0b3a0b665.json",
+      "enhanced_sha256": "7416f437ef7d5d50aab800d4ce8b89e2404fc1454868e9e82fc812bcc50d7555",
+      "raw_sha256": "a313ace9205cbe41d6931a2d376e967ecc90b49d8c40ccc607dc6ac3fa95ce70",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:edge.ml_surveillance_pipeline",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.ml_surveillance_pipeline-1cca5e4f66.json",
+      "enhanced_sha256": "22a95719eaa4800659d918e3bf81c416300cfa4e1ee55c7f762dc30b77a0f5c8",
+      "raw_sha256": "9c682d97c32dbcee67d733251943fc815ee45a8d6cfdfc301cbb862367540b9a",
+      "resource_count": 7
+    },
+    {
+      "id": "dagbench-network:edge.mtec_lightgbm",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.mtec_lightgbm-74c048fb42.json",
+      "enhanced_sha256": "75128619c46c85995b337cb84b7147ac1ac19daba9c43599d8fe84797de69fbe",
+      "raw_sha256": "1ffa828c44d503aa3279127b4ca92daa0058d3bbd3e836556ecd0514c3170451",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:edge.mtec_matrix_ops",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.mtec_matrix_ops-32958705df.json",
+      "enhanced_sha256": "ec54df0ff192badfc38d08dbffde7c01afc0a6f8943ddd2adc6590cb70153920",
+      "raw_sha256": "3cda0543ce08e557b6b40561016ac3813d4f6c82b55fa805983895fb2b0005aa",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:edge.mtec_video_analytics",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.mtec_video_analytics-56ca78400f.json",
+      "enhanced_sha256": "86f4fcd33939ecd9018a1a2e68d1f97fe016666abc9395e8c4efd42ebfad95d6",
+      "raw_sha256": "2cb2e6f998726f6c237e4d7ac2c63062883d3d1baabb19818c5ebb60539a04f5",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:edge.smart_home",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.smart_home-8f08cf08d4.json",
+      "enhanced_sha256": "f9e742b04aa23053cd3df6bc99cfe20179253b2d25e3ed5c3dbf4a3d86ff1b31",
+      "raw_sha256": "946c75e6519b03f5b8b07711ffb86d3d3d7a7da8dcc29d649917aafacd140843",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:edge.splitstream_pipeline",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.splitstream_pipeline-8b8682c0be.json",
+      "enhanced_sha256": "9a0af66512894a6979ba125d4135159c3e99d242196346c1353aec37fddeb21e",
+      "raw_sha256": "f8eef8e184aaa1578ecb90305e00a9157988155ff9411991bcd95199a8357526",
+      "resource_count": 5
+    },
+    {
+      "id": "dagbench-network:edge.video_transcoding",
+      "source": "dagbench",
+      "family": "edge",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_edge.video_transcoding-087d7a8ea5.json",
+      "enhanced_sha256": "97c5b849ae261e3ecb628c77eebb654f4c4d6c2d0fbc148c0143446f20bc1e3c",
+      "raw_sha256": "ff21db3d9b8b640dff063b3ae6dacfcdc2c78fad1b10460ec2f08ecbc449a500",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:fog.federated_fog",
+      "source": "dagbench",
+      "family": "fog",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_fog.federated_fog-76c9b62e6e.json",
+      "enhanced_sha256": "0b2e72e423f139976fe9cb081af554c779eb94a87f1753c4278d5517659b1481",
+      "raw_sha256": "19230412a5d2cba332a6eb768f1f914022db25ba8aa231870c36301a39552b7a",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:fog.healthcare_fog",
+      "source": "dagbench",
+      "family": "fog",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_fog.healthcare_fog-64e90e766c.json",
+      "enhanced_sha256": "8ef9f3a6256767a56788a3c715dc439703ee48f095fda5e7d8a6ff5ad1216c9f",
+      "raw_sha256": "926db7946952417d815a22c7222661c61bf7e95950919570209870040eeb4bd6",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:fog.smart_building",
+      "source": "dagbench",
+      "family": "fog",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_fog.smart_building-b0d36fd321.json",
+      "enhanced_sha256": "b5f34e6eb7ad0bd49521e520cde7fe0a7d5f83fd520241e91fdfc29d4372a02f",
+      "raw_sha256": "f8a99ebdf06a3f9352bb31c343bcd2bd73bb7a63852058890d017693303b5f2e",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:iiot.cnc_monitoring",
+      "source": "dagbench",
+      "family": "iiot",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_iiot.cnc_monitoring-407f4fc67b.json",
+      "enhanced_sha256": "e651a8e6ff863199f0ebdf4b07b8b298169eb4fa3220b1a4973c120357a1faec",
+      "raw_sha256": "dd281f0b12b81c581aeb0e9a0669505fe9447a157b8d57600a3391b63ca9d132",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:iiot.digital_twin",
+      "source": "dagbench",
+      "family": "iiot",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_iiot.digital_twin-dac34a399d.json",
+      "enhanced_sha256": "dd47c51cf986e7ad064ec8fdf39106287e2dbe263509833ea34e6dbc21d289f4",
+      "raw_sha256": "1e24fa2d9f1a4ac92f0329d3372765f638aaadf68eb2da0c4150900c1632d092",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:iiot.energy_monitoring",
+      "source": "dagbench",
+      "family": "iiot",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_iiot.energy_monitoring-d4a0d3c77c.json",
+      "enhanced_sha256": "f592bc42b8262750819317b9a4427678bdac6df54fb6924f35071e0c2641bfbc",
+      "raw_sha256": "0ca92ee3beedec2463e8ddba80f639c376a40a613b98c7f472b99f5a11d233f1",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:iiot.robotic_assembly",
+      "source": "dagbench",
+      "family": "iiot",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_iiot.robotic_assembly-48477388f7.json",
+      "enhanced_sha256": "e5c1de85b4fd99674f425cf6bae83ea035da3eb23b18950247c0023550d4a60d",
+      "raw_sha256": "22cb0b2db1acc200be17b4670d575808ca463b9eedf8aa2fd555a464a03abbbf",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:iot.predictive_maintenance",
+      "source": "dagbench",
+      "family": "iot",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_iot.predictive_maintenance-b32f655de3.json",
+      "enhanced_sha256": "fd47c4c83d4165427ee41422b83d70d69cb2b5e2d58daa0b071e86453a47917c",
+      "raw_sha256": "6cc1f756e79eda9404dd4a582a1af7a30e0d19dedb4edbdbdf40891c5a8cda05",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:iot.riotbench_etl",
+      "source": "dagbench",
+      "family": "iot",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_iot.riotbench_etl-3204ed4b2c.json",
+      "enhanced_sha256": "e0b09e38bf53c4ac7ccd1b104561233acfa74cbbfeca14123d1237e6e5ab8697",
+      "raw_sha256": "24380cb5770db4f3ecaca50f098044cd7815c26edabb72110e5e55e534d2b963",
+      "resource_count": 15
+    },
+    {
+      "id": "dagbench-network:iot.riotbench_predict",
+      "source": "dagbench",
+      "family": "iot",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_iot.riotbench_predict-181218c75d.json",
+      "enhanced_sha256": "3a3ff6782f7da6f9ce43d7d5f0a6ec4063af858d7be83fc88f223a86b3b5a55d",
+      "raw_sha256": "63d620213280c987e3bc69284a601ecf8a0137e4b34c24ef48cd0f88f3fc4511",
+      "resource_count": 15
+    },
+    {
+      "id": "dagbench-network:iot.riotbench_stats",
+      "source": "dagbench",
+      "family": "iot",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_iot.riotbench_stats-c49af78027.json",
+      "enhanced_sha256": "a3d258075eec7528def1217c07ca4f48890f32acdc147a18a4317280bc98507a",
+      "raw_sha256": "bfee385d3d489b08b335c566dbfe0525c39db9063b89c6175d257b8e7de7d9f8",
+      "resource_count": 15
+    },
+    {
+      "id": "dagbench-network:iot.riotbench_train",
+      "source": "dagbench",
+      "family": "iot",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_iot.riotbench_train-d5e4a426ae.json",
+      "enhanced_sha256": "2e89f922c87a51dab74f47d2ae4f288db463a3270c315cffc4e904362434a818",
+      "raw_sha256": "c06455a06be3c958d93129ef24c6a9d83bee9279d0e07e15d66f3b3e1cdb96a1",
+      "resource_count": 15
+    },
+    {
+      "id": "dagbench-network:mec.sleipnir_antivirus",
+      "source": "dagbench",
+      "family": "mec",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_mec.sleipnir_antivirus-ebb0da7aa5.json",
+      "enhanced_sha256": "1e5b5fec70cb0163cc8ffcda71ae5b6d9808a062095391a03dcaa2d2a2201c91",
+      "raw_sha256": "d0e680e9b32ca5cf10c2a8feaa57e707b494f2a119eccdfc64bd046294b2aaf8",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:mec.sleipnir_chess",
+      "source": "dagbench",
+      "family": "mec",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_mec.sleipnir_chess-8e1049f81a.json",
+      "enhanced_sha256": "55722f37d34722ec4d7d896b08c442030e56793f910f87cba7f3ce134f487860",
+      "raw_sha256": "dfad1e42b1491497f4f2e9f486c03cdbdc9bbaa334c272790e4e6d8f87722d81",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:mec.sleipnir_facebook",
+      "source": "dagbench",
+      "family": "mec",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_mec.sleipnir_facebook-72cc3d0ea7.json",
+      "enhanced_sha256": "8fb4c511010b6dc0a279f2b0f1e5ed644a1a32fd0c60d48a02ad7512b7e44f76",
+      "raw_sha256": "32ff4fd5f6c1fc090e54b3fbd7839bdd00c76f581109be311855530de419867e",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:mec.sleipnir_facerecognizer",
+      "source": "dagbench",
+      "family": "mec",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_mec.sleipnir_facerecognizer-c814809d63.json",
+      "enhanced_sha256": "09dabc630eeafbdeb82ff40aef52414f8a10461d8d93a29ce21c2b5c4fe5a621",
+      "raw_sha256": "65ee3ccd9ffc853b454e1b5007424bbb2a1689df10190e4894f68bc4de45293f",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:mec.sleipnir_navigator",
+      "source": "dagbench",
+      "family": "mec",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_mec.sleipnir_navigator-9e5131cad5.json",
+      "enhanced_sha256": "f8c31252501c97b460965d4bc7c715c4059db87cd5cb5f79ddb2a03d1a8ebf79",
+      "raw_sha256": "754039ee903e180979973d945076f15590d5f96402350a9488e3d86209850b28",
+      "resource_count": 3
+    },
+    {
+      "id": "dagbench-network:mec.video_analytics",
+      "source": "dagbench",
+      "family": "mec",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_mec.video_analytics-45185fa606.json",
+      "enhanced_sha256": "5dcbccbe3de36ef182effbd7409a0673f516df18d9c7ac237567ea6fe70d9432",
+      "raw_sha256": "3a9532176f8a4d8e3429d2f437c89e0c0fa99a0288d6d3fe973a60b1fd6e20c3",
+      "resource_count": 7
+    },
+    {
+      "id": "dagbench-network:ml.federated_learning",
+      "source": "dagbench",
+      "family": "ml",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_ml.federated_learning-8827fdec15.json",
+      "enhanced_sha256": "7e94a24229aac3da559f011981ac493568e4dc7d2ac88119e6b8bd572e728858",
+      "raw_sha256": "1d5bcdbcd5ae39cbb1acd88796d869c7dda6a4106e57756541a75626755ebbca",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:ml.gpt2_tensor_sh12_decode",
+      "source": "dagbench",
+      "family": "ml",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_ml.gpt2_tensor_sh12_decode-351159605d.json",
+      "enhanced_sha256": "245f1e0b9686324d6f7404387bfb304c4185e2a244c2aedbea79ddeefc98ec09",
+      "raw_sha256": "d8933240ff82cddcbe4b9af02934230c81ea1225e9aadc18fd28a1b448d4d38c",
+      "resource_count": 12
+    },
+    {
+      "id": "dagbench-network:ml.gpt2_tensor_sh12_prefill",
+      "source": "dagbench",
+      "family": "ml",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_ml.gpt2_tensor_sh12_prefill-b28b8f67a1.json",
+      "enhanced_sha256": "d9d3b0d0d8ffcdddee9e2bbea1f7ab6668471ca6c1775307ab40c10cc125f12f",
+      "raw_sha256": "2ddb04db595875db985a678aa35e1544f8b9a2cf193a2045b2aa03a2666e0e71",
+      "resource_count": 12
+    },
+    {
+      "id": "dagbench-network:nfv.ue_attach",
+      "source": "dagbench",
+      "family": "nfv",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_nfv.ue_attach-60b82beedc.json",
+      "enhanced_sha256": "3f68f14ffa38f599ca84de27573102492aec7869df32f2d8f4ec1e9f8eddfa25",
+      "raw_sha256": "56bea8f1ff4e1325d0f56de6ca43b053124c6e190bf83a9a7c371432ac4ba6b5",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:scientific.blast_like",
+      "source": "dagbench",
+      "family": "scientific",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_scientific.blast_like-44c4a212ed.json",
+      "enhanced_sha256": "070063836d40d3fc5ecd8f433fc0f9fd34dc002e4bf4da7b656e556a3c2b9ffd",
+      "raw_sha256": "cfed7a7aca4ff049d92d541ca2ad0097f88105b50772bfd310abc2ed27e0af5a",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:scientific.epigenomics_like",
+      "source": "dagbench",
+      "family": "scientific",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_scientific.epigenomics_like-fa0dbdebd7.json",
+      "enhanced_sha256": "f5848c83a7cd300585ae60ea5c426318e3bca985db1b802208ee11651a1a0dc3",
+      "raw_sha256": "cfff2fe9d837c391f2a225f61817b99ceba04aa8741758cb051a54de4311b2ac",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:scientific.montage_like",
+      "source": "dagbench",
+      "family": "scientific",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_scientific.montage_like-e115872fc7.json",
+      "enhanced_sha256": "3ea45a42120b17cb3e20b968b366eb2e735486273f16209aaf86905f8d4a9e23",
+      "raw_sha256": "9c011c16c89878f0c2d2f3a005b9de74ba2a0919506ae9cb94762a6d31e98306",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:scientific.seismology_like",
+      "source": "dagbench",
+      "family": "scientific",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_scientific.seismology_like-bd1d77f98d.json",
+      "enhanced_sha256": "c0eb9e19c6579cf4b34600f14f0156932212f6e3a074c59db14d0b485f621a03",
+      "raw_sha256": "79dc812a21092465857d7d7d3fd78b2e693901f250c1b0db2510e0b1b45b24d8",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:smart_city.air_quality",
+      "source": "dagbench",
+      "family": "smart_city",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_smart_city.air_quality-256544bc8d.json",
+      "enhanced_sha256": "eb112168c1baa9ac052ea157b76b93db3e2428e755336a1c5fe1d38287591eaf",
+      "raw_sha256": "bb31fc68e2eb71e5887e7a3c4504c0f848231e14dff131c0b6e0f708368fa26a",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:smart_city.traffic_mgmt",
+      "source": "dagbench",
+      "family": "smart_city",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_smart_city.traffic_mgmt-4090c66932.json",
+      "enhanced_sha256": "3dc15d540aa0cafc2c5a470146ab2d3ce93baaa243a014b748beda7961a3e6a4",
+      "raw_sha256": "f712359d47773c5d42bcb5db876523cb6ce4e52de603451e760835ab4543cd59",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:smart_city.waste_mgmt",
+      "source": "dagbench",
+      "family": "smart_city",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_smart_city.waste_mgmt-f2251dba92.json",
+      "enhanced_sha256": "b21d78e891a6a93d2e8906a7a714f822ece5c18881b2ed80939dec8bf3bd03f7",
+      "raw_sha256": "b5ac98aac88860040c5cf92c2783768fbed53b7a079db6236ce13e5678adce67",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:smart_city.water_distribution",
+      "source": "dagbench",
+      "family": "smart_city",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_smart_city.water_distribution-624c472a14.json",
+      "enhanced_sha256": "419bc8a69601d9ac5a092d180ff42846a4bc85473c2184f4b8f8688e1433bf6a",
+      "raw_sha256": "c7e8106c606c9520bb203635a5a7af170baae04802d3ed3eeab4f84624e2f3c1",
+      "resource_count": 8
+    },
+    {
+      "id": "dagbench-network:synthetic.branching_3x2",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.branching_3x2-798e938377.json",
+      "enhanced_sha256": "7946f8a684d58e8b95b171bf393d01f2c33a8d1e4b34c387bc6ae4b5d90c5a56",
+      "raw_sha256": "d4c282768605cab801ffb4816f34bd0e1ecc3b988864228dbe28477e294ece56",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.branching_4x3",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.branching_4x3-b2b0c3288f.json",
+      "enhanced_sha256": "88aa8249de904ff7695124cf3422cf6664c5f91ed504cc02208458196710ae6b",
+      "raw_sha256": "8ce29298bb81283a5349d3c80c1e7f89d2c538050cc36aeb3501f89239a5366a",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.chain_2",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.chain_2-95e58b3ed2.json",
+      "enhanced_sha256": "d2c095396bc42661ac45ac20fbf830dbdeb21edf8134bf14408a5e6323a65d3f",
+      "raw_sha256": "f1f35818c772680dfbc14273ff6b0791e1c2caf4ad0b61406b8c2506d1c6b98e",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.chain_4",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.chain_4-77ffec5781.json",
+      "enhanced_sha256": "bec3585dd7ab3406eae71b7ae5e2c1b155cfe1cb5731a9c2d083bdc95b0f3159",
+      "raw_sha256": "9f20c96deecf23bcb8b38a0d50ea3c6f73b0a0e38170e25a5e558e7a8f0a8aed",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.chain_8",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.chain_8-3596f3066f.json",
+      "enhanced_sha256": "3c069f26cd34c3bbe286c489c9293605ce3b2a26f095fb92d49301da03bb7731",
+      "raw_sha256": "92105744ab56a064b118fec8fbb1cb49a86f434c01438e1610a2d1ae775d1a89",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.diamond",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.diamond-196d80a6e0.json",
+      "enhanced_sha256": "7c606895c3f8f85dd07dae0e2ba67f9d2c306f748c1dc24b33ce589c174f2480",
+      "raw_sha256": "dcf2a9d21638bbd135fb3869137fa018dc0314b7922014062ea8ecb1360cd819",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.fork",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.fork-6db9f5a1f7.json",
+      "enhanced_sha256": "4820754de2cba6f92d36aa8f0e2f6c381662606ce1deda162fcf51d236069738",
+      "raw_sha256": "04d23a8d9f08ee79092189c6318ab8ce21bd1a720cc4e4b1a1594c39cf84d6d3",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.multi_fork_join",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.multi_fork_join-c5902ccf7a.json",
+      "enhanced_sha256": "edc01e107cb1986ea43cff5da5a5d9c05a325a78be6b85f074031b21bc522b05",
+      "raw_sha256": "da574615bb52dae0179202d00bd53b32b1c4bb45a289ac81244e49ca68773d31",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.one_task",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.one_task-db34e1aae5.json",
+      "enhanced_sha256": "ec2a8cd6dbe8e1a4fd1902e5ba1a01b397e6961c96e0387ea26087641e939d5c",
+      "raw_sha256": "28519793f7c108922f31369655d107ff5553da7b9738cc2bc2f7f1aac7131882",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.pipeline_stages",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.pipeline_stages-3d6618b540.json",
+      "enhanced_sha256": "b02934bde89b3a23798854f7f412b878b8be742b0f9b66925e8e0c0537aa6893",
+      "raw_sha256": "e1108b0e3dee22b2d55ba03e27063595c0cb630fbb7607d66cc37cb7307d03f0",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_large_balanced",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_large_balanced-ded7bf50ee.json",
+      "enhanced_sha256": "7f21cbcb763a5b3e27bdaa1dc5f9b97d531302b4248d6cbb5dc65d8ac9a784df",
+      "raw_sha256": "4182a998c0d929d2ac0da8cef9b189f74903c803d3d9ec7e128df391887f08b6",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_large_dense",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_large_dense-cf8ef37031.json",
+      "enhanced_sha256": "9787d2c68b4cb05923823993bf80f86b39a4c4f62a8549517c1509403232c905",
+      "raw_sha256": "6fa51ce4121c9a227490a482719c5b3a751b52fc16753b4d4ef9220b3e3affcf",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_medium_balanced",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_medium_balanced-27c44c9d08.json",
+      "enhanced_sha256": "f95e54f2ce968d3aeeaa44a9f7f96d9caf83278130b3c8565c9186a6e039a73e",
+      "raw_sha256": "c502077fba3ab4b87e195594e9deb8e0ba379b3b20057f3248e49fb41e5209f9",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_medium_comm",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_medium_comm-7f44bb94ca.json",
+      "enhanced_sha256": "71554cf1aaf2f68c7298d46dd02d4b6d97cffca2f06a6204cea79d009720c66c",
+      "raw_sha256": "316ecbae3a85afa2034cd395fb87f459bef7d9a66b4a28b4a5e313d4a4e0ce1e",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_medium_compute",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_medium_compute-aada3fbf63.json",
+      "enhanced_sha256": "d2c867a49308f58514245d58b0d1afb485398157a6775bb37fd27cc481a85de2",
+      "raw_sha256": "cd0fdbeb2a5c04842887f430a8e65b7deaa0161890b6a7f87b66d32ab4991742",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_medium_deep",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_medium_deep-955e78780b.json",
+      "enhanced_sha256": "254d1571f4fac4c4dcefe29355b745f947415ae6b915554930f3df450fd3bfc9",
+      "raw_sha256": "57ab8b39ff40294315e4a28e242e2994c047a11f6a8dfb6187652cae77df9949",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_small_narrow",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_small_narrow-096ab63c51.json",
+      "enhanced_sha256": "d3728a9786c9cfa02e4c98096dbbd70ead0fd4c9bef2f1ccd5a9999fde7e5e46",
+      "raw_sha256": "9d57178ea8f74b8c61e230296a637a07bf29227666a674dd73de6129237f542e",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_small_wide",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_small_wide-4385dd4b1e.json",
+      "enhanced_sha256": "04d3355cce39a70e4a4cd29c6ead6758b082b2069dbce6bbd4f088c5ef648e86",
+      "raw_sha256": "0f2115fe5fa81e4361abca5851b44dd9b6381fdf4eba0353a6dc9d50340f857b",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_xlarge",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_xlarge-f8693137f0.json",
+      "enhanced_sha256": "806d1f1ba3796f0604bc01c31eefa57b70121a4281239b1009cd91ef0cfae390",
+      "raw_sha256": "b75b5cda941d2bc5bec75fb3e2f0c28ef059d70531e56ca6ca314566b0f5d7fa",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.random_xxlarge",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.random_xxlarge-587336c5ee.json",
+      "enhanced_sha256": "19f7ef3e38d0075db52f923eabd8961bff399bff9d1d61802a720a6e78f29c7e",
+      "raw_sha256": "2abe438534400b0e5b8c277f1442084afc38211fb6ad925f1c1bf06cf22cf54f",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.reduction_tree",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.reduction_tree-64fb17d870.json",
+      "enhanced_sha256": "ab1d1b11717cce2a4095e6829999a7e8a11bc3a14c65102d3a8337a921699f00",
+      "raw_sha256": "fb2a59fb0ab8fc84cdd8db1aed6e70330b5946a2629516de7adf4ba42df3e416",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.stencil_3x4",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.stencil_3x4-2156d0dc27.json",
+      "enhanced_sha256": "c4fabf6b6e7acf0795b94850f13362a5aed15f48567f5c8ed10aa400f03baeb3",
+      "raw_sha256": "3a03294ee6ac90efa659ebb95d1454cce8c480819f530621ba233e11a746cf4c",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:synthetic.wide_parallel_20",
+      "source": "dagbench",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_synthetic.wide_parallel_20-4a82619042.json",
+      "enhanced_sha256": "0a1aff0af7ccff0892515049f2ec5074097828920a0848fdf6f6861280c87daf",
+      "raw_sha256": "383f107ded690b2b6e5cff3a754b8018e3864d1ee2f90a6e2c123b9020175c9c",
+      "resource_count": 4
+    },
+    {
+      "id": "dagbench-network:uav.search_rescue",
+      "source": "dagbench",
+      "family": "uav",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_uav.search_rescue-c6fa3759e7.json",
+      "enhanced_sha256": "c610d0b27430108cf3b26afb10f3d0885f6a18914b71d3c4d325e01edaa80970",
+      "raw_sha256": "4803f7c206b77810ce0832742888f91dbabc3111788d47e7e2bd322429de4e8f",
+      "resource_count": 7
+    },
+    {
+      "id": "dagbench-network:v2x.cooperative_perception",
+      "source": "dagbench",
+      "family": "v2x",
+      "role": "train_pool",
+      "file": "resource_models/dagbench/dagbench-network_v2x.cooperative_perception-22e85f8c00.json",
+      "enhanced_sha256": "9b1482a4a55adbde69e4cf2396911c625e04c16c90a6a7ca42d7cfc5e0988d7a",
+      "raw_sha256": "5a3d8498ebfac38afdb96d1519d2ca619fced0930aa1c13b6e4fffd6b4439ddb",
+      "resource_count": 7
+    },
+    {
+      "id": "dagbench-network:v2x.intersection_mgmt",
+      "source": "dagbench",
+      "family": "v2x",
+      "role": "id_validation_pool",
+      "file": "resource_models/dagbench/dagbench-network_v2x.intersection_mgmt-283ba3e759.json",
+      "enhanced_sha256": "5f70a97d0ec89702240ec6242b532e47f13f588552593c0bfc2a7689bda64dfb",
+      "raw_sha256": "16c0535d6a5dd06f3bbd6dbf89ae132c42b8cee32244b14ab6cdd7b669619ef5",
+      "resource_count": 7
+    },
+    {
+      "id": "synthetic-network-0000",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0000-925ac6da2d.json",
+      "enhanced_sha256": "58e9baa21e8ab18378142e7703dcf60bbc570067395900c3aa65af20445bcd45",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0001",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0001-970a678483.json",
+      "enhanced_sha256": "36d6d718b52efcaf414fa3e99bb0322658cd8d011ad71fa8f789ddcf88e83ee7",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0002",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0002-cab5fba83e.json",
+      "enhanced_sha256": "ae210db32422e4268b1fa46026d0964f59f2890a1231d0bc7ec2d245e41d0880",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0003",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0003-d7afbd17cf.json",
+      "enhanced_sha256": "4df16bd1694b520a14b43fff098572ad016c5da51f5e5f7fb86a5feb4b7ea8dc",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0004",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0004-120026c94d.json",
+      "enhanced_sha256": "8919292bb0edc8ed5bdf93ec7a195c43a0ca9d21e28e8ca458a6d6fcf8b2e8ba",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0005",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/synthetic/synthetic-network-0005-b560845d93.json",
+      "enhanced_sha256": "cd68389a27b67590de96a8c64fa43119ab63068e5ccc4ce161388ac5d74141fa",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0006",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0006-fc950b2d98.json",
+      "enhanced_sha256": "2a3bc2ac0cc779a5fbce4de55fcbe3f80f80eae4e81fdabea1b7544b60631fb1",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0007",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0007-a4e91dfaeb.json",
+      "enhanced_sha256": "1e2d0e2ee9e38fd5ea319319bd4faf010e09b72947b14efe47e871aaa10171ff",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0008",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/synthetic/synthetic-network-0008-c55b926417.json",
+      "enhanced_sha256": "d6b67647179fd43ec8a401e5d2863480b6e4cdcd74b4c5c11bf07bbeeb99156f",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0009",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0009-d384fd58df.json",
+      "enhanced_sha256": "3a524b8aba8470c25ac502bffce19ff8769a7df7b42ad929f447d48f7605a596",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0010",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/synthetic/synthetic-network-0010-72cde89343.json",
+      "enhanced_sha256": "6b9719bfea4c4103e36d6fa63b86bee80168bab934f88fb6fc12b1e9a75fa966",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0011",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0011-e75ee8f5b9.json",
+      "enhanced_sha256": "7b6fb523f5020e3da7bcfd19c60249062170c76c13eba9b5462a7b333edc38b9",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0012",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0012-75678d20e2.json",
+      "enhanced_sha256": "e5d64e83379671a8fb942dd00c0db8654ddd86fb6d317b0f71a84dbe775cd01c",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0013",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0013-102a218fcc.json",
+      "enhanced_sha256": "283ca4be2d230fa2f4664c2a0bb482a7f6f4687ec485947b22ad74ac96d526ae",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0014",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0014-b222c8948e.json",
+      "enhanced_sha256": "91b907c14fc84c9b5e21c0e200dce2bca07514e7b89c9a2e041840dee12bd8bc",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0015",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0015-aa946f0c41.json",
+      "enhanced_sha256": "1df85daedc949212f126fb3a9e9e9b603fca84ef04e2469e70e6ea7af358b641",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0016",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0016-529c9cb7ba.json",
+      "enhanced_sha256": "69711c55dee682f4cd0bbdb7bba6ab0899dc80b5db5a74e28360356b55a39097",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0017",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0017-79c324c245.json",
+      "enhanced_sha256": "4b997b9b3c9d86a14c19aa1ceaf6bb8344dae1699f8ed81f922e166bc0305d06",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0018",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0018-5fad99fca7.json",
+      "enhanced_sha256": "57a172a6c3729e3830a8d5962873a84b5e3e39af3ffce5919bf313176ddc58e0",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0019",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0019-e413ed857d.json",
+      "enhanced_sha256": "6449c17939f438c0202306d0088c13f5cd6fa8818c58442d686b2975de229416",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0020",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0020-e9f46d9cdf.json",
+      "enhanced_sha256": "5b6fbc87b4f5ed3f45507748c18f1099be489b13771fe1a917b6608e9f70054f",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0021",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/synthetic/synthetic-network-0021-8026cbedf1.json",
+      "enhanced_sha256": "10570343d3762364d39bd92001a267ac8138109aac6171a0aab4c001a95f97ef",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0022",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0022-4ac36fefaf.json",
+      "enhanced_sha256": "b5d35a8d3d0f797262cfb0f1739ee05492b62eaa0a44dd78bd9c5bd85486052c",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0023",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0023-24b3d0f474.json",
+      "enhanced_sha256": "4dedc8cc80937b6596c0f911ca0f83161682cb0a2f7d2701b05bbc651292900c",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0024",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0024-12c8f5293d.json",
+      "enhanced_sha256": "24e61e4e835640a4811349f2a57c6c551dde235060487954ef8f678c69a7cc7e",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0025",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/synthetic/synthetic-network-0025-922958cae1.json",
+      "enhanced_sha256": "9fe8f3a1383e0310c583f8d0ebb1f58abc86738e1a8f360c20a809be1ce173cd",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0026",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0026-3322b8557c.json",
+      "enhanced_sha256": "ebff47e76a669e25bf7396dc0c8df8543c86ee1e44a60fefaceb67d01fba303a",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0027",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "id_validation_pool",
+      "file": "resource_models/synthetic/synthetic-network-0027-29931eec00.json",
+      "enhanced_sha256": "1c6f6b3133c4f06bcf7d0d7d7f3225b52365339039d7907ed93ab821ef61f2db",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0028",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0028-499bc29720.json",
+      "enhanced_sha256": "4166c226107c6f46d702130dff07d93a7bde541e3ab583b115842cd0a7838b87",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0029",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0029-c0b3fdceb7.json",
+      "enhanced_sha256": "080834e961f1da16309f8dc4c752a8001af70037f65425a96af8e48c3ded692b",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0030",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0030-8d33b60086.json",
+      "enhanced_sha256": "798d7351d6457d2a62bcb49f66449b736aa69de04d93aaeadf7784c16bd4a74e",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "synthetic-network-0031",
+      "source": "synthetic",
+      "family": "synthetic",
+      "role": "train_pool",
+      "file": "resource_models/synthetic/synthetic-network-0031-2a51392a33.json",
+      "enhanced_sha256": "f0d2d32752ab1f908917bc5c9c8a133ed0c8a581a2065bfae2701ae544c5b22d",
+      "raw_sha256": null,
+      "resource_count": 6
+    },
+    {
+      "id": "topology-zoo:Aconet",
+      "source": "topology_zoo",
+      "family": "aconet",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Aconet-163cc4b915.json",
+      "enhanced_sha256": "0e7a5f596331cd970d365c7c278b169161eb6c91f9c7dced307120d97120e559",
+      "raw_sha256": "69edc6788f77270a59cc9d40cfde9f1ab63023263b746ee7277b60247c5dbb8c",
+      "resource_count": 23
+    },
+    {
+      "id": "topology-zoo:Arn",
+      "source": "topology_zoo",
+      "family": "arn",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Arn-53ea376534.json",
+      "enhanced_sha256": "80a4340a0db37d1f31b9e7e2ed763befbf36c0304d11ee2d41a32f66ea7ddd79",
+      "raw_sha256": "de0e712fab27d34b2aceb5f007501fc72fad4a262319a2906bd1e15e9b626edd",
+      "resource_count": 30
+    },
+    {
+      "id": "topology-zoo:Arpanet19728",
+      "source": "topology_zoo",
+      "family": "arpanet19728",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Arpanet19728-8d5643421c.json",
+      "enhanced_sha256": "0245a60e909a02cfac702c4852665ffe09bbc31b89cd7cacca979d7155b20aab",
+      "raw_sha256": "082cc6e6b25da8332dd8aee0a3adbb4b0c91b9f1fae649005bb1545c79ef600b",
+      "resource_count": 29
+    },
+    {
+      "id": "topology-zoo:Bics",
+      "source": "topology_zoo",
+      "family": "bics",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Bics-a6611118df.json",
+      "enhanced_sha256": "4622a355f911094f6c017d05545f33c4fd3268748d2aaa10d6d6a7fa696f874f",
+      "raw_sha256": "4405571595722964b0373721b659f5382fd03db47bc29b8246dec6d08493fac1",
+      "resource_count": 33
+    },
+    {
+      "id": "topology-zoo:Bren",
+      "source": "topology_zoo",
+      "family": "bren",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Bren-b04e91b5f8.json",
+      "enhanced_sha256": "cea68b091a305f14ae93146ba54a025aba04caf3e1630e96d4a81334d7018137",
+      "raw_sha256": "00c39e12c596f14a28f8ad4fc8f0d4d78ceb0152b1525c3a39f857d4fe3b56a0",
+      "resource_count": 37
+    },
+    {
+      "id": "topology-zoo:BtLatinAmerica",
+      "source": "topology_zoo",
+      "family": "btlatinamerica",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_BtLatinAmerica-0b696a0a88.json",
+      "enhanced_sha256": "f945fc99c66adecec3d12a4a4116b3b318944c20d83c125b26196454c38b02c4",
+      "raw_sha256": "2845ebfc09dc569e359016d554d4ce4baf935ebb14c3a47a9e7e72e254a6e93e",
+      "resource_count": 45
+    },
+    {
+      "id": "topology-zoo:Canerie",
+      "source": "topology_zoo",
+      "family": "canerie",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Canerie-355e6c988b.json",
+      "enhanced_sha256": "fcb9d4ff3c9b70fe082b0719169c9bd6059d88e7aa0fbc2880e5df1d4e5aa9a7",
+      "raw_sha256": "d4f39c34d0b59c58794eaf9581de1d7af7ca036b816b2677ca73bccc9d5901ed",
+      "resource_count": 32
+    },
+    {
+      "id": "topology-zoo:Carnet",
+      "source": "topology_zoo",
+      "family": "carnet",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Carnet-0b29bf7c66.json",
+      "enhanced_sha256": "0abf9513bceefa5c36c9e4996f7269f685fa1c061a3a9a4119e9170886bafec7",
+      "raw_sha256": "56be6c07654ebb9b2283180eb6596a755013f0be06310de107344ec81e99d296",
+      "resource_count": 44
+    },
+    {
+      "id": "topology-zoo:Cesnet200511",
+      "source": "topology_zoo",
+      "family": "cesnet200511",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Cesnet200511-42c50fb2b8.json",
+      "enhanced_sha256": "f85fc8d96b01c8a2bee69ec00a36bc73592bafa3df9eb458c21b49a6f1ce0d98",
+      "raw_sha256": "3e8777fbdb6d1797c12f932d3c710e590691c56b20fbe73a92218def2751ea5a",
+      "resource_count": 39
+    },
+    {
+      "id": "topology-zoo:Cesnet200603",
+      "source": "topology_zoo",
+      "family": "cesnet200603",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Cesnet200603-ba66368b3c.json",
+      "enhanced_sha256": "2dee0accb6a7f2820b43da83835aea472c6f2fec0f21a0c1804f1d7120eec0a5",
+      "raw_sha256": "3e8777fbdb6d1797c12f932d3c710e590691c56b20fbe73a92218def2751ea5a",
+      "resource_count": 39
+    },
+    {
+      "id": "topology-zoo:Claranet",
+      "source": "topology_zoo",
+      "family": "claranet",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Claranet-b74ecdbefe.json",
+      "enhanced_sha256": "43ccd609a7784a12614780313db6bd850328960dc806e3aae984df242a49253d",
+      "raw_sha256": "94bdba0fdccf5ca7f62c384e91061a5ca9d8ae912359695e390cf0c822e4a171",
+      "resource_count": 15
+    },
+    {
+      "id": "topology-zoo:Cwix",
+      "source": "topology_zoo",
+      "family": "cwix",
+      "role": "id_validation_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Cwix-e1f5ae555f.json",
+      "enhanced_sha256": "de3ca42e753b1d01a0508bbc59fdbb5e046e0e797424d09b160c22a5f48499bb",
+      "raw_sha256": "7a43c62141938088d4c7bab2929458c153aa23df9b4c34128a046bfd1f987641",
+      "resource_count": 36
+    },
+    {
+      "id": "topology-zoo:Cynet",
+      "source": "topology_zoo",
+      "family": "cynet",
+      "role": "id_validation_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Cynet-792a2ee1ff.json",
+      "enhanced_sha256": "b11de95a455c68990628a1a477affac6619d39a52786ba2666de3b8fd6d49f3a",
+      "raw_sha256": "579de0b9c42da1e78c82ed9f5c37a353dadcad4e79a7b6bb4e5f76aa94ce0041",
+      "resource_count": 30
+    },
+    {
+      "id": "topology-zoo:EliBackbone",
+      "source": "topology_zoo",
+      "family": "elibackbone",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_EliBackbone-d4cf33d256.json",
+      "enhanced_sha256": "065756eea964d4ce60bc7c4151f156ece12f6e3291e3b1173c43c96efd3b38ed",
+      "raw_sha256": "e40691ab4835c3303d144e67668b15b73094e582288f87bff239fd33041bd185",
+      "resource_count": 20
+    },
+    {
+      "id": "topology-zoo:Evolink",
+      "source": "topology_zoo",
+      "family": "evolink",
+      "role": "id_validation_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Evolink-acc862b609.json",
+      "enhanced_sha256": "ed3d0fd718c02bc1df92e1629af9427b3cc168d5626adf4119097fa67c166039",
+      "raw_sha256": "a6cf5c5b400e86a5f2b972d903c185014893558002e549b8dcc78b3d22719b10",
+      "resource_count": 37
+    },
+    {
+      "id": "topology-zoo:Gambia",
+      "source": "topology_zoo",
+      "family": "gambia",
+      "role": "network_ood_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Gambia-c08f0efcc5.json",
+      "enhanced_sha256": "cf68f6824eed71941f2eebd11093be3eb8019a7a0b8c6b7725a797d4c9c9da16",
+      "raw_sha256": "3ecd782d059a4cf76522d31208e07e7d60147550faaa048c70a8646cf7552a74",
+      "resource_count": 28
+    },
+    {
+      "id": "topology-zoo:Garr199905",
+      "source": "topology_zoo",
+      "family": "garr199905",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Garr199905-08cd0f3477.json",
+      "enhanced_sha256": "9ccc680115553936440429a4b4b252c6844eb72449e2f63ce5f201f2b06acf91",
+      "raw_sha256": "97d68f6b8a5ec133e527a9205fc8c4ce9148277854bbc987f244d1138eb0358d",
+      "resource_count": 23
+    },
+    {
+      "id": "topology-zoo:GtsPoland",
+      "source": "topology_zoo",
+      "family": "gtspoland",
+      "role": "id_validation_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_GtsPoland-1e1b5f31fe.json",
+      "enhanced_sha256": "c4841878db161aff0592d93a4ddac9cd15f39526392dab635deafcd2dcf42626",
+      "raw_sha256": "03468623b746a18fa90dbda20fde94e6792db0191201337ed9a5226607b340ab",
+      "resource_count": 33
+    },
+    {
+      "id": "topology-zoo:GtsSlovakia",
+      "source": "topology_zoo",
+      "family": "gtsslovakia",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_GtsSlovakia-3b78244fa0.json",
+      "enhanced_sha256": "e83eea969e842ef4820f4bfa5093498b4358b918b65326aca11f0fe4822326f8",
+      "raw_sha256": "a2e89d43d24736cc77eb5b32f8610defd88237f85c3c68d3a57be21002a4e79b",
+      "resource_count": 35
+    },
+    {
+      "id": "topology-zoo:Janetbackbone",
+      "source": "topology_zoo",
+      "family": "janetbackbone",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Janetbackbone-ef6d548b59.json",
+      "enhanced_sha256": "15676cb877b6653760f68729939bff62a258231eef1ec61512284d492b86f256",
+      "raw_sha256": "7c700c14b8408f608426875ba81971d574388bad30b020f77184afdecdee625a",
+      "resource_count": 29
+    },
+    {
+      "id": "topology-zoo:LambdaNet",
+      "source": "topology_zoo",
+      "family": "lambdanet",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_LambdaNet-8bf5755a77.json",
+      "enhanced_sha256": "2fac493b8f9733442f6540d75e4796fa10738c9cf979ae6ca6cfb19b2944027c",
+      "raw_sha256": "4b79d535eec2e277e699b99dcc44f3b7515a574bd6490d7bb85624b6e2d5d2ad",
+      "resource_count": 42
+    },
+    {
+      "id": "topology-zoo:Litnet",
+      "source": "topology_zoo",
+      "family": "litnet",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Litnet-4b6e15d2e7.json",
+      "enhanced_sha256": "2aa7527f956113c5eafffccdaddc981c21aeb6d2f719400e4faa55cadc5af497",
+      "raw_sha256": "bd3e67df90d2bbc88a96c45643606cb428cc32839db443257a334612524eebdc",
+      "resource_count": 43
+    },
+    {
+      "id": "topology-zoo:Marnet",
+      "source": "topology_zoo",
+      "family": "marnet",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Marnet-914f4630b2.json",
+      "enhanced_sha256": "e4c60e3ee591211abdc315c4f5705bbbed94ecb23bffc55cdeb6191047e23ce5",
+      "raw_sha256": "22630b6e42dcca2ae121134438fc4101a047ef9b586ae28e5be9e15f71b355cf",
+      "resource_count": 20
+    },
+    {
+      "id": "topology-zoo:NetworkUsa",
+      "source": "topology_zoo",
+      "family": "networkusa",
+      "role": "id_validation_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_NetworkUsa-46a5f9a495.json",
+      "enhanced_sha256": "f699b922e6aff70a86df3161c99d3bc58f55059371208e177cd34118564effcd",
+      "raw_sha256": "fe6515b518691495109d7d7603f6d64f10bc2f83a83d8551da7f147dfc8bf25c",
+      "resource_count": 35
+    },
+    {
+      "id": "topology-zoo:Niif",
+      "source": "topology_zoo",
+      "family": "niif",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Niif-8d7ed4ba3d.json",
+      "enhanced_sha256": "6086dbd2903bbc5af382b3d4e43644d7c7108cf91f0a48cfc073e9267f3356c4",
+      "raw_sha256": "6230440f351cdcdf0ee364db795a3d499ae7352ca62c5e522aad3f33564f2556",
+      "resource_count": 36
+    },
+    {
+      "id": "topology-zoo:Oxford",
+      "source": "topology_zoo",
+      "family": "oxford",
+      "role": "network_ood_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Oxford-37dac40b7b.json",
+      "enhanced_sha256": "9f57788bac2a24cd2178c3cb4463a7ecfa56096bb17b35def8b8efa1a789c4f0",
+      "raw_sha256": "b382d1ef85c5d9a438c5f90d6a241a85be7193c1fb5629ab2352e8f9d585b673",
+      "resource_count": 20
+    },
+    {
+      "id": "topology-zoo:PionierL1",
+      "source": "topology_zoo",
+      "family": "pionierl1",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_PionierL1-5d4992dc57.json",
+      "enhanced_sha256": "e970e48290b461bba95efed0e2b2450edf1f7293a02f154faa345d9bf5fed124",
+      "raw_sha256": "950b9b1fa2f11b58e3473dcc6d5af040add5c40ab7ce1afa10beeb71c6b235da",
+      "resource_count": 36
+    },
+    {
+      "id": "topology-zoo:Restena",
+      "source": "topology_zoo",
+      "family": "restena",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Restena-72f9212c2a.json",
+      "enhanced_sha256": "02ee57302684f6b395162cc3bc3a95a9f13e6696f3f81de3b29a77d16ffc94a0",
+      "raw_sha256": "f8618a22f38edbe3986641d082775325e3a7f1fe75c0a8e73510302e85562bcf",
+      "resource_count": 19
+    },
+    {
+      "id": "topology-zoo:Reuna",
+      "source": "topology_zoo",
+      "family": "reuna",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Reuna-14eed3fb49.json",
+      "enhanced_sha256": "8bef164be72947a2a35df2805e0cc3adf78a353491247991b8e60ccbe9b51491",
+      "raw_sha256": "df28dcc74ed3596de8c599988ee7b7262d18aedb2dbb3c7a29e89b627b3db45f",
+      "resource_count": 37
+    },
+    {
+      "id": "topology-zoo:Sago",
+      "source": "topology_zoo",
+      "family": "sago",
+      "role": "network_ood_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Sago-1d7e81b560.json",
+      "enhanced_sha256": "b91eac12eb376703690f521d832ed7d9fb5a0cce2fe881bc93e2e6e43195092c",
+      "raw_sha256": "1e1579a4149f78c358c1bdc45039d073dc008c812b06cfef583511055045c6d1",
+      "resource_count": 18
+    },
+    {
+      "id": "topology-zoo:Sanet",
+      "source": "topology_zoo",
+      "family": "sanet",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Sanet-288115116f.json",
+      "enhanced_sha256": "3fda460a89c56d41e025cc9970e15cb3a4195cd9599ba810fcd2eb63a264fdc8",
+      "raw_sha256": "bdd0615c6242bdda8d0d5d9668653c349898da01134b1d94ab97a1640a4997fb",
+      "resource_count": 43
+    },
+    {
+      "id": "topology-zoo:Twaren",
+      "source": "topology_zoo",
+      "family": "twaren",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Twaren-ef11b028fb.json",
+      "enhanced_sha256": "bd3dd87368ef6efba0d80619c4b64f4a7500e91b1f859f3d4e56f861180ab4e3",
+      "raw_sha256": "ac07206751acd4ec625e8760ffb50be65b7e5c7c46746fa66ece024db1c3cd12",
+      "resource_count": 20
+    },
+    {
+      "id": "topology-zoo:Uran",
+      "source": "topology_zoo",
+      "family": "uran",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Uran-930c668fa8.json",
+      "enhanced_sha256": "8481d7bd7efb18d4f7fdc5d7c504f77ab16e09d4a8cf76348c4f1b50932890d5",
+      "raw_sha256": "71943b043ac083380e6bdc7822701ad4ef73e0e97994e491c2d50cc05b02aaa6",
+      "resource_count": 24
+    },
+    {
+      "id": "topology-zoo:Vinaren",
+      "source": "topology_zoo",
+      "family": "vinaren",
+      "role": "train_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Vinaren-e61078a2ea.json",
+      "enhanced_sha256": "07061c0e3bc65981b4fdf1b54c75116747cb012a8fd7845edab866d5e3046a29",
+      "raw_sha256": "53f0ca8146420ce97dab09257afb3e34275c057e5f2786168861eab40c4bef6e",
+      "resource_count": 25
+    },
+    {
+      "id": "topology-zoo:VisionNet",
+      "source": "topology_zoo",
+      "family": "visionnet",
+      "role": "id_validation_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_VisionNet-7c45523b0c.json",
+      "enhanced_sha256": "3e830205701f7618c6a4a8978bedc7b17c5de33fe4af0ea5c8a58f247541faa3",
+      "raw_sha256": "a9313f6406d715bcf9013d6c401ff9de652540ec648794be93390a1ea6896858",
+      "resource_count": 24
+    },
+    {
+      "id": "topology-zoo:Zamren",
+      "source": "topology_zoo",
+      "family": "zamren",
+      "role": "network_ood_pool",
+      "file": "resource_models/topology_zoo/topology-zoo_Zamren-992d4295b1.json",
+      "enhanced_sha256": "c6ae3e1e16ab1c817d216ccfa2980570ecdb10efada9ca874a599a9a56c25810",
+      "raw_sha256": "6e53ce114e19c0a18b3b61de32a22ebe51ce351530fd5c9100606fb90dbdd1cb",
+      "resource_count": 35
+    }
+  ]
+}

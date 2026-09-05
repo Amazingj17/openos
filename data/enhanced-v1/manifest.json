@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "kind": "trisched_separated_enhanced_dataset",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "config": "configs/complex_dual_graph.json",
+  "task_manifest": "task_models/manifest.json",
+  "resource_manifest": "resource_models/manifest.json",
+  "task_count": 296,
+  "resource_graph_count": 152,
+  "path_contract": {
+    "base": "this_dataset_directory",
+    "separator": "/",
+    "absolute_paths_allowed": false
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:classic.gauss_elim_5",
+  "source": "dagbench",
+  "family": "classic",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/classic_benchmarks/gauss_elim_5/graph.json",
+    "raw_sha256": "9dc9d5f311c1532a9f36f94ed3be8ef579b1e605cfa758602dfd6633b60aacc3"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "N1",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "N2",
+      "kind": "cloud",
+      "speed": 10.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "N0",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      100.0,
+      100.0
+    ],
+    [
+      100.0,
+      1000000000.0,
+      100.0
+    ],
+    [
+      100.0,
+      100.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

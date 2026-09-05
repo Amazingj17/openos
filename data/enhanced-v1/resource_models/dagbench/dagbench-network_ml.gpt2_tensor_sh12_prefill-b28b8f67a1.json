@@ -1,0 +1,527 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:ml.gpt2_tensor_sh12_prefill",
+  "source": "dagbench",
+  "family": "ml",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/ml_pipelines/gpt2_tensor_sh12_prefill/graph.json",
+    "raw_sha256": "2ddb04db595875db985a678aa35e1544f8b9a2cf193a2045b2aa03a2666e0e71"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "N0",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "N1",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "N2",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "N3",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "N4",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "N5",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "N6",
+      "kind": "cloud",
+      "speed": 10.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "N7",
+      "kind": "cloud",
+      "speed": 10.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "N8",
+      "kind": "cloud",
+      "speed": 10.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "N9",
+      "kind": "cloud",
+      "speed": 10.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "N10",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "N11",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0,
+      500.0
+    ],
+    [
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      500.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

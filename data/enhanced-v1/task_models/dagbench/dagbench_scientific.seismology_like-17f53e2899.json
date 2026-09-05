@@ -1,0 +1,395 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:scientific.seismology_like",
+  "source": "dagbench",
+  "family": "scientific",
+  "seed": 596528653,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/scientific_workflows/seismology_like/graph.json",
+    "raw_sha256": "79dc812a21092465857d7d7d3fd78b2e693901f250c1b0db2510e0b1b45b24d8"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 15.0,
+      "cpu_cores_required": 2,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 1,
+      "workload": 20.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 2,
+      "workload": 15.0,
+      "cpu_cores_required": 1,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 3,
+      "workload": 10.0,
+      "cpu_cores_required": 1,
+      "memory_required": 512.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 4,
+      "workload": 5.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 5,
+      "workload": 5.0,
+      "cpu_cores_required": 8,
+      "memory_required": 8192.0,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 6,
+      "workload": 5.0,
+      "cpu_cores_required": 4,
+      "memory_required": 8192.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 7,
+      "workload": 5.0,
+      "cpu_cores_required": 1,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 8,
+      "workload": 15.0,
+      "cpu_cores_required": 1,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 9,
+      "workload": 5.0,
+      "cpu_cores_required": 4,
+      "memory_required": 8192.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 10,
+      "workload": 5.0,
+      "cpu_cores_required": 1,
+      "memory_required": 512.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 11,
+      "workload": 15.0,
+      "cpu_cores_required": 1,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 12,
+      "workload": 15.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 13,
+      "workload": 10.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 14,
+      "workload": 10.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 15,
+      "workload": 5.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 16,
+      "workload": 5.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 17,
+      "workload": 15.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 18,
+      "workload": 15.0,
+      "cpu_cores_required": 8,
+      "memory_required": 8192.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 19,
+      "workload": 8.0,
+      "cpu_cores_required": 1,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 20,
+      "workload": 5.0,
+      "cpu_cores_required": 1,
+      "memory_required": 512.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 21,
+      "workload": 15.0,
+      "cpu_cores_required": 4,
+      "memory_required": 8192.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 22,
+      "workload": 3.0,
+      "cpu_cores_required": 4,
+      "memory_required": 4096.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 23,
+      "workload": 15.0,
+      "cpu_cores_required": 1,
+      "memory_required": 1024.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 6,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 5,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 22,
+      "target": 3,
+      "data": 5.0
+    },
+    {
+      "source": 21,
+      "target": 20,
+      "data": 3.0
+    },
+    {
+      "source": 16,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 11,
+      "target": 10,
+      "data": 3.0
+    },
+    {
+      "source": 0,
+      "target": 7,
+      "data": 3.0
+    },
+    {
+      "source": 4,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 14,
+      "target": 0,
+      "data": 8.0
+    },
+    {
+      "source": 3,
+      "target": 18,
+      "data": 8.0
+    },
+    {
+      "source": 14,
+      "target": 11,
+      "data": 8.0
+    },
+    {
+      "source": 8,
+      "target": 5,
+      "data": 3.0
+    },
+    {
+      "source": 15,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 18,
+      "target": 4,
+      "data": 3.0
+    },
+    {
+      "source": 1,
+      "target": 19,
+      "data": 5.0
+    },
+    {
+      "source": 14,
+      "target": 2,
+      "data": 8.0
+    },
+    {
+      "source": 3,
+      "target": 17,
+      "data": 8.0
+    },
+    {
+      "source": 20,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 13,
+      "target": 8,
+      "data": 8.0
+    },
+    {
+      "source": 22,
+      "target": 14,
+      "data": 5.0
+    },
+    {
+      "source": 13,
+      "target": 23,
+      "data": 8.0
+    },
+    {
+      "source": 10,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 9,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 13,
+      "target": 12,
+      "data": 8.0
+    },
+    {
+      "source": 23,
+      "target": 9,
+      "data": 3.0
+    },
+    {
+      "source": 3,
+      "target": 21,
+      "data": 8.0
+    },
+    {
+      "source": 22,
+      "target": 13,
+      "data": 5.0
+    },
+    {
+      "source": 17,
+      "target": 15,
+      "data": 3.0
+    },
+    {
+      "source": 7,
+      "target": 1,
+      "data": 2.0
+    },
+    {
+      "source": 2,
+      "target": 16,
+      "data": 3.0
+    },
+    {
+      "source": 12,
+      "target": 6,
+      "data": 3.0
+    }
+  ]
+}

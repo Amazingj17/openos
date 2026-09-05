@@ -1,0 +1,604 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "synthetic-task-0017",
+  "source": "synthetic",
+  "family": "synthetic",
+  "seed": 1643046094,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": null,
+    "raw_sha256": null
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 58.18022698899247,
+      "cpu_cores_required": 3,
+      "memory_required": 3839.022797060821,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 1,
+      "workload": 28.238039935751676,
+      "cpu_cores_required": 2,
+      "memory_required": 1227.333075279175,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 2,
+      "workload": 63.09623607220837,
+      "cpu_cores_required": 1,
+      "memory_required": 974.409070010071,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 3,
+      "workload": 78.47044091102626,
+      "cpu_cores_required": 4,
+      "memory_required": 2589.916660061731,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 4,
+      "workload": 22.729747397294155,
+      "cpu_cores_required": 4,
+      "memory_required": 11010.92080329041,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 5,
+      "workload": 96.6825878827146,
+      "cpu_cores_required": 1,
+      "memory_required": 5868.895695657155,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 6,
+      "workload": 71.13621463028552,
+      "cpu_cores_required": 4,
+      "memory_required": 2593.8192684393944,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 7,
+      "workload": 82.89867287901922,
+      "cpu_cores_required": 1,
+      "memory_required": 5540.6702196069655,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 8,
+      "workload": 77.75264069102721,
+      "cpu_cores_required": 2,
+      "memory_required": 4259.073502559352,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 9,
+      "workload": 76.02038311575672,
+      "cpu_cores_required": 3,
+      "memory_required": 4613.744090547628,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 10,
+      "workload": 89.83568516645062,
+      "cpu_cores_required": 4,
+      "memory_required": 5998.040122160409,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 11,
+      "workload": 30.947198684379664,
+      "cpu_cores_required": 1,
+      "memory_required": 1432.030932722932,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 12,
+      "workload": 42.62566083635914,
+      "cpu_cores_required": 3,
+      "memory_required": 5834.2763451004885,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 13,
+      "workload": 37.26756429192307,
+      "cpu_cores_required": 2,
+      "memory_required": 2682.429258537469,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 14,
+      "workload": 41.95157944538884,
+      "cpu_cores_required": 1,
+      "memory_required": 4917.896664968892,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 15,
+      "workload": 92.46278828197855,
+      "cpu_cores_required": 3,
+      "memory_required": 4662.662466462022,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 16,
+      "workload": 87.88251484804628,
+      "cpu_cores_required": 5,
+      "memory_required": 6481.656551949416,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 17,
+      "workload": 43.89263288257044,
+      "cpu_cores_required": 1,
+      "memory_required": 1788.4485787938704,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 18,
+      "workload": 16.567147366624027,
+      "cpu_cores_required": 3,
+      "memory_required": 1841.8687535563292,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 19,
+      "workload": 51.30463022958775,
+      "cpu_cores_required": 3,
+      "memory_required": 2310.1398286657445,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 20,
+      "workload": 9.392103856049859,
+      "cpu_cores_required": 1,
+      "memory_required": 3659.4864805152333,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 21,
+      "workload": 17.373588573287318,
+      "cpu_cores_required": 2,
+      "memory_required": 1349.7542979206655,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 22,
+      "workload": 24.898608100777988,
+      "cpu_cores_required": 4,
+      "memory_required": 2847.913632449076,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 23,
+      "workload": 46.18685236228094,
+      "cpu_cores_required": 2,
+      "memory_required": 5519.794786705532,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 24,
+      "workload": 38.909654270706625,
+      "cpu_cores_required": 1,
+      "memory_required": 2425.8026864591393,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 25,
+      "workload": 84.8451590226377,
+      "cpu_cores_required": 3,
+      "memory_required": 2273.6505408786334,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 26,
+      "workload": 70.59257666237772,
+      "cpu_cores_required": 4,
+      "memory_required": 5925.148105188923,
+      "accelerator_required": false,
+      "required_features": [
+        "high_bandwidth"
+      ],
+      "task_type": "data"
+    },
+    {
+      "id": 27,
+      "workload": 37.176123646037965,
+      "cpu_cores_required": 6,
+      "memory_required": 5588.539248483806,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 28,
+      "workload": 79.10097628286711,
+      "cpu_cores_required": 4,
+      "memory_required": 1467.5634844726385,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 29,
+      "workload": 35.761151192943124,
+      "cpu_cores_required": 3,
+      "memory_required": 6119.213641387736,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 30,
+      "workload": 98.00772949013096,
+      "cpu_cores_required": 2,
+      "memory_required": 5139.490320688365,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 0,
+      "target": 1,
+      "data": 9.335478477307046
+    },
+    {
+      "source": 1,
+      "target": 2,
+      "data": 4.542552008726406
+    },
+    {
+      "source": 1,
+      "target": 22,
+      "data": 2.729276550099829
+    },
+    {
+      "source": 2,
+      "target": 3,
+      "data": 1.4595237726095998
+    },
+    {
+      "source": 2,
+      "target": 4,
+      "data": 6.71094867253561
+    },
+    {
+      "source": 2,
+      "target": 20,
+      "data": 5.872012031334955
+    },
+    {
+      "source": 2,
+      "target": 25,
+      "data": 2.5400184872422598
+    },
+    {
+      "source": 2,
+      "target": 28,
+      "data": 2.396814016098325
+    },
+    {
+      "source": 3,
+      "target": 11,
+      "data": 2.5951662120180146
+    },
+    {
+      "source": 3,
+      "target": 19,
+      "data": 11.776519415015848
+    },
+    {
+      "source": 4,
+      "target": 5,
+      "data": 2.7966728022300362
+    },
+    {
+      "source": 5,
+      "target": 6,
+      "data": 9.179168280760184
+    },
+    {
+      "source": 5,
+      "target": 7,
+      "data": 2.955164928696434
+    },
+    {
+      "source": 5,
+      "target": 10,
+      "data": 2.043168965598376
+    },
+    {
+      "source": 6,
+      "target": 7,
+      "data": 2.719175786035358
+    },
+    {
+      "source": 6,
+      "target": 8,
+      "data": 1.3659003630686644
+    },
+    {
+      "source": 6,
+      "target": 19,
+      "data": 10.174864037251728
+    },
+    {
+      "source": 6,
+      "target": 23,
+      "data": 3.852717890463334
+    },
+    {
+      "source": 6,
+      "target": 25,
+      "data": 5.463572177369687
+    },
+    {
+      "source": 6,
+      "target": 29,
+      "data": 9.498255685637675
+    },
+    {
+      "source": 7,
+      "target": 8,
+      "data": 1.2477578703447803
+    },
+    {
+      "source": 8,
+      "target": 9,
+      "data": 9.277489144649667
+    },
+    {
+      "source": 8,
+      "target": 10,
+      "data": 9.41902442879697
+    },
+    {
+      "source": 8,
+      "target": 11,
+      "data": 17.990543850168542
+    },
+    {
+      "source": 8,
+      "target": 29,
+      "data": 2.911084496042607
+    },
+    {
+      "source": 9,
+      "target": 12,
+      "data": 1.8243835355912166
+    },
+    {
+      "source": 10,
+      "target": 13,
+      "data": 7.907326881340826
+    },
+    {
+      "source": 10,
+      "target": 14,
+      "data": 3.3687325688101986
+    },
+    {
+      "source": 10,
+      "target": 26,
+      "data": 2.9302205418245175
+    },
+    {
+      "source": 12,
+      "target": 16,
+      "data": 12.698701322713069
+    },
+    {
+      "source": 12,
+      "target": 23,
+      "data": 1.0766689296931744
+    },
+    {
+      "source": 12,
+      "target": 29,
+      "data": 2.843306173728206
+    },
+    {
+      "source": 13,
+      "target": 21,
+      "data": 1.090049056616047
+    },
+    {
+      "source": 13,
+      "target": 25,
+      "data": 15.21200899642058
+    },
+    {
+      "source": 14,
+      "target": 15,
+      "data": 31.876247279539847
+    },
+    {
+      "source": 14,
+      "target": 18,
+      "data": 1.5851612170930178
+    },
+    {
+      "source": 14,
+      "target": 23,
+      "data": 1.4944548083766727
+    },
+    {
+      "source": 15,
+      "target": 17,
+      "data": 0.8576955620160157
+    },
+    {
+      "source": 15,
+      "target": 25,
+      "data": 7.054418490371068
+    },
+    {
+      "source": 15,
+      "target": 26,
+      "data": 0.7308694708233816
+    },
+    {
+      "source": 16,
+      "target": 17,
+      "data": 10.050092961609465
+    },
+    {
+      "source": 16,
+      "target": 23,
+      "data": 1.8534037990143244
+    },
+    {
+      "source": 17,
+      "target": 19,
+      "data": 4.302433183742193
+    },
+    {
+      "source": 18,
+      "target": 21,
+      "data": 5.684961166456743
+    },
+    {
+      "source": 19,
+      "target": 20,
+      "data": 1.9374198145684467
+    },
+    {
+      "source": 19,
+      "target": 28,
+      "data": 4.221524311332607
+    },
+    {
+      "source": 20,
+      "target": 22,
+      "data": 5.5395193088836825
+    },
+    {
+      "source": 20,
+      "target": 24,
+      "data": 16.616871739576005
+    },
+    {
+      "source": 20,
+      "target": 27,
+      "data": 2.3796814023465584
+    },
+    {
+      "source": 21,
+      "target": 23,
+      "data": 4.072244225370483
+    },
+    {
+      "source": 21,
+      "target": 25,
+      "data": 0.3252484880180353
+    },
+    {
+      "source": 22,
+      "target": 23,
+      "data": 2.529125536962197
+    },
+    {
+      "source": 23,
+      "target": 25,
+      "data": 0.9374699407825682
+    },
+    {
+      "source": 24,
+      "target": 26,
+      "data": 2.0345841904256514
+    },
+    {
+      "source": 26,
+      "target": 27,
+      "data": 2.3193587127862623
+    },
+    {
+      "source": 26,
+      "target": 28,
+      "data": 0.8695192045864113
+    },
+    {
+      "source": 26,
+      "target": 30,
+      "data": 8.063232362952519
+    },
+    {
+      "source": 28,
+      "target": 29,
+      "data": 5.699708369720213
+    },
+    {
+      "source": 29,
+      "target": 30,
+      "data": 4.051661977415649
+    }
+  ]
+}

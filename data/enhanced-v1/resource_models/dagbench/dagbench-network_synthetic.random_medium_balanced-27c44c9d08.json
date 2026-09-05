@@ -1,0 +1,125 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:synthetic.random_medium_balanced",
+  "source": "dagbench",
+  "family": "synthetic",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/synthetic/random_medium_balanced/graph.json",
+    "raw_sha256": "c502077fba3ab4b87e195594e9deb8e0ba379b3b20057f3248e49fb41e5209f9"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "N0",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "N2",
+      "kind": "edge",
+      "speed": 4.0,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "N1",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "N3",
+      "kind": "cloud",
+      "speed": 10.0,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      100.0,
+      100.0,
+      100.0
+    ],
+    [
+      100.0,
+      1000000000.0,
+      100.0,
+      100.0
+    ],
+    [
+      100.0,
+      100.0,
+      1000000000.0,
+      100.0
+    ],
+    [
+      100.0,
+      100.0,
+      100.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

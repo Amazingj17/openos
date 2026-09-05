@@ -1,0 +1,164 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:edge.splitstream_pipeline",
+  "source": "dagbench",
+  "family": "edge",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/edge_computing/splitstream_pipeline/graph.json",
+    "raw_sha256": "f8eef8e184aaa1578ecb90305e00a9157988155ff9411991bcd95199a8357526"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "JetsonNano",
+      "kind": "device",
+      "speed": 1.0,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "AGXXavier15W",
+      "kind": "device",
+      "speed": 4.35,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "AGXXavier30W",
+      "kind": "edge",
+      "speed": 21.88,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "AGXXavierMAXN",
+      "kind": "cloud",
+      "speed": 80.8,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "E5Server",
+      "kind": "cloud",
+      "speed": 36.3,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0
+    ],
+    [
+      1000.0,
+      1000000000.0,
+      1000.0,
+      1000.0,
+      1000.0
+    ],
+    [
+      1000.0,
+      1000.0,
+      1000000000.0,
+      1000.0,
+      1000.0
+    ],
+    [
+      1000.0,
+      1000.0,
+      1000.0,
+      1000000000.0,
+      1000.0
+    ],
+    [
+      1000.0,
+      1000.0,
+      1000.0,
+      1000.0,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

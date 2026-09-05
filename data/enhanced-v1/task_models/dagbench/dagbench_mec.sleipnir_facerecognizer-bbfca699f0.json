@@ -1,0 +1,92 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_task_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench:mec.sleipnir_facerecognizer",
+  "source": "dagbench",
+  "family": "mec",
+  "seed": 1447815215,
+  "units": {
+    "workload": "source_cost_unit",
+    "memory_required": "MiB",
+    "edge_data": "MB"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/mec/sleipnir_facerecognizer/graph.json",
+    "raw_sha256": "65ee3ccd9ffc853b454e1b5007424bbb2a1689df10190e4894f68bc4de45293f"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "workload": 500.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 1,
+      "workload": 800.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "cpu"
+    },
+    {
+      "id": 2,
+      "workload": 800.0,
+      "cpu_cores_required": 2,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    },
+    {
+      "id": 3,
+      "workload": 1600.0,
+      "cpu_cores_required": 1,
+      "memory_required": 512.0,
+      "accelerator_required": false,
+      "required_features": [],
+      "task_type": "data"
+    },
+    {
+      "id": 4,
+      "workload": 800.0,
+      "cpu_cores_required": 4,
+      "memory_required": 2048.0,
+      "accelerator_required": true,
+      "required_features": [],
+      "task_type": "gpu"
+    }
+  ],
+  "edges": [
+    {
+      "source": 0,
+      "target": 1,
+      "data": 100.0
+    },
+    {
+      "source": 1,
+      "target": 2,
+      "data": 3000.0
+    },
+    {
+      "source": 1,
+      "target": 3,
+      "data": 3000.0
+    },
+    {
+      "source": 2,
+      "target": 3,
+      "data": 100.0
+    },
+    {
+      "source": 3,
+      "target": 4,
+      "data": 3000.0
+    }
+  ]
+}

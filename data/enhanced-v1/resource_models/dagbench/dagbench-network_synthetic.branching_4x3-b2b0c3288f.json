@@ -1,0 +1,125 @@
+{
+  "format_version": 1,
+  "kind": "enhanced_resource_graph",
+  "adapter_version": "mixed-cloud-edge-device-v1",
+  "id": "dagbench-network:synthetic.branching_4x3",
+  "source": "dagbench",
+  "family": "synthetic",
+  "units": {
+    "memory_capacity": "MiB",
+    "bandwidth": "MB/s",
+    "latency": "seconds"
+  },
+  "origin": {
+    "path": "outputs/datasets/dagbench/workflows/synthetic/branching_4x3/graph.json",
+    "raw_sha256": "8ce29298bb81283a5349d3c80c1e7f89d2c538050cc36aeb3501f89239a5366a"
+  },
+  "resources": [
+    {
+      "id": 0,
+      "name": "1",
+      "kind": "cloud",
+      "speed": 8.010043745420013,
+      "cpu_cores": 64,
+      "memory_capacity": 262144.0,
+      "has_accelerator": true,
+      "features": [
+        "accelerator",
+        "cpu",
+        "gpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "2",
+      "kind": "edge",
+      "speed": 2.079605654927649,
+      "cpu_cores": 16,
+      "memory_capacity": 65536.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "high_bandwidth"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "0",
+      "kind": "device",
+      "speed": 0.23448012562641268,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "3",
+      "kind": "device",
+      "speed": 0.18241356320625338,
+      "cpu_cores": 4,
+      "memory_capacity": 8192.0,
+      "has_accelerator": false,
+      "features": [
+        "cpu",
+        "trusted_local"
+      ]
+    }
+  ],
+  "bandwidth": [
+    [
+      1000000000.0,
+      0.5605286440870003,
+      0.7661029211824625,
+      0.5605286440870003
+    ],
+    [
+      0.5605286440870003,
+      1000000000.0,
+      0.5605286440870003,
+      0.6057813552219953
+    ],
+    [
+      0.7661029211824625,
+      0.5605286440870003,
+      1000000000.0,
+      0.5605286440870003
+    ],
+    [
+      0.5605286440870003,
+      0.6057813552219953,
+      0.5605286440870003,
+      1000000000.0
+    ]
+  ],
+  "latency": [
+    [
+      0.0,
+      0.01,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.0,
+      0.01,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.0,
+      0.01
+    ],
+    [
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  ]
+}

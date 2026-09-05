@@ -28,6 +28,8 @@ from .evaluation import (
     resolve_failure_penalty_ratio,
     write_summary,
 )
+from .dual_graph import run_complex_dual_graph_pipeline
+from .mixed_dataset import export_separated_enhanced_dataset, materialize_mixed_dataset
 from .learning import MaskedMLPPolicy, train_policy
 from .ood import OODWorkflowError, materialize_p1_b02_ood
 from .p1_a05 import (
@@ -576,6 +578,36 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         default="configs/stg_trisched_gnn_ppo.json",
     )
+    train_dual_graph = subparsers.add_parser(
+        "train-dual-graph",
+        help=(
+            "train the constraint-aware task/resource dual-graph PPO and "
+            "write validation summary.json"
+        ),
+    )
+    train_dual_graph.add_argument(
+        "--config", default="configs/complex_dual_graph.json"
+    )
+    train_dual_graph.add_argument("--output", default=None)
+    materialize_mixed = subparsers.add_parser(
+        "materialize-mixed-dataset",
+        help=(
+            "build deterministic STG/DAGBench/synthetic task and "
+            "Topology-Zoo/DAGBench/synthetic network splits"
+        ),
+    )
+    materialize_mixed.add_argument(
+        "--config", default="configs/complex_dual_graph.json"
+    )
+    materialize_mixed.add_argument("--output", default=None)
+    export_enhanced = subparsers.add_parser(
+        "export-enhanced-datasets",
+        help="export all enhanced task graphs and resource graphs into separate folders",
+    )
+    export_enhanced.add_argument(
+        "--config", default="configs/complex_dual_graph.json"
+    )
+    export_enhanced.add_argument("--output", default="data/enhanced-v1")
     train_task_gnn.add_argument("--output", default=None)
     train_task_gnn.add_argument(
         "--resume",
@@ -701,6 +733,18 @@ def main(argv: list[str] | None = None) -> int:
                 args.config,
                 args.output,
                 resume=args.resume,
+            )
+        elif args.command == "train-dual-graph":
+            print(
+                run_complex_dual_graph_pipeline(
+                    args.config, args.output
+                ).resolve()
+            )
+        elif args.command == "materialize-mixed-dataset":
+            print(materialize_mixed_dataset(args.config, args.output).resolve())
+        elif args.command == "export-enhanced-datasets":
+            print(
+                export_separated_enhanced_dataset(args.config, args.output).resolve()
             )
         elif args.command == "generate":
             generate_scenarios(args.config, args.output)
